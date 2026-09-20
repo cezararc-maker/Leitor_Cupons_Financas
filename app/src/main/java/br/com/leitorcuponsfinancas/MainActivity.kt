@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.leitorcuponsfinancas.ui.HistoryScreen
+import br.com.leitorcuponsfinancas.ui.ManualEntryScreen
+import br.com.leitorcuponsfinancas.ui.ProfileScreen
 import br.com.leitorcuponsfinancas.ui.NfceScreen
 import br.com.leitorcuponsfinancas.ui.ProductScreen
 import br.com.leitorcuponsfinancas.ui.ProductViewModel
@@ -47,6 +49,8 @@ private enum class AppScreen {
     PRODUCTS,
     NFCE,
     HISTORY,
+    MANUAL,
+    PROFILE,
 }
 
 @Composable
@@ -80,6 +84,8 @@ private fun LeitorCuponsApp(
                 onProducts = { screen = AppScreen.PRODUCTS },
                 onNfce = { screen = AppScreen.NFCE },
                 onHistory = { screen = AppScreen.HISTORY },
+                onManual = { screen = AppScreen.MANUAL },
+                onProfile = { screen = AppScreen.PROFILE },
             )
 
             AppScreen.PRODUCTS -> Column(Modifier.fillMaxSize()) {
@@ -107,6 +113,16 @@ private fun LeitorCuponsApp(
                 onBack = { screen = AppScreen.HOME },
                 modifier = Modifier.fillMaxSize(),
             )
+
+            AppScreen.MANUAL -> ManualEntryScreen(
+                onBack = { screen = AppScreen.HOME },
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            AppScreen.PROFILE -> ProfileScreen(
+                onBack = { screen = AppScreen.HOME },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
@@ -117,6 +133,8 @@ private fun HomeScreen(
     onProducts: () -> Unit,
     onNfce: () -> Unit,
     onHistory: () -> Unit,
+    onManual: () -> Unit,
+    onProfile: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -158,6 +176,20 @@ private fun HomeScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Histórico e gastos")
+        }
+
+        Button(
+            onClick = onManual,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Adicionar compra manual")
+        }
+
+        Button(
+            onClick = onProfile,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Perfil do usuário")
         }
     }
 }
