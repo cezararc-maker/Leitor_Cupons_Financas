@@ -9,6 +9,7 @@ import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductLinkResult
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
+import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -28,6 +29,11 @@ enum class HistoryPeriodType(val label: String) {
     QUARTERLY("Trimestral"),
     SEMIANNUAL("Semestral"),
     ANNUAL("Anual"),
+}
+
+enum class HistorySearchMode(val label: String) {
+    STARTS_WITH("Início"),
+    CONTAINS("Qualquer parte"),
 }
 
 data class HistoryDateRange(
@@ -84,6 +90,28 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         initialValue = emptyList(),
     )
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _searchMode = MutableStateFlow(HistorySearchMode.CONTAINS)
+    val searchMode: StateFlow<HistorySearchMode> = _searchMode.asStateFlow()
+
+    val filteredItems: StateFlow<List<HistoryItemRow>> = combine(
+        items,
+        _searchQuery,
+        _searchMode,
+    ) { currentItems, query, mode ->
+        filterHistoryItems(
+            items = currentItems,
+            query = query,
+            mode = mode,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = emptyList(),
+    )
+
     val products: StateFlow<List<ProductEntity>> = productRepository.products.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -95,6 +123,18 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
 
     fun selectPeriod(type: HistoryPeriodType) {
         _periodType.value = type
+    }
+
+    fun updateSearchQuery(value: String) {
+        _searchQuery.value = value
+    }
+
+    fun selectSearchMode(mode: HistorySearchMode) {
+        _searchMode.value = mode
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
     }
 
     fun previousPeriod() {
@@ -145,6 +185,30 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
 
     fun clearLinkMessage() {
         _linkState.value = HistoryLinkState()
+    }
+
+    private fun filterHistoryItems(
+        items: List<HistoryItemRow>,
+        query: String,
+        mode: HistorySearchMode,
+    ): List<HistoryItemRow> {
+        val normalizedQuery = ProductNormalizer.searchKey(query)
+        if (normalizedQuery.isBlank()) return items
+
+        return items.filter { item ->
+            val candidates = listOfNotNull(
+                item.fiscalDescription,
+                item.productName,
+            ).map(ProductNormalizer::searchKey)
+
+            when (mode) {
+                HistorySearchMode.STARTS_WITH ->
+                    candidates.any { candidate -> candidate.startsWith(normalizedQuery) }
+
+                HistorySearchMode.CONTAINS ->
+                    candidates.any { candidate -> candidate.contains(normalizedQuery) }
+            }
+        }
     }
 
     private fun buildRange(
