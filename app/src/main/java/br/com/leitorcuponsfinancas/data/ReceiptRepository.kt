@@ -75,6 +75,73 @@ class ReceiptRepository(
         endDate: String,
     ) = receiptDao.observeHistory(startDate, endDate)
 
+    suspend fun saveItemCorrection(
+        item: HistoryItemRow,
+        description: String,
+        quantity: String,
+        unit: String,
+        unitPrice: String,
+        totalAmount: String,
+    ): ItemCorrectionResult {
+        val normalizedDescription = description.trim()
+        if (normalizedDescription.isBlank()) {
+            return ItemCorrectionResult.Error("A descrição do item não pode ficar vazia.")
+        }
+
+        val normalizedQuantity = normalizeOptionalDecimal(quantity)
+            ?: return ItemCorrectionResult.Error("Quantidade inválida.")
+        val normalizedUnitPrice = normalizeOptionalDecimal(unitPrice)
+            ?: return ItemCorrectionResult.Error("Valor unitário inválido.")
+        val normalizedTotal = normalizeOptionalDecimal(totalAmount)
+            ?: return ItemCorrectionResult.Error("Valor total inválido.")
+
+        val normalizedUnit = unit.trim().ifBlank { item.unit.orEmpty() }
+
+        val correctedDescription = normalizedDescription
+            .takeUnless { it == item.fiscalDescription }
+        val correctedQuantity = normalizedQuantity
+            .takeUnless { it == item.quantity.orEmpty() }
+        val correctedUnit = normalizedUnit
+            .takeUnless { it == item.unit.orEmpty() }
+        val correctedUnitPrice = normalizedUnitPrice
+            .takeUnless { it == item.unitPrice.orEmpty() }
+        val correctedTotalAmount = normalizedTotal
+            .takeUnless { it == item.totalAmount.orEmpty() }
+
+        val hasCorrection = listOf(
+            correctedDescription,
+            correctedQuantity,
+            correctedUnit,
+            correctedUnitPrice,
+            correctedTotalAmount,
+        ).any { it != null }
+
+        val updated = receiptDao.updateItemCorrection(
+            itemId = item.itemId,
+            correctedDescription = correctedDescription,
+            correctedQuantity = correctedQuantity,
+            correctedUnit = correctedUnit,
+            correctedUnitPrice = correctedUnitPrice,
+            correctedTotalAmount = correctedTotalAmount,
+            correctedAt = if (hasCorrection) System.currentTimeMillis() else null,
+        )
+
+        return if (updated > 0) {
+            ItemCorrectionResult.Success(hasCorrection)
+        } else {
+            ItemCorrectionResult.Error("O item não foi encontrado no histórico.")
+        }
+    }
+
+    suspend fun clearItemCorrection(itemId: Long): ItemCorrectionResult {
+        val updated = receiptDao.clearItemCorrection(itemId)
+        return if (updated > 0) {
+            ItemCorrectionResult.Success(hasCorrection = false)
+        } else {
+            ItemCorrectionResult.Error("O item não foi encontrado no histórico.")
+        }
+    }
+
     suspend fun linkHistoryItem(
         item: HistoryItemRow,
         productId: Long,
@@ -195,6 +262,18 @@ class ReceiptRepository(
         }
     }
 
+    private fun normalizeOptionalDecimal(value: String): String? {
+        val trimmed = value.trim()
+        if (trimmed.isBlank()) return ""
+
+        val normalized = trimmed
+            .replace(".", "")
+            .replace(",", ".")
+            .replace(Regex("""[^0-9.-]"""), "")
+
+        return normalized.toBigDecimalOrNull()?.stripTrailingZeros()?.toPlainString()
+    }
+
     private fun normalizeCnpj(value: String?): String? = value
         ?.filter(Char::isDigit)
         ?.takeIf { it.isNotBlank() }
@@ -228,4 +307,10 @@ sealed interface ProductLinkResult {
     ) : ProductLinkResult
 
     data class Error(val message: String) : ProductLinkResult
+}
+
+
+sealed interface ItemCorrectionResult {
+    data class Success(val hasCorrection: Boolean) : ItemCorrectionResult
+    data class Error(val message: String) : ItemCorrectionResult
 }
