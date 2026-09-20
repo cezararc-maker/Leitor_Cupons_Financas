@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MerchantProductLinkDao {
@@ -40,6 +41,14 @@ interface MerchantProductLinkDao {
 
     @Update
     suspend fun update(link: MerchantProductLinkEntity)
+
+    @Query(
+        """
+        SELECT * FROM merchant_product_links
+        ORDER BY productId, lastUsedAt DESC, fiscalDescription COLLATE NOCASE
+        """,
+    )
+    fun observeAll(): Flow<List<MerchantProductLinkEntity>>
 
     @Query("SELECT COUNT(*) FROM merchant_product_links")
     suspend fun count(): Int
