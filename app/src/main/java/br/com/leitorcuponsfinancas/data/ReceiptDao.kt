@@ -122,6 +122,50 @@ interface ReceiptDao {
 
     @Query(
         """
+        DELETE FROM receipt_items
+        WHERE id = :itemId
+          AND receiptId = :receiptId
+          AND receiptId IN (
+              SELECT id FROM receipts
+              WHERE id = :receiptId
+                AND sourceType = 'MANUAL'
+          )
+        """,
+    )
+    suspend fun deleteManualItem(
+        itemId: Long,
+        receiptId: Long,
+    ): Int
+
+    @Query(
+        """
+        DELETE FROM receipts
+        WHERE id = :receiptId
+          AND sourceType = 'MANUAL'
+          AND NOT EXISTS (
+              SELECT 1 FROM receipt_items WHERE receiptId = :receiptId
+          )
+        """,
+    )
+    suspend fun deleteEmptyManualReceipt(receiptId: Long): Int
+
+    @Transaction
+    suspend fun deleteManualHistoryItem(
+        itemId: Long,
+        receiptId: Long,
+    ): Int {
+        val deleted = deleteManualItem(
+            itemId = itemId,
+            receiptId = receiptId,
+        )
+        if (deleted > 0) {
+            deleteEmptyManualReceipt(receiptId)
+        }
+        return deleted
+    }
+
+    @Query(
+        """
         UPDATE receipt_items
         SET productId = :productId
         WHERE productId IS NULL
