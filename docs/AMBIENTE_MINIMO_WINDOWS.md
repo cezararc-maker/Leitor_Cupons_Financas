@@ -5,7 +5,7 @@ Para o computador de desenvolvimento atual, o projeto prioriza um ambiente leve 
 ## Componentes
 
 - Microsoft OpenJDK 17;
-- Android CLI oficial do Google;
+- Android SDK Command-Line Tools;
 - Android SDK Platform 36;
 - Android Build Tools 35.0.0;
 - Android Platform Tools;
@@ -13,16 +13,30 @@ Para o computador de desenvolvimento atual, o projeto prioriza um ambiente leve 
 
 O Android Studio e o Android Emulator ficam opcionais para uma fase posterior.
 
-## Instalação
+## Instalação manual das Command-Line Tools
 
-Na raiz do projeto:
+Baixe no site oficial Android Developers o pacote **Command line tools only** para Windows.
+
+Estrutura esperada depois de extrair:
+
+`%LOCALAPPDATA%\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat`
+
+A pasta `latest` deve conter diretamente as pastas `bin` e `lib`, além dos arquivos do pacote.
+
+Depois execute na raiz do projeto:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
 .\scripts\instalar-ambiente-minimo.ps1
 ```
 
-O script usa `winget` para instalar o JDK e a Android CLI e configura o SDK em:
+O script usa o `sdkmanager.bat` para aceitar licenças e instalar:
+
+- `platform-tools`
+- `platforms;android-36`
+- `build-tools;35.0.0`
+
+O SDK fica em:
 
 `%LOCALAPPDATA%\Android\Sdk`
 
