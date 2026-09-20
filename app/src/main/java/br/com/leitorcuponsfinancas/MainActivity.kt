@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.leitorcuponsfinancas.ui.BackArrowButton
 import br.com.leitorcuponsfinancas.ui.HistoryScreen
 import br.com.leitorcuponsfinancas.ui.ManualEntryScreen
 import br.com.leitorcuponsfinancas.ui.ProfileScreen
@@ -90,12 +91,10 @@ private fun LeitorCuponsApp(
             )
 
             AppScreen.PRODUCTS -> Column(Modifier.fillMaxSize()) {
-                Button(
+                BackArrowButton(
                     onClick = { screen = AppScreen.HOME },
-                    modifier = Modifier.padding(12.dp),
-                ) {
-                    Text("Voltar")
-                }
+                    modifier = Modifier.padding(start = 8.dp, top = 4.dp),
+                )
 
                 ProductScreen(
                     products = products,
