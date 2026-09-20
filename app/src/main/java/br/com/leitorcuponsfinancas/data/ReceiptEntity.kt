@@ -21,6 +21,7 @@ data class ReceiptEntity(
     val number: String? = null,
     val series: String? = null,
     val issuedAt: String? = null,
+    val issuedDate: String? = null,
     val totalAmount: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
 )
