@@ -11,7 +11,7 @@ class ReceiptRepository(
     suspend fun save(
         accessKey: String,
         receipt: NfceReceipt,
-    ): ReceiptInsertResult {
+    ): ReceiptSaveResult {
         val products = productDao.listActiveOnce()
 
         val receiptEntity = ReceiptEntity(
@@ -43,7 +43,14 @@ class ReceiptRepository(
             )
         }
 
-        return receiptDao.insertReceiptWithItems(receiptEntity, items)
+        val insertResult = receiptDao.insertReceiptWithItems(receiptEntity, items)
+
+        return ReceiptSaveResult(
+            receiptId = insertResult.receiptId,
+            inserted = insertResult.inserted,
+            matchedItems = items.count { it.productId != null },
+            totalItems = items.size,
+        )
     }
 
     private fun findExactProductMatch(
@@ -61,3 +68,11 @@ class ReceiptRepository(
         }
     }
 }
+
+
+data class ReceiptSaveResult(
+    val receiptId: Long,
+    val inserted: Boolean,
+    val matchedItems: Int,
+    val totalItems: Int,
+)
