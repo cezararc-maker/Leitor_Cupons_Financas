@@ -9,7 +9,7 @@ Configuração informada para o computador de desenvolvimento:
 - 7,98 GB de RAM;
 - SSD Kingston SA400S37 480 GB;
 - VT-x/EPT suportados pelo processador;
-- virtualização atualmente desativada no firmware/BIOS.
+- virtualização Intel VT-x/EPT habilitada no firmware/BIOS e validada no Windows.
 
 ## Estratégia
 
@@ -61,3 +61,14 @@ VirtualizationFirmwareEnabled : True
 ```
 
 No Windows, o caminho preferencial para aceleração do Android Emulator é a Windows Hypervisor Platform (WHPX).
+
+## Fluxo automatizado
+
+1. Abra o PowerShell como Administrador e execute `scripts/habilitar-whpx.ps1`.
+2. Reinicie o Windows se o script solicitar.
+3. Em um PowerShell normal, execute `scripts/instalar-emulador-lite.ps1`.
+4. Depois execute `scripts/executar-app-emulador.ps1`.
+
+O perfil usa Android 14 / API 34 com imagem AOSP `x86_64`, 1536 MB de RAM, 2 CPUs, resolução 720 x 1280 e câmeras desativadas nesta fase.
+
+A câmera será habilitada posteriormente quando iniciarmos os testes reais de QR Code/NFC-e.
