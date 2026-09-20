@@ -12,6 +12,9 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE active = 1 ORDER BY normalizedName COLLATE NOCASE")
     fun observeActive(): Flow<List<ProductEntity>>
 
+    @Query("SELECT * FROM products WHERE active = 1 ORDER BY normalizedName COLLATE NOCASE")
+    suspend fun listActiveOnce(): List<ProductEntity>
+
     @Insert
     suspend fun insert(product: ProductEntity): Long
 
