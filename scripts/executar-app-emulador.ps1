@@ -13,6 +13,7 @@ $Adb = Join-Path $Sdk "platform-tools\adb.exe"
 $AvdName = "LeitorCupons_API34_Lite"
 $PackageName = "br.com.leitorcuponsfinancas"
 $Apk = Join-Path $ProjectRoot "app\build\outputs\apk\debug\app-debug.apk"
+$AvdConfig = Join-Path $env:USERPROFILE ".android\avd\$AvdName.avd\config.ini"
 
 $ReportDir = Join-Path $ProjectRoot "data\runtime\reports"
 $StdOutLog = Join-Path $ReportDir "emulator_stdout.log"
@@ -29,6 +30,26 @@ foreach ($Required in @($Emulator, $Adb, $Apk)) {
 }
 
 New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
+
+function Enable-PhysicalKeyboard {
+    if (-not (Test-Path $AvdConfig)) {
+        Write-Host "[INFO] config.ini do AVD ainda nao encontrado; teclado sera configurado quando o AVD existir." -ForegroundColor DarkYellow
+        return
+    }
+
+    $Lines = Get-Content $AvdConfig
+    $Pattern = "^hw\.keyboard="
+
+    if ($Lines -match $Pattern) {
+        $Lines = $Lines | ForEach-Object {
+            if ($_ -match $Pattern) { "hw.keyboard=yes" } else { $_ }
+        }
+    } else {
+        $Lines += "hw.keyboard=yes"
+    }
+
+    Set-Content -Path $AvdConfig -Value $Lines -Encoding ASCII
+}
 
 function Get-ProjectAvdProcesses {
     @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
@@ -123,6 +144,7 @@ function Show-EmulatorDiagnostics {
 Write-Host ""
 Write-Host "[1/4] Preparando emulador..." -ForegroundColor Yellow
 
+Enable-PhysicalKeyboard
 Restart-Adb
 
 if ($ResetAvd) {
