@@ -47,7 +47,7 @@ Start-Sleep -Seconds 2
 
 Write-Host ""
 Write-Host "[2/5] Iniciando em modo grafico seguro..." -ForegroundColor Yellow
-Write-Host "GPU: software | CPU: 1 | snapshots: desativados" -ForegroundColor DarkYellow
+Write-Host "GPU: SwiftShader | Vulkan: desativado | CPU: 1 | snapshots: desativados" -ForegroundColor DarkYellow
 
 $Arguments = @(
     "@$AvdName",
@@ -57,7 +57,8 @@ $Arguments = @(
     "-no-boot-anim",
     "-memory", "1536",
     "-cores", "1",
-    "-gpu", "software",
+    "-gpu", "swiftshader",
+    "-feature", "-Vulkan",
     "-verbose",
     "-show-kernel"
 )
