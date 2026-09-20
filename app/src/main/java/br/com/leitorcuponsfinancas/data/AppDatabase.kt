@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ReceiptItemEntity::class,
         MerchantProductLinkEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -142,6 +142,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE receipts ADD COLUMN sourceType TEXT NOT NULL DEFAULT 'NFCE'")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN createdById TEXT")
+                db.execSQL("ALTER TABLE receipts ADD COLUMN createdByName TEXT")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN correctedById TEXT")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN correctedByName TEXT")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -149,7 +159,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "leitor_cupons_financas.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { instance = it }
             }
