@@ -7,6 +7,7 @@ import br.com.leitorcuponsfinancas.data.AppDatabase
 import br.com.leitorcuponsfinancas.data.HistoryItemRow
 import br.com.leitorcuponsfinancas.data.ItemCorrectionResult
 import br.com.leitorcuponsfinancas.data.ManualDeleteResult
+import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductLinkResult
 import br.com.leitorcuponsfinancas.data.ProductRepository
@@ -133,6 +134,15 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),
     )
+
+    val learnedLinks: StateFlow<List<MerchantProductLinkEntity>> =
+        database.merchantProductLinkDao()
+            .observeAll()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList(),
+            )
 
     private val _linkState = MutableStateFlow(HistoryLinkState())
     val linkState: StateFlow<HistoryLinkState> = _linkState.asStateFlow()
