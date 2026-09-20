@@ -151,6 +151,25 @@ class ReceiptRepository(
         endDate: String,
     ) = receiptDao.observeHistory(startDate, endDate)
 
+    suspend fun deleteManualHistoryItem(item: HistoryItemRow): ManualDeleteResult {
+        if (item.sourceType != "MANUAL") {
+            return ManualDeleteResult.Error(
+                "Somente lançamentos manuais podem ser excluídos por esta opção.",
+            )
+        }
+
+        val deleted = receiptDao.deleteManualHistoryItem(
+            itemId = item.itemId,
+            receiptId = item.receiptId,
+        )
+
+        return if (deleted > 0) {
+            ManualDeleteResult.Success
+        } else {
+            ManualDeleteResult.Error("O lançamento manual não foi encontrado.")
+        }
+    }
+
     suspend fun saveItemCorrection(
         item: HistoryItemRow,
         description: String,
@@ -420,4 +439,10 @@ sealed interface ProductLinkResult {
 sealed interface ItemCorrectionResult {
     data class Success(val hasCorrection: Boolean) : ItemCorrectionResult
     data class Error(val message: String) : ItemCorrectionResult
+}
+
+
+sealed interface ManualDeleteResult {
+    data object Success : ManualDeleteResult
+    data class Error(val message: String) : ManualDeleteResult
 }
