@@ -11,6 +11,9 @@ import br.com.leitorcuponsfinancas.data.QrImageReader
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
 import br.com.leitorcuponsfinancas.domain.NfcePageParseResult
 import br.com.leitorcuponsfinancas.domain.NfceReceipt
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +37,13 @@ data class NfceImageState(
     val error: String? = null,
 )
 
+data class NfceDuplicateState(
+    val checking: Boolean = false,
+    val alreadyImported: Boolean = false,
+    val firstImportedAt: Long? = null,
+    val formattedFirstImportedAt: String? = null,
+)
+
 class NfceViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getInstance(application)
@@ -51,6 +61,31 @@ class NfceViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _imageState = MutableStateFlow(NfceImageState())
     val imageState: StateFlow<NfceImageState> = _imageState.asStateFlow()
+
+    private val _duplicateState = MutableStateFlow(NfceDuplicateState())
+    val duplicateState: StateFlow<NfceDuplicateState> = _duplicateState.asStateFlow()
+
+    fun checkDuplicate(accessKey: String) {
+        _duplicateState.value = NfceDuplicateState(checking = true)
+
+        viewModelScope.launch {
+            val existing = receiptRepository.findImportedReceipt(accessKey)
+
+            _duplicateState.value = if (existing != null) {
+                NfceDuplicateState(
+                    alreadyImported = true,
+                    firstImportedAt = existing.createdAt,
+                    formattedFirstImportedAt = formatImportedAt(existing.createdAt),
+                )
+            } else {
+                NfceDuplicateState()
+            }
+        }
+    }
+
+    fun clearDuplicateState() {
+        _duplicateState.value = NfceDuplicateState()
+    }
 
     fun readQrImage(uri: Uri) {
         if (_imageState.value.reading) return
@@ -122,19 +157,25 @@ class NfceViewModel(application: Application) : AndroidViewModel(application) {
                     receipt = receipt,
                 )
 
-                val prefix = if (result.inserted) {
-                    "NFC-e salva no histórico."
+                _saveState.value = if (result.inserted) {
+                    NfceSaveState(
+                        message = buildString {
+                            append("NFC-e salva no histórico.")
+                            append(" Itens: ${result.totalItems}.")
+                            append(" Vinculados automaticamente: ${result.matchedItems}.")
+                        },
+                    )
                 } else {
-                    "Esta NFC-e já estava salva no histórico."
+                    val formatted = formatImportedAt(result.firstImportedAt)
+                    _duplicateState.value = NfceDuplicateState(
+                        alreadyImported = true,
+                        firstImportedAt = result.firstImportedAt,
+                        formattedFirstImportedAt = formatted,
+                    )
+                    NfceSaveState(
+                        message = "Esta NFC-e já havia sido importada em $formatted. Nenhum novo lançamento foi criado.",
+                    )
                 }
-
-                _saveState.value = NfceSaveState(
-                    message = buildString {
-                        append(prefix)
-                        append(" Itens: ${result.totalItems}.")
-                        append(" Vinculados automaticamente: ${result.matchedItems}.")
-                    },
-                )
             } catch (error: Exception) {
                 _saveState.value = NfceSaveState(
                     error = "Não foi possível salvar a NFC-e: ${error.message ?: error::class.java.simpleName}",
@@ -147,4 +188,13 @@ class NfceViewModel(application: Application) : AndroidViewModel(application) {
         _lookupState.value = NfceLookupState()
         _saveState.value = NfceSaveState()
     }
+
+    private fun formatImportedAt(timestamp: Long): String =
+        DateTimeFormatter
+            .ofPattern("dd/MM/yyyy 'às' HH:mm:ss")
+            .format(
+                Instant
+                    .ofEpochMilli(timestamp)
+                    .atZone(ZoneId.systemDefault()),
+            )
 }
