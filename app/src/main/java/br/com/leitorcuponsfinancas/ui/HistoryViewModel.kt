@@ -9,7 +9,6 @@ import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductLinkResult
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
-import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -101,7 +100,7 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         _searchQuery,
         _searchMode,
     ) { currentItems, query, mode ->
-        filterHistoryItems(
+        HistorySearchFilter.filter(
             items = currentItems,
             query = query,
             mode = mode,
@@ -185,30 +184,6 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
 
     fun clearLinkMessage() {
         _linkState.value = HistoryLinkState()
-    }
-
-    private fun filterHistoryItems(
-        items: List<HistoryItemRow>,
-        query: String,
-        mode: HistorySearchMode,
-    ): List<HistoryItemRow> {
-        val normalizedQuery = ProductNormalizer.searchKey(query)
-        if (normalizedQuery.isBlank()) return items
-
-        return items.filter { item ->
-            val candidates = listOfNotNull(
-                item.fiscalDescription,
-                item.productName,
-            ).map(ProductNormalizer::searchKey)
-
-            when (mode) {
-                HistorySearchMode.STARTS_WITH ->
-                    candidates.any { candidate -> candidate.startsWith(normalizedQuery) }
-
-                HistorySearchMode.CONTAINS ->
-                    candidates.any { candidate -> candidate.contains(normalizedQuery) }
-            }
-        }
     }
 
     private fun buildRange(
