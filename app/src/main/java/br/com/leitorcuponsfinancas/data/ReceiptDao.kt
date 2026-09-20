@@ -64,7 +64,61 @@ interface ReceiptDao {
     suspend fun updateItemProduct(
         itemId: Long,
         productId: Long,
+    ): Int
+
+    @Query(
+        """
+        UPDATE receipt_items
+        SET productId = :productId
+        WHERE productId IS NULL
+          AND itemCode = :itemCode
+          AND receiptId IN (
+              SELECT id
+              FROM receipts
+              WHERE REPLACE(
+                  REPLACE(
+                      REPLACE(COALESCE(merchantCnpj, ''), '.', ''),
+                      '/',
+                      ''
+                  ),
+                  '-',
+                  ''
+              ) = :merchantCnpjDigits
+          )
+        """,
     )
+    suspend fun updateEquivalentItemsByCode(
+        merchantCnpjDigits: String,
+        itemCode: String,
+        productId: Long,
+    ): Int
+
+    @Query(
+        """
+        UPDATE receipt_items
+        SET productId = :productId
+        WHERE productId IS NULL
+          AND UPPER(TRIM(fiscalDescription)) = UPPER(TRIM(:fiscalDescription))
+          AND receiptId IN (
+              SELECT id
+              FROM receipts
+              WHERE REPLACE(
+                  REPLACE(
+                      REPLACE(COALESCE(merchantCnpj, ''), '.', ''),
+                      '/',
+                      ''
+                  ),
+                  '-',
+                  ''
+              ) = :merchantCnpjDigits
+          )
+        """,
+    )
+    suspend fun updateEquivalentItemsByDescription(
+        merchantCnpjDigits: String,
+        fiscalDescription: String,
+        productId: Long,
+    ): Int
 
     @Transaction
     suspend fun insertReceiptWithItems(
