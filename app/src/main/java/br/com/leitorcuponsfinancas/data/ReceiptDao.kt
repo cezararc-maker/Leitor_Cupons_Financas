@@ -46,6 +46,12 @@ interface ReceiptDao {
             ri.unitPrice AS unitPrice,
             ri.totalAmount AS totalAmount,
             ri.productId AS productId,
+            ri.correctedDescription AS correctedDescription,
+            ri.correctedQuantity AS correctedQuantity,
+            ri.correctedUnit AS correctedUnit,
+            ri.correctedUnitPrice AS correctedUnitPrice,
+            ri.correctedTotalAmount AS correctedTotalAmount,
+            ri.correctedAt AS correctedAt,
             p.normalizedName AS productName,
             p.sector AS sector,
             p.category AS category,
@@ -68,6 +74,42 @@ interface ReceiptDao {
         itemId: Long,
         productId: Long,
     ): Int
+
+    @Query(
+        """
+        UPDATE receipt_items
+        SET correctedDescription = :correctedDescription,
+            correctedQuantity = :correctedQuantity,
+            correctedUnit = :correctedUnit,
+            correctedUnitPrice = :correctedUnitPrice,
+            correctedTotalAmount = :correctedTotalAmount,
+            correctedAt = :correctedAt
+        WHERE id = :itemId
+        """,
+    )
+    suspend fun updateItemCorrection(
+        itemId: Long,
+        correctedDescription: String?,
+        correctedQuantity: String?,
+        correctedUnit: String?,
+        correctedUnitPrice: String?,
+        correctedTotalAmount: String?,
+        correctedAt: Long?,
+    ): Int
+
+    @Query(
+        """
+        UPDATE receipt_items
+        SET correctedDescription = NULL,
+            correctedQuantity = NULL,
+            correctedUnit = NULL,
+            correctedUnitPrice = NULL,
+            correctedTotalAmount = NULL,
+            correctedAt = NULL
+        WHERE id = :itemId
+        """,
+    )
+    suspend fun clearItemCorrection(itemId: Long): Int
 
     @Query(
         """
