@@ -29,15 +29,26 @@ Write-Host "[1/4] Verificando emulador..." -ForegroundColor Yellow
 $Devices = (& $Adb devices | Out-String)
 
 if ($Devices -notmatch "emulator-\d+\s+device") {
-    Write-Host "Iniciando $AvdName..."
-    Start-Process -FilePath $Emulator -ArgumentList @(
-        "@$AvdName",
-        "-gpu", "auto",
-        "-no-audio",
-        "-no-boot-anim",
-        "-memory", "1536",
-        "-cores", "2"
-    )
+    $RunningAvd = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            ($_.Name -eq "emulator.exe" -or $_.Name -like "qemu-system-*.exe") -and
+            $_.CommandLine -match [regex]::Escape($AvdName)
+        } |
+        Select-Object -First 1
+
+    if ($RunningAvd) {
+        Write-Host "[INFO] O AVD $AvdName ja esta em execucao; aguardando conexao ADB..." -ForegroundColor DarkYellow
+    } else {
+        Write-Host "Iniciando $AvdName..."
+        Start-Process -FilePath $Emulator -ArgumentList @(
+            "@$AvdName",
+            "-gpu", "auto",
+            "-no-audio",
+            "-no-boot-anim",
+            "-memory", "1536",
+            "-cores", "2"
+        )
+    }
 }
 
 Write-Host ""
