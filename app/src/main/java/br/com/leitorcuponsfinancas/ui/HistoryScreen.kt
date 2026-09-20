@@ -600,7 +600,7 @@ private fun HistoryItemCard(
             Text(
                 text = listOfNotNull(
                     item.displayQuantity?.let { "Qtd.: ${formatHistoryNumber(it)}" },
-                    item.displayUnit?.let { "UN: $it" },
+                    item.displayUnit?.let { "Unidade: $it" },
                     item.displayUnitPrice?.let { "Unit.: R$ ${formatHistoryMoney(it)}" },
                     item.displayTotalAmount?.let { "Total: R$ ${formatHistoryMoney(it)}" },
                 ).joinToString(" • "),
