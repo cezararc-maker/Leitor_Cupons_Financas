@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -79,28 +80,65 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
     val periodType: StateFlow<HistoryPeriodType> = _periodType.asStateFlow()
 
     private val _anchorDate = MutableStateFlow(LocalDate.now())
+    private val _selectedDay = MutableStateFlow<LocalDate?>(null)
 
     val dateRange: StateFlow<HistoryDateRange> = combine(
         _periodType,
         _anchorDate,
-    ) { type, anchor ->
-        buildRange(type, anchor)
+        _selectedDay,
+    ) { type, anchor, selectedDay ->
+        buildSelectedRange(type, anchor, selectedDay)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = buildRange(HistoryPeriodType.MONTHLY, LocalDate.now()),
+        initialValue = buildSelectedRange(
+            HistoryPeriodType.MONTHLY,
+            LocalDate.now(),
+            null,
+        ),
     )
 
     val items: StateFlow<List<HistoryItemRow>> = combine(
         _periodType,
         _anchorDate,
-    ) { type, anchor ->
-        buildRange(type, anchor)
+        _selectedDay,
+    ) { type, anchor, selectedDay ->
+        buildSelectedRange(type, anchor, selectedDay)
     }.flatMapLatest { range ->
         receiptRepository.observeHistory(
             startDate = range.start.toString(),
             endDate = range.end.toString(),
         )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = emptyList(),
+    )
+
+    val chartBars: StateFlow<List<HistoryChartBar>> = combine(
+        _periodType,
+        _anchorDate,
+        _selectedDay,
+    ) { type, anchor, selectedDay ->
+        Triple(type, anchor, selectedDay)
+    }.flatMapLatest { state ->
+        val type = state.first
+        val anchor = state.second
+        val selectedDay = state.third
+        val window = HistoryChartBuilder.buildWindow(type, anchor)
+
+        receiptRepository.observeHistory(
+            startDate = window.start.toString(),
+            endDate = window.end.toString(),
+        ).map { rows ->
+            HistoryChartBuilder.buildBars(
+                type = type,
+                anchor = anchor,
+                selectedDay = selectedDay,
+                window = window,
+                rows = rows,
+            )
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -155,6 +193,16 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
 
     fun selectPeriod(type: HistoryPeriodType) {
         _periodType.value = type
+        _selectedDay.value = null
+    }
+
+    fun selectChartBar(bar: HistoryChartBar) {
+        _anchorDate.value = bar.start
+        _selectedDay.value = if (_periodType.value == HistoryPeriodType.WEEKLY) {
+            bar.start
+        } else {
+            null
+        }
     }
 
     fun updateSearchQuery(value: String) {
@@ -175,6 +223,13 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
             _periodType.value,
             -1,
         )
+        _selectedDay.value = _selectedDay.value?.let { selected ->
+            if (_periodType.value == HistoryPeriodType.WEEKLY) {
+                selected.minusWeeks(1)
+            } else {
+                null
+            }
+        }
     }
 
     fun nextPeriod() {
@@ -183,6 +238,13 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
             _periodType.value,
             1,
         )
+        _selectedDay.value = _selectedDay.value?.let { selected ->
+            if (_periodType.value == HistoryPeriodType.WEEKLY) {
+                selected.plusWeeks(1)
+            } else {
+                null
+            }
+        }
     }
 
     fun saveItemCorrection(
@@ -407,6 +469,25 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         _linkState.value = HistoryLinkState()
     }
 
+    private fun buildSelectedRange(
+        type: HistoryPeriodType,
+        anchor: LocalDate,
+        selectedDay: LocalDate?,
+    ): HistoryDateRange {
+        if (type == HistoryPeriodType.WEEKLY && selectedDay != null) {
+            val week = buildRange(type, anchor)
+            if (!selectedDay.isBefore(week.start) && !selectedDay.isAfter(week.end)) {
+                val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                return HistoryDateRange(
+                    start = selectedDay,
+                    end = selectedDay,
+                    label = selectedDay.format(formatter),
+                )
+            }
+        }
+
+        return buildRange(type, anchor)
+    }
     private fun buildRange(
         type: HistoryPeriodType,
         anchor: LocalDate,
