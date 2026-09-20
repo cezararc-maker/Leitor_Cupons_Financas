@@ -638,6 +638,7 @@ private fun EditHistoryItemDialog(
     item: HistoryItemRow,
     saving: Boolean,
     onDismiss: () -> Unit,
+    onEditLink: () -> Unit,
     onRestoreOriginal: () -> Unit,
     onSave: (String, String, String, String, String) -> Unit,
 ) {
@@ -659,15 +660,20 @@ private fun EditHistoryItemDialog(
 
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
-        title = { Text("Editar item importado") },
+        title = { Text("Editar item") },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
                     Text(
-                        text = if (item.sourceType == "MANUAL") "A edição ficará registrada com usuário e data." else "Os dados originais da NFC-e serão preservados. A correção altera apenas a visualização e os relatórios do aplicativo.",
+                        text = if (item.sourceType == "MANUAL") {
+                            "A edição ficará registrada com usuário e data."
+                        } else {
+                            "Os dados originais da NFC-e serão preservados. A correção altera apenas a visualização e os relatórios do aplicativo."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+
                 if (item.sourceType != "MANUAL") {
                     item {
                         Text(
@@ -676,30 +682,98 @@ private fun EditHistoryItemDialog(
                         )
                     }
                 }
-                item { OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Descrição") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
-                item { OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("Quantidade") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
-                item { OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("Unidade") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
-                item { OutlinedTextField(value = unitPrice, onValueChange = { unitPrice = it }, label = { Text("Valor unitário") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
-                item { OutlinedTextField(value = totalAmount, onValueChange = { totalAmount = it }, label = { Text("Valor total") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
+
+                item {
+                    OutlinedButton(
+                        enabled = !saving,
+                        onClick = onEditLink,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            if (item.productId == null) {
+                                "Vincular a produto mestre"
+                            } else {
+                                "Editar vinculação: ${item.productName ?: "Produto cadastrado"}"
+                            },
+                        )
+                    }
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Descrição") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = quantity,
+                        onValueChange = { quantity = it },
+                        label = { Text("Quantidade") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = unit,
+                        onValueChange = { unit = it },
+                        label = { Text("Unidade") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = unitPrice,
+                        onValueChange = { unitPrice = it },
+                        label = { Text("Valor unitário") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = totalAmount,
+                        onValueChange = { totalAmount = it },
+                        label = { Text("Valor total") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
                 enabled = description.isNotBlank() && !saving,
                 onClick = { onSave(description, quantity, unit, unitPrice, totalAmount) },
-            ) { Text(if (saving) "Salvando..." else "Salvar correção") }
+            ) {
+                Text(if (saving) "Salvando..." else "Salvar correção")
+            }
         },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (item.manuallyEdited) {
-                    TextButton(enabled = !saving, onClick = onRestoreOriginal) { Text("Restaurar original") }
+                    TextButton(
+                        enabled = !saving,
+                        onClick = onRestoreOriginal,
+                    ) {
+                        Text("Restaurar original")
+                    }
                 }
-                TextButton(enabled = !saving, onClick = onDismiss) { Text("Cancelar") }
+                TextButton(
+                    enabled = !saving,
+                    onClick = onDismiss,
+                ) {
+                    Text("Cancelar")
+                }
             }
         },
     )
 }
-
 @Composable
 private fun UnrecognizedReviewDialog(
     item: HistoryItemRow,
