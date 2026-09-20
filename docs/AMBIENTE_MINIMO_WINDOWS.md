@@ -47,3 +47,8 @@ Esse fluxo permite continuar usando VS Code, PowerShell e GitHub, evitando mante
 ## Emulador
 
 O emulador continua opcional. Antes de usá-lo, a virtualização Intel VT-x deve ser habilitada no BIOS/UEFI. Consulte `docs/EMULATOR_LITE.md`.
+
+
+## Gradle Wrapper local
+
+Nesta fase, `gradlew`, `gradlew.bat` e `gradle/wrapper` são gerados automaticamente por `scripts/bootstrap-windows.ps1` e permanecem locais. Eles são ignorados pelo Git para evitar arquivos gerados aparecendo como alterações do projeto.
