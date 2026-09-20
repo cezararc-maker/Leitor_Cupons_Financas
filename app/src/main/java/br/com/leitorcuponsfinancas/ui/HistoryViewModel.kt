@@ -10,6 +10,7 @@ import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductLinkResult
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
+import br.com.leitorcuponsfinancas.data.UserProfileStore
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -57,6 +58,7 @@ data class HistoryEditState(
 class HistoryViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getInstance(application)
+    private val userProfileStore = UserProfileStore.getInstance(application)
     private val receiptRepository = ReceiptRepository(
         receiptDao = database.receiptDao(),
         productDao = database.productDao(),
@@ -183,6 +185,7 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                     unit = unit,
                     unitPrice = unitPrice,
                     totalAmount = totalAmount,
+                    actor = userProfileStore.profile.value,
                 )
             ) {
                 is ItemCorrectionResult.Success -> {
