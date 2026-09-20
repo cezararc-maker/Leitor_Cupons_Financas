@@ -88,9 +88,7 @@ fun ManualEntryScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Button(onClick = onBack) {
-                Text("Voltar")
-            }
+            BackArrowButton(onClick = onBack)
         }
 
         item {
