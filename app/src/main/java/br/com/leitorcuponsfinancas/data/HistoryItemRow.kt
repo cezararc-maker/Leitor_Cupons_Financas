@@ -20,4 +20,28 @@ data class HistoryItemRow(
     val sector: String?,
     val category: String?,
     val subcategory: String?,
-)
+    val correctedDescription: String?,
+    val correctedQuantity: String?,
+    val correctedUnit: String?,
+    val correctedUnitPrice: String?,
+    val correctedTotalAmount: String?,
+    val correctedAt: Long?,
+) {
+    val displayDescription: String
+        get() = correctedDescription ?: fiscalDescription
+
+    val displayQuantity: String?
+        get() = correctedQuantity ?: quantity
+
+    val displayUnit: String?
+        get() = correctedUnit ?: unit
+
+    val displayUnitPrice: String?
+        get() = correctedUnitPrice ?: unitPrice
+
+    val displayTotalAmount: String?
+        get() = correctedTotalAmount ?: totalAmount
+
+    val manuallyEdited: Boolean
+        get() = correctedAt != null
+}
