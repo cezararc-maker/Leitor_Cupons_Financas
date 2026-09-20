@@ -1,6 +1,8 @@
 package br.com.leitorcuponsfinancas.ui
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -342,6 +344,24 @@ fun NfceScreen(
                 title = "Consulta pública não concluída",
                 message = error,
             )
+
+            consultationUrl?.let { url ->
+                OutlinedButton(
+                    onClick = {
+                        val browserUrl = url
+                            .replace("http://", "https://", ignoreCase = true)
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse(browserUrl),
+                            ),
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Abrir consulta no navegador")
+                }
+            }
         }
 
         lookupState.receipt?.let { receipt ->
