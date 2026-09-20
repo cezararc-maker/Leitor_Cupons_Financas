@@ -123,8 +123,13 @@ object NfcePublicClient {
         location: String,
     ): String? {
         val current = runCatching { URI(currentUrl) }.getOrNull() ?: return null
+        val safeLocation = location
+            .trim()
+            .replace("|", "%7C")
+            .replace(" ", "%20")
+
         return runCatching {
-            current.resolve(location.trim()).toString()
+            current.resolve(safeLocation).toString()
         }.getOrNull()
     }
 }
