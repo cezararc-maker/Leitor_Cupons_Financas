@@ -62,7 +62,11 @@ object NfcePublicClient {
             else -> trimmed
         }
 
-        val uri = runCatching { URI(upgraded) }.getOrNull() ?: return null
+        val encodedUrl = upgraded
+            .replace("|", "%7C")
+            .replace(" ", "%20")
+
+        val uri = runCatching { URI(encodedUrl) }.getOrNull() ?: return null
         if (!uri.scheme.equals("https", ignoreCase = true)) return null
 
         val host = uri.host?.lowercase() ?: return null
@@ -71,6 +75,6 @@ object NfcePublicClient {
         val path = uri.path.orEmpty()
         if (!path.startsWith("/nfce/qrcode", ignoreCase = true)) return null
 
-        return upgraded
+        return encodedUrl
     }
 }
