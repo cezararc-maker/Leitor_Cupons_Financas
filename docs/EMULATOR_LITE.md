@@ -83,3 +83,19 @@ Se o emulador abrir mas não aparecer no ADB ou não concluir o boot, execute:
 ```
 
 Esse modo encerra processos residuais, reinicia o ADB, executa um cold boot sem snapshots e usa `-wipe-data` para restaurar somente os dados do dispositivo virtual. Os logs de inicialização ficam em `data/runtime/reports/emulator_stdout.log` e `data/runtime/reports/emulator_stderr.log`.
+
+
+## Compatibilidade com PC legado
+
+O computador de referência do projeto possui Intel Core i5-3470 e 8 GB de RAM, abaixo dos requisitos mínimos atuais publicados pelo Google para Windows com Android Studio + Emulator.
+
+Se o Android Emulator 37.1.11 encerrar durante o boot mesmo com SwiftShader e Vulkan desativado, use o teste controlado com Android Emulator 36.3.10 Stable:
+
+```powershell
+.\scripts\instalar-emulador-compat-36.3.10.ps1
+.\scripts\diagnosticar-boot-emulador.ps1
+```
+
+O script baixa o pacote oficial do Android Emulator Archive, valida o SHA-256, preserva a versão 37.1.11 em `%LocalAppData%\Android\Sdk\emulator-37.1.11-backup` e instala temporariamente a 36.3.10 no diretório padrão do SDK.
+
+Não execute novamente o instalador do Emulator antes do teste de compatibilidade, pois o SDK Manager pode atualizar o componente para a versão mais recente.
