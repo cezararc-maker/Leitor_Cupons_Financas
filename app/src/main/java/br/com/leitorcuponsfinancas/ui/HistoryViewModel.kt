@@ -6,11 +6,13 @@ import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
 import br.com.leitorcuponsfinancas.data.HistoryItemRow
 import br.com.leitorcuponsfinancas.data.ItemCorrectionResult
+import br.com.leitorcuponsfinancas.data.ManualDeleteResult
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductLinkResult
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
 import br.com.leitorcuponsfinancas.data.UserProfileStore
+import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -51,6 +53,12 @@ data class HistoryLinkState(
 
 data class HistoryEditState(
     val saving: Boolean = false,
+    val message: String? = null,
+    val error: String? = null,
+)
+
+data class HistoryDeleteState(
+    val deleting: Boolean = false,
     val message: String? = null,
     val error: String? = null,
 )
@@ -131,6 +139,9 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
 
     private val _editState = MutableStateFlow(HistoryEditState())
     val editState: StateFlow<HistoryEditState> = _editState.asStateFlow()
+
+    private val _deleteState = MutableStateFlow(HistoryDeleteState())
+    val deleteState: StateFlow<HistoryDeleteState> = _deleteState.asStateFlow()
 
     fun selectPeriod(type: HistoryPeriodType) {
         _periodType.value = type
@@ -227,6 +238,99 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
 
     fun clearEditMessage() {
         _editState.value = HistoryEditState()
+    }
+
+    fun createProductAndLink(
+        item: HistoryItemRow,
+        name: String,
+        sector: String,
+        category: String,
+        subcategory: String,
+        unit: String,
+    ) {
+        val cleanName = ProductNormalizer.displayName(name)
+        val cleanSector = ProductNormalizer.displayName(sector)
+        val cleanCategory = ProductNormalizer.displayName(category)
+
+        if (cleanName.isBlank() || cleanSector.isBlank() || cleanCategory.isBlank()) {
+            _linkState.value = HistoryLinkState(
+                error = "Informe nome, setor e categoria para criar o produto mestre.",
+            )
+            return
+        }
+
+        if (_linkState.value.saving) return
+        _linkState.value = HistoryLinkState(saving = true)
+
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val product = ProductEntity(
+                fiscalDescription = item.fiscalDescription,
+                normalizedName = cleanName,
+                sector = cleanSector,
+                category = cleanCategory,
+                subcategory = ProductNormalizer.displayName(subcategory).ifBlank { null },
+                unit = unit.trim().uppercase().ifBlank { item.displayUnit ?: "UN" },
+                active = true,
+                createdAt = now,
+                updatedAt = now,
+            )
+
+            try {
+                val newId = productRepository.save(product)
+                val created = product.copy(id = newId)
+
+                when (
+                    val result = receiptRepository.linkHistoryItem(
+                        item = item,
+                        productId = newId,
+                    )
+                ) {
+                    is ProductLinkResult.Success -> {
+                        _linkState.value = HistoryLinkState(
+                            message = buildString {
+                                append("Produto mestre \"${created.normalizedName}\" criado e vinculado.")
+                                append(" Itens atualizados: ${result.updatedItems}.")
+                            },
+                        )
+                    }
+
+                    is ProductLinkResult.Error -> {
+                        _linkState.value = HistoryLinkState(error = result.message)
+                    }
+                }
+            } catch (error: Exception) {
+                _linkState.value = HistoryLinkState(
+                    error = error.message ?: "Não foi possível criar o produto mestre.",
+                )
+            }
+        }
+    }
+
+    fun deleteManualItem(item: HistoryItemRow) {
+        if (_deleteState.value.deleting) return
+
+        _deleteState.value = HistoryDeleteState(deleting = true)
+
+        viewModelScope.launch {
+            when (val result = receiptRepository.deleteManualHistoryItem(item)) {
+                ManualDeleteResult.Success -> {
+                    _deleteState.value = HistoryDeleteState(
+                        message = "Lançamento manual excluído do histórico.",
+                    )
+                }
+
+                is ManualDeleteResult.Error -> {
+                    _deleteState.value = HistoryDeleteState(
+                        error = result.message,
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearDeleteMessage() {
+        _deleteState.value = HistoryDeleteState()
     }
 
     fun linkItem(
