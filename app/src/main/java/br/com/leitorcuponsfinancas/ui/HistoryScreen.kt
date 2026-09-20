@@ -558,36 +558,38 @@ private fun HistoryItemCard(
 ) {
     var menuExpanded by remember(item.itemId) { mutableStateOf(false) }
 
+    val sourceLabel = if (item.sourceType == "MANUAL") "Manual" else "NFC-e"
+    val header = listOfNotNull(
+        item.issuedAt?.take(10),
+        item.merchantName,
+        sourceLabel,
+    ).joinToString(" • ")
+
     Card(Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            val sourceLabel = if (item.sourceType == "MANUAL") "Manual" else "NFC-e"
-            val header = listOfNotNull(
-                item.issuedAt?.take(10),
-                item.merchantName,
-                sourceLabel,
-            ).joinToString(" • ")
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
                     if (header.isNotBlank()) {
                         Text(
                             text = header,
                             style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                         )
                     }
 
                     Text(
                         text = item.displayDescription,
                         style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
 
@@ -639,11 +641,42 @@ private fun HistoryItemCard(
                 }
             }
 
-            item.createdByName?.let { author ->
-                Text(
-                    text = "Incluído por: $author",
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = listOfNotNull(
+                            item.displayQuantity?.let { "Qtd. ${formatHistoryNumber(it)}" },
+                            item.displayUnit?.let { it },
+                        ).joinToString(" • "),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+
+                    item.displayUnitPrice?.let { price ->
+                        Text(
+                            text = buildString {
+                                append("R$ ${formatHistoryMoney(price)}")
+                                item.displayUnit?.let { append(" / $it") }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                item.displayTotalAmount?.let { total ->
+                    Text(
+                        text = "R$ ${formatHistoryMoney(total)}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
 
             if (item.manuallyEdited) {
@@ -659,38 +692,43 @@ private fun HistoryItemCard(
                 )
             }
 
-            item.itemCode?.let {
+            val auxiliary = buildList {
+                item.itemCode?.let { add("Cód. $it") }
+                item.createdByName?.let { add("Incluído por $it") }
+            }.joinToString(" • ")
+
+            if (auxiliary.isNotBlank()) {
                 Text(
-                    text = "Código no estabelecimento: $it",
+                    text = auxiliary,
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.68f),
                 )
             }
 
-            Text(
-                text = listOfNotNull(
-                    item.displayQuantity?.let { "Qtd.: ${formatHistoryNumber(it)}" },
-                    item.displayUnit?.let { "Unidade: $it" },
-                    item.displayUnitPrice?.let { "Unit.: R$ ${formatHistoryMoney(it)}" },
-                    item.displayTotalAmount?.let { "Total: R$ ${formatHistoryMoney(it)}" },
-                ).joinToString(" • "),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
             if (item.productId != null) {
-                Text(
-                    text = buildString {
-                        append("Produto: ")
-                        append(item.productName ?: "Produto cadastrado")
-                        item.sector?.let { append(" • $it") }
-                        item.category?.let { append(" • $it") }
-                        item.subcategory?.let { append(" • $it") }
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+                ) {
+                    Text(
+                        text = buildString {
+                            append("Produto mestre: ")
+                            append(item.productName ?: "Produto cadastrado")
+                            item.sector?.let { append(" • $it") }
+                            item.category?.let { append(" • $it") }
+                            item.subcategory?.let { append(" • $it") }
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    )
+                }
             } else {
                 Text(
-                    text = "Produto ainda não reconhecido.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Sem vínculo com produto mestre",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedButton(
                     onClick = onEditLink,
@@ -1326,3 +1364,32 @@ private fun formatAuditDateTime(timestamp: Long): String =
                 .ofEpochMilli(timestamp)
                 .atZone(ZoneId.systemDefault()),
         )
+
+private enum class HistorySortMode(val label: String) {
+    DEFAULT("Mais recentes"),
+    NAME_ASC("A–Z"),
+    NAME_DESC("Z–A"),
+    VALUE_ASC("Menor valor"),
+    VALUE_DESC("Maior valor"),
+}
+
+private fun sortHistoryItems(
+    items: List<HistoryItemRow>,
+    mode: HistorySortMode,
+): List<HistoryItemRow> = when (mode) {
+    HistorySortMode.DEFAULT -> items
+    HistorySortMode.NAME_ASC -> items.sortedBy {
+        ProductNormalizer.searchKey(it.displayDescription)
+    }
+    HistorySortMode.NAME_DESC -> items.sortedByDescending {
+        ProductNormalizer.searchKey(it.displayDescription)
+    }
+    HistorySortMode.VALUE_ASC -> items.sortedWith(
+        compareBy<HistoryItemRow> { it.displayTotalAmount?.toBigDecimalOrNull() == null }
+            .thenBy { it.displayTotalAmount?.toBigDecimalOrNull() ?: BigDecimal.ZERO },
+    )
+    HistorySortMode.VALUE_DESC -> items.sortedWith(
+        compareBy<HistoryItemRow> { it.displayTotalAmount?.toBigDecimalOrNull() == null }
+            .thenByDescending { it.displayTotalAmount?.toBigDecimalOrNull() ?: BigDecimal.ZERO },
+    )
+}
