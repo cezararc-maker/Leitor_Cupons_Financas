@@ -168,8 +168,7 @@ interface ReceiptDao {
         """
         UPDATE receipt_items
         SET productId = :productId
-        WHERE productId IS NULL
-          AND itemCode = :itemCode
+        WHERE itemCode = :itemCode
           AND receiptId IN (
               SELECT id
               FROM receipts
@@ -195,8 +194,7 @@ interface ReceiptDao {
         """
         UPDATE receipt_items
         SET productId = :productId
-        WHERE productId IS NULL
-          AND UPPER(TRIM(fiscalDescription)) = UPPER(TRIM(:fiscalDescription))
+        WHERE UPPER(TRIM(fiscalDescription)) = UPPER(TRIM(:fiscalDescription))
           AND receiptId IN (
               SELECT id
               FROM receipts
