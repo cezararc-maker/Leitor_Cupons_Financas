@@ -2,7 +2,9 @@ package br.com.leitorcuponsfinancas.domain
 
 import java.math.BigDecimal
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import org.jsoup.parser.Parser
 
 data class NfceReceiptItem(
     val description: String,
@@ -46,8 +48,23 @@ object NfcePageParser {
             return NfcePageParseResult.Error("A SEFAZ-MS retornou uma página vazia.")
         }
 
-        val document = Jsoup.parse(html, sourceUrl)
-        val bodyText = cleanText(document.text())
+        val originalDocument = Jsoup.parse(html, sourceUrl)
+        val embeddedDanfeHtml = extractEmbeddedDanfeHtml(originalDocument)
+        val embeddedDocument = embeddedDanfeHtml
+            ?.let { Jsoup.parse(it, sourceUrl) }
+
+        val document = when {
+            originalDocument.selectFirst("#tabResult") != null -> originalDocument
+            embeddedDocument?.selectFirst("#tabResult") != null -> embeddedDocument
+            else -> originalDocument
+        }
+
+        val bodyText = cleanText(
+            listOfNotNull(
+                originalDocument.text(),
+                embeddedDocument?.text(),
+            ).joinToString(" "),
+        )
 
         if (bodyText.contains("Código da Imagem", ignoreCase = true) ||
             bodyText.contains("captcha", ignoreCase = true)
@@ -65,12 +82,18 @@ object NfcePageParser {
 
         val items = document.select("#tabResult tr").mapNotNull(::parseItem)
 
-        val merchantName = document.selectFirst("#u20")?.text()?.let(::cleanText)
-            ?.takeIf { it.isNotBlank() }
-            ?: document.selectFirst(".txtCenter .txtTopo")?.text()?.let(::cleanText)
-                ?.takeIf { it.isNotBlank() }
+        val merchantName = firstText(
+            document,
+            originalDocument,
+            selectors = listOf("#u20", ".txtCenter .txtTopo"),
+        )
 
-        val centerTexts = document.select(".txtCenter .text").map { cleanText(it.text()) }
+        val centerTexts = listOf(document, originalDocument)
+            .distinct()
+            .flatMap { candidate ->
+                candidate.select(".txtCenter .text").map { cleanText(it.text()) }
+            }
+            .distinct()
         val merchantCnpj = centerTexts.firstNotNullOfOrNull { text ->
             cnpjRegex.find(text)?.groupValues?.getOrNull(1)
         } ?: cnpjRegex.find(bodyText)?.groupValues?.getOrNull(1)
@@ -88,6 +111,8 @@ object NfcePageParser {
         val issuedAt = noteInfo?.groupValues?.getOrNull(3)
 
         val totalAmount = findPayableTotal(document.body(), bodyText)
+            ?: embeddedDocument?.body()?.let { findPayableTotal(it, bodyText) }
+            ?: findPayableTotal(originalDocument.body(), bodyText)
 
         if (merchantName == null && items.isEmpty()) {
             val title = cleanText(document.title()).takeIf { it.isNotBlank() }
@@ -125,6 +150,150 @@ object NfcePageParser {
         )
     }
 
+    private fun extractEmbeddedDanfeHtml(document: Document): String? {
+        document.select("script").forEach { script ->
+            val scriptText = script.data().ifBlank { script.html() }
+            if (
+                !scriptText.contains("tabResult", ignoreCase = true) &&
+                !scriptText.contains("DanfeNFCe", ignoreCase = true)
+            ) {
+                return@forEach
+            }
+
+            extractJavascriptStrings(scriptText)
+                .asSequence()
+                .sortedByDescending { it.length }
+                .map(::decodeJavascriptString)
+                .map { Parser.unescapeEntities(it, false) }
+                .firstOrNull { candidate ->
+                    candidate.contains("tabResult", ignoreCase = true) &&
+                        candidate.contains("<table", ignoreCase = true)
+                }
+                ?.let { return it }
+        }
+
+        return null
+    }
+
+    private fun extractJavascriptStrings(script: String): List<String> {
+        val values = mutableListOf<String>()
+        var index = 0
+
+        while (index < script.length) {
+            val quote = script[index]
+            if (quote != '\'' && quote != '"') {
+                index++
+                continue
+            }
+
+            val value = StringBuilder()
+            var cursor = index + 1
+            var escaped = false
+
+            while (cursor < script.length) {
+                val char = script[cursor]
+
+                if (escaped) {
+                    value.append('\\')
+                    value.append(char)
+                    escaped = false
+                    cursor++
+                    continue
+                }
+
+                if (char == '\\') {
+                    escaped = true
+                    cursor++
+                    continue
+                }
+
+                if (char == quote) {
+                    values += value.toString()
+                    index = cursor + 1
+                    break
+                }
+
+                value.append(char)
+                cursor++
+            }
+
+            if (cursor >= script.length) {
+                index++
+            }
+        }
+
+        return values
+    }
+
+    private fun decodeJavascriptString(value: String): String {
+        val result = StringBuilder()
+        var index = 0
+
+        while (index < value.length) {
+            val char = value[index]
+            if (char != '\\' || index + 1 >= value.length) {
+                result.append(char)
+                index++
+                continue
+            }
+
+            val next = value[index + 1]
+            when (next) {
+                'n' -> { result.append('\n'); index += 2 }
+                'r' -> { result.append('\r'); index += 2 }
+                't' -> { result.append('\t'); index += 2 }
+                'b' -> { result.append('\b'); index += 2 }
+                'f' -> { result.append('\u000C'); index += 2 }
+                '/' -> { result.append('/'); index += 2 }
+                '\\' -> { result.append('\\'); index += 2 }
+                '\'' -> { result.append('\''); index += 2 }
+                '"' -> { result.append('"'); index += 2 }
+                'u' -> {
+                    val hex = value.substring(index + 2, minOf(index + 6, value.length))
+                    val decoded = if (hex.length == 4) hex.toIntOrNull(16)?.toChar() else null
+                    if (decoded != null) {
+                        result.append(decoded)
+                        index += 6
+                    } else {
+                        result.append(next)
+                        index += 2
+                    }
+                }
+                'x' -> {
+                    val hex = value.substring(index + 2, minOf(index + 4, value.length))
+                    val decoded = if (hex.length == 2) hex.toIntOrNull(16)?.toChar() else null
+                    if (decoded != null) {
+                        result.append(decoded)
+                        index += 4
+                    } else {
+                        result.append(next)
+                        index += 2
+                    }
+                }
+                else -> {
+                    result.append(next)
+                    index += 2
+                }
+            }
+        }
+
+        return result.toString()
+    }
+
+    private fun firstText(
+        primary: Document,
+        fallback: Document,
+        selectors: List<String>,
+    ): String? = listOf(primary, fallback)
+        .distinct()
+        .firstNotNullOfOrNull { document ->
+            selectors.firstNotNullOfOrNull { selector ->
+                document.selectFirst(selector)
+                    ?.text()
+                    ?.let(::cleanText)
+                    ?.takeIf { it.isNotBlank() }
+            }
+        }
     private fun parseItem(row: Element): NfceReceiptItem? {
         val description = row.selectFirst(".txtTit")?.text()?.let(::cleanText)
             ?.takeIf { it.isNotBlank() }
