@@ -37,7 +37,7 @@ android {
     }
 
     room {
-        schemaDirectory("$projectDir/schemas")
+        schemaDirectory("$buildDir/generated/room-schemas")
     }
 }
 
