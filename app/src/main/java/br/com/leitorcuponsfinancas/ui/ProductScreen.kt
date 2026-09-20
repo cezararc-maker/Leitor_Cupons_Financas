@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,6 +35,7 @@ import br.com.leitorcuponsfinancas.data.ProductEntity
 @Composable
 fun ProductScreen(
     products: List<ProductEntity>,
+    learnedDescriptions: Map<Long, List<String>>,
     onSave: (
         ProductEntity?,
         String,
@@ -92,6 +94,7 @@ fun ProductScreen(
                 items(products, key = { it.id }) { product ->
                     ProductCard(
                         product = product,
+                        learnedDescriptions = learnedDescriptions[product.id].orEmpty(),
                         onClick = {
                             editing = product
                             showForm = true
@@ -105,6 +108,7 @@ fun ProductScreen(
     if (showForm) {
         ProductFormDialog(
             product = editing,
+            learnedDescriptions = editing?.let { learnedDescriptions[it.id] }.orEmpty(),
             onDismiss = {
                 showForm = false
                 editing = null
@@ -137,6 +141,7 @@ fun ProductScreen(
 @Composable
 private fun ProductCard(
     product: ProductEntity,
+    learnedDescriptions: List<String>,
     onClick: () -> Unit,
 ) {
     Card(
@@ -172,6 +177,7 @@ private fun ProductCard(
 @Composable
 private fun ProductFormDialog(
     product: ProductEntity?,
+    learnedDescriptions: List<String>,
     onDismiss: () -> Unit,
     onSave: (
         String,
