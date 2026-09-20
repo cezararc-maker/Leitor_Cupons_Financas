@@ -65,6 +65,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
 
     implementation("org.jsoup:jsoup:1.23.2")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     val roomVersion = "2.8.5"
     implementation("androidx.room:room-runtime:$roomVersion")
