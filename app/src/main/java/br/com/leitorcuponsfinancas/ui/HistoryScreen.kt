@@ -562,6 +562,146 @@ fun HistoryScreen(
 }
 
 @Composable
+private fun HistoryPeriodChart(
+    bars: List<HistoryChartBar>,
+    onSelect: (HistoryChartBar) -> Unit,
+) {
+    if (bars.isEmpty()) return
+
+    val selectedIndex = bars.indexOfFirst { it.selected }
+        .takeIf { it >= 0 }
+        ?: 0
+    val firstVisible = maxOf(0, selectedIndex - 2)
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = firstVisible,
+    )
+    val maxTotal = bars.maxOfOrNull { it.total } ?: BigDecimal.ZERO
+
+    LaunchedEffect(selectedIndex, bars.size) {
+        if (bars.isNotEmpty()) {
+            listState.animateScrollToItem(maxOf(0, selectedIndex - 2))
+        }
+    }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Gastos por período",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "Toque para filtrar",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                )
+            }
+
+            LazyRow(
+                state = listState,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(
+                    items = bars,
+                    key = { it.key },
+                ) { bar ->
+                    val ratio = if (maxTotal > BigDecimal.ZERO) {
+                        (bar.total.toDouble() / maxTotal.toDouble())
+                            .coerceIn(0.0, 1.0)
+                    } else {
+                        0.0
+                    }
+                    val barHeight = (10.0 + 58.0 * ratio).dp
+                    val barColor = if (bar.selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f)
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .width(56.dp)
+                            .clickable { onSelect(bar) }
+                            .padding(vertical = 2.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = formatCompactChartValue(bar.total),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (bar.selected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            maxLines = 1,
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .height(72.dp)
+                                .width(28.dp),
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            Surface(
+                                modifier = Modifier
+                                    .width(24.dp)
+                                    .height(barHeight),
+                                shape = RoundedCornerShape(7.dp),
+                                color = barColor,
+                            ) {}
+                        }
+
+                        Text(
+                            text = bar.label,
+                            style = if (bar.selected) {
+                                MaterialTheme.typography.labelMedium
+                            } else {
+                                MaterialTheme.typography.bodySmall
+                            },
+                            color = if (bar.selected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatCompactChartValue(value: BigDecimal): String {
+    if (value == BigDecimal.ZERO) return "R$ 0"
+
+    val absolute = value.abs()
+    val number = if (absolute >= BigDecimal("1000")) {
+        value
+            .divide(BigDecimal("1000"), 1, RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString()
+            .replace(".", ",") + "k"
+    } else {
+        val scale = if (absolute < BigDecimal("100")) 1 else 0
+        value
+            .setScale(scale, RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString()
+            .replace(".", ",")
+    }
+
+    return "R$ $number"
+}
+
+@Composable
 private fun HistoryItemCard(
     item: HistoryItemRow,
     onEdit: () -> Unit,
