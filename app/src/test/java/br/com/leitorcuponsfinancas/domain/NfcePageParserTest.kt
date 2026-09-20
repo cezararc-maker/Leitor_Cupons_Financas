@@ -74,4 +74,36 @@ class NfcePageParserTest {
         assertTrue(result is NfcePageParseResult.Error)
         assertTrue((result as NfcePageParseResult.Error).message.contains("validação adicional"))
     }
+    @Test
+    fun parsesDanfeEmbeddedInsideJavascript() {
+        val html = """
+            <html>
+              <head><title>Consulta NFC-e</title></head>
+              <body>
+                <script>
+                  new DanfeNFCe('<div class="txtCenter"><div id="u20" class="txtTopo">LOJA TESTE</div><div class="text">CNPJ: 12.345.678/0001-90</div></div><table id="tabResult"><tr><td><span class="txtTit2">CAMISETA BASICA</span><span class="RCod">(Código: 12345)</span><span class="Rqtd"><strong>Qtde.:</strong>2</span><span class="RUN"><strong>UN:</strong>UN</span><span class="RvlUnit"><strong>Vl. Unit.:</strong>39,90</span></td><td><span class="valor">79,80</span></td></tr></table><div id="totalNota"><div id="linhaTotal"><label>Valor a pagar R$:</label><span class="totalNumb">79,80</span></div></div>');
+                </script>
+              </body>
+            </html>
+        """.trimIndent()
+
+        val result = NfcePageParser.parse(
+            html = html,
+            sourceUrl = "https://www.dfe.ms.gov.br/nfce/qrcode/?p=abc%7C3%7C1",
+        )
+
+        assertTrue(result is NfcePageParseResult.Success)
+        val receipt = (result as NfcePageParseResult.Success).receipt
+        assertEquals("LOJA TESTE", receipt.merchantName)
+        assertEquals("12.345.678/0001-90", receipt.merchantCnpj)
+        assertEquals(1, receipt.items.size)
+        assertEquals("CAMISETA BASICA", receipt.items.first().description)
+        assertEquals("12345", receipt.items.first().code)
+        assertEquals("2", receipt.items.first().quantity?.toPlainString())
+        assertEquals("UN", receipt.items.first().unit)
+        assertEquals("39.90", receipt.items.first().unitPrice?.toPlainString())
+        assertEquals("79.80", receipt.items.first().total?.toPlainString())
+        assertEquals("79.80", receipt.totalAmount?.toPlainString())
+    }
+
 }
