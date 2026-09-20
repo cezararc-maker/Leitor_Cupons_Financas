@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ReceiptItemEntity::class,
         MerchantProductLinkEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -131,6 +131,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN correctedDescription TEXT")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN correctedQuantity TEXT")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN correctedUnit TEXT")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN correctedUnitPrice TEXT")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN correctedTotalAmount TEXT")
+                db.execSQL("ALTER TABLE receipt_items ADD COLUMN correctedAt INTEGER")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -138,7 +149,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "leitor_cupons_financas.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { instance = it }
             }
