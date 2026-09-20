@@ -30,12 +30,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
 import br.com.leitorcuponsfinancas.data.ProductEntity
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun ProductScreen(
     products: List<ProductEntity>,
-    learnedDescriptions: Map<Long, List<String>>,
+    learnedLinks: Map<Long, List<MerchantProductLinkEntity>>,
     onSave: (
         ProductEntity?,
         String,
@@ -94,7 +98,6 @@ fun ProductScreen(
                 items(products, key = { it.id }) { product ->
                     ProductCard(
                         product = product,
-                        learnedDescriptions = learnedDescriptions[product.id].orEmpty(),
                         onClick = {
                             editing = product
                             showForm = true
@@ -108,7 +111,7 @@ fun ProductScreen(
     if (showForm) {
         ProductFormDialog(
             product = editing,
-            learnedDescriptions = editing?.let { learnedDescriptions[it.id] }.orEmpty(),
+            learnedLinks = editing?.let { learnedLinks[it.id] }.orEmpty(),
             onDismiss = {
                 showForm = false
                 editing = null
@@ -141,7 +144,6 @@ fun ProductScreen(
 @Composable
 private fun ProductCard(
     product: ProductEntity,
-    learnedDescriptions: List<String>,
     onClick: () -> Unit,
 ) {
     Card(
@@ -177,25 +179,6 @@ private fun ProductCard(
                 )
             }
 
-            if (learnedDescriptions.isNotEmpty()) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Descrições aprendidas:",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                learnedDescriptions.take(4).forEach { description ->
-                    Text(
-                        text = "• $description",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (learnedDescriptions.size > 4) {
-                    Text(
-                        text = "+${learnedDescriptions.size - 4} outra(s)",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
         }
     }
 }
@@ -203,7 +186,7 @@ private fun ProductCard(
 @Composable
 private fun ProductFormDialog(
     product: ProductEntity?,
-    learnedDescriptions: List<String>,
+    learnedLinks: List<MerchantProductLinkEntity>,
     onDismiss: () -> Unit,
     onSave: (
         String,
@@ -236,6 +219,7 @@ private fun ProductFormDialog(
         )
     }
     var showUnitPicker by remember(product?.id) { mutableStateOf(false) }
+    var showLearnedLinks by remember(product?.id) { mutableStateOf(false) }
     var notes by remember(product?.id) { mutableStateOf(product?.notes.orEmpty()) }
 
     val valid = name.isNotBlank() &&
@@ -329,19 +313,13 @@ private fun ProductFormDialog(
                     }
                 }
 
-                if (learnedDescriptions.isNotEmpty()) {
+                if (product != null) {
                     item {
-                        Text(
-                            text = "Descrições aprendidas automaticamente:",
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                    }
-                    learnedDescriptions.forEach { learned ->
-                        item {
-                            Text(
-                                text = "• $learned",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+                        OutlinedButton(
+                            onClick = { showLearnedLinks = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Vínculos e aliases aprendidos (${learnedLinks.size})")
                         }
                     }
                 }
@@ -434,4 +412,85 @@ private fun ProductFormDialog(
             },
         )
     }
+    if (showLearnedLinks) {
+        LearnedLinksDialog(
+            productName = product?.normalizedName.orEmpty(),
+            links = learnedLinks,
+            onDismiss = { showLearnedLinks = false },
+        )
+    }
 }
+
+@Composable
+private fun LearnedLinksDialog(
+    productName: String,
+    links: List<MerchantProductLinkEntity>,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Vínculos e aliases aprendidos") },
+        text = {
+            if (links.isEmpty()) {
+                Text(
+                    text = "O produto $productName ainda não possui vínculos aprendidos a partir de NFC-e.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 440.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    items(links, key = { it.id }) { link ->
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                Text(
+                                    text = link.fiscalDescription,
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "CNPJ: ${formatLearnedCnpj(link.merchantCnpj)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                link.itemCode?.takeIf { it.isNotBlank() }?.let { code ->
+                                    Text(
+                                        text = "Código no estabelecimento: $code",
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                                Text(
+                                    text = "Último reconhecimento: ${formatLearnedDateTime(link.lastUsedAt)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Fechar")
+            }
+        },
+    )
+}
+
+private fun formatLearnedCnpj(value: String): String {
+    val digits = value.filter(Char::isDigit)
+    if (digits.length != 14) return value
+    return "${digits.substring(0, 2)}.${digits.substring(2, 5)}.${digits.substring(5, 8)}/" +
+        "${digits.substring(8, 12)}-${digits.substring(12, 14)}"
+}
+
+private fun formatLearnedDateTime(timestamp: Long): String =
+    DateTimeFormatter
+        .ofPattern("dd/MM/yyyy HH:mm")
+        .format(
+            Instant
+                .ofEpochMilli(timestamp)
+                .atZone(ZoneId.systemDefault()),
+        )
