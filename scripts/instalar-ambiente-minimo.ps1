@@ -17,8 +17,8 @@ function Resolve-AndroidCli {
     }
 
     $Candidates = @(
-        (Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Links\\android.exe"),
-        (Join-Path $env:LOCALAPPDATA "Microsoft\\WindowsApps\\android.exe")
+        (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\android.exe"),
+        (Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\android.exe")
     )
 
     foreach ($Candidate in $Candidates) {
@@ -28,7 +28,7 @@ function Resolve-AndroidCli {
     }
 
     $SearchRoots = @(
-        (Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Packages"),
+        (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"),
         (Join-Path $env:LOCALAPPDATA "Packages")
     )
 
