@@ -81,26 +81,33 @@ class ReceiptRepository(
         quantity: String,
         unit: String,
         unitPrice: String,
-        totalAmount: String,
         productId: Long?,
         actor: LocalUserProfile,
     ): ReceiptSaveResult {
-        val normalizedMerchant = merchantName.trim()
+        val normalizedMerchant = merchantName.trim().ifBlank { "Compra manual" }
         val normalizedDescription = description.trim()
 
-        if (normalizedMerchant.isBlank()) {
-            error("Informe o estabelecimento.")
-        }
         if (normalizedDescription.isBlank()) {
             error("Informe a descrição do item.")
         }
 
         val normalizedQuantity = normalizeOptionalDecimal(quantity)
-            ?: error("Quantidade inválida.")
+            ?.takeIf { it.isNotBlank() }
+            ?: error("Informe uma quantidade válida.")
         val normalizedUnitPrice = normalizeOptionalDecimal(unitPrice)
-            ?: error("Valor unitário inválido.")
-        val normalizedTotal = normalizeOptionalDecimal(totalAmount)
-            ?: error("Valor total inválido.")
+            ?.takeIf { it.isNotBlank() }
+            ?: error("Informe um valor unitário válido.")
+
+        val quantityValue = normalizedQuantity.toBigDecimalOrNull()
+            ?.takeIf { it > java.math.BigDecimal.ZERO }
+            ?: error("A quantidade deve ser maior que zero.")
+        val unitPriceValue = normalizedUnitPrice.toBigDecimalOrNull()
+            ?.takeIf { it >= java.math.BigDecimal.ZERO }
+            ?: error("O valor unitário não pode ser negativo.")
+        val normalizedTotal = quantityValue
+            .multiply(unitPriceValue)
+            .setScale(2, java.math.RoundingMode.HALF_UP)
+            .toPlainString()
 
         val manualId = java.util.UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
@@ -111,7 +118,7 @@ class ReceiptRepository(
             merchantName = normalizedMerchant,
             issuedAt = issuedDate,
             issuedDate = parseIsoDate(issuedDate),
-            totalAmount = normalizedTotal.ifBlank { null },
+            totalAmount = normalizedTotal,
             sourceType = "MANUAL",
             createdById = actor.id,
             createdByName = actor.displayName,
@@ -125,7 +132,7 @@ class ReceiptRepository(
             quantity = normalizedQuantity.ifBlank { null },
             unit = unit.trim().ifBlank { "UN" },
             unitPrice = normalizedUnitPrice.ifBlank { null },
-            totalAmount = normalizedTotal.ifBlank { null },
+            totalAmount = normalizedTotal,
             productId = productId,
         )
 
