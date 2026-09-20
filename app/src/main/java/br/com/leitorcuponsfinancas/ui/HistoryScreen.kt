@@ -22,6 +22,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
@@ -56,15 +57,17 @@ fun HistoryScreen(
     val searchMode by historyViewModel.searchMode.collectAsStateWithLifecycle()
     val products by historyViewModel.products.collectAsStateWithLifecycle()
     val linkState by historyViewModel.linkState.collectAsStateWithLifecycle()
+    val editState by historyViewModel.editState.collectAsStateWithLifecycle()
 
     var linkingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
+    var editingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
     var reviewingItemId by rememberSaveable { mutableStateOf<Long?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
 
     val unrecognizedItems = filteredItems.filter { it.productId == null }
 
     val total = filteredItems
-        .mapNotNull { it.totalAmount?.toBigDecimalOrNull() }
+        .mapNotNull { it.displayTotalAmount?.toBigDecimalOrNull() }
         .fold(BigDecimal.ZERO, BigDecimal::add)
 
     LazyColumn(
@@ -274,6 +277,24 @@ fun HistoryScreen(
             }
         }
 
+        editState.message?.let { message ->
+            item {
+                HistoryMessageCard(
+                    title = "Item atualizado",
+                    message = message,
+                )
+            }
+        }
+
+        editState.error?.let { error ->
+            item {
+                HistoryMessageCard(
+                    title = "Não foi possível editar o item",
+                    message = error,
+                )
+            }
+        }
+
         if (filteredItems.isEmpty()) {
             item {
                 Card(Modifier.fillMaxWidth()) {
@@ -305,6 +326,10 @@ fun HistoryScreen(
         ) { item ->
             HistoryItemCard(
                 item = item,
+                onEdit = {
+                    historyViewModel.clearEditMessage()
+                    editingItem = item
+                },
                 onLink = {
                     historyViewModel.clearLinkMessage()
                     linkingItem = item
@@ -321,6 +346,29 @@ fun HistoryScreen(
             onSelect = { product ->
                 historyViewModel.linkItem(item, product)
                 linkingItem = null
+            },
+        )
+    }
+
+    editingItem?.let { item ->
+        EditHistoryItemDialog(
+            item = item,
+            saving = editState.saving,
+            onDismiss = { editingItem = null },
+            onRestoreOriginal = {
+                historyViewModel.restoreOriginalItem(item)
+                editingItem = null
+            },
+            onSave = { description, quantity, unit, unitPrice, totalAmount ->
+                historyViewModel.saveItemCorrection(
+                    item = item,
+                    description = description,
+                    quantity = quantity,
+                    unit = unit,
+                    unitPrice = unitPrice,
+                    totalAmount = totalAmount,
+                )
+                editingItem = null
             },
         )
     }
@@ -355,6 +403,7 @@ fun HistoryScreen(
 @Composable
 private fun HistoryItemCard(
     item: HistoryItemRow,
+    onEdit: () -> Unit,
     onLink: () -> Unit,
 ) {
     Card(Modifier.fillMaxWidth()) {
@@ -375,9 +424,17 @@ private fun HistoryItemCard(
             }
 
             Text(
-                text = item.fiscalDescription,
+                text = item.displayDescription,
                 style = MaterialTheme.typography.titleMedium,
             )
+
+            if (item.manuallyEdited) {
+                Text(
+                    text = "Editado manualmente • original preservado",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
 
             item.itemCode?.let {
                 Text(
@@ -388,13 +445,20 @@ private fun HistoryItemCard(
 
             Text(
                 text = listOfNotNull(
-                    item.quantity?.let { "Qtd.: ${formatHistoryNumber(it)}" },
-                    item.unit?.let { "UN: $it" },
-                    item.unitPrice?.let { "Unit.: R$ ${formatHistoryMoney(it)}" },
-                    item.totalAmount?.let { "Total: R$ ${formatHistoryMoney(it)}" },
+                    item.displayQuantity?.let { "Qtd.: ${formatHistoryNumber(it)}" },
+                    item.displayUnit?.let { "UN: $it" },
+                    item.displayUnitPrice?.let { "Unit.: R$ ${formatHistoryMoney(it)}" },
+                    item.displayTotalAmount?.let { "Total: R$ ${formatHistoryMoney(it)}" },
                 ).joinToString(" • "),
                 style = MaterialTheme.typography.bodyMedium,
             )
+
+            OutlinedButton(
+                onClick = onEdit,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Editar item")
+            }
 
             if (item.productId != null) {
                 Text(
@@ -421,6 +485,71 @@ private fun HistoryItemCard(
             }
         }
     }
+}
+
+@Composable
+private fun EditHistoryItemDialog(
+    item: HistoryItemRow,
+    saving: Boolean,
+    onDismiss: () -> Unit,
+    onRestoreOriginal: () -> Unit,
+    onSave: (String, String, String, String, String) -> Unit,
+) {
+    var description by remember(item.itemId, item.correctedAt) {
+        mutableStateOf(item.displayDescription)
+    }
+    var quantity by remember(item.itemId, item.correctedAt) {
+        mutableStateOf(item.displayQuantity?.replace(".", ",").orEmpty())
+    }
+    var unit by remember(item.itemId, item.correctedAt) {
+        mutableStateOf(item.displayUnit.orEmpty())
+    }
+    var unitPrice by remember(item.itemId, item.correctedAt) {
+        mutableStateOf(item.displayUnitPrice?.replace(".", ",").orEmpty())
+    }
+    var totalAmount by remember(item.itemId, item.correctedAt) {
+        mutableStateOf(item.displayTotalAmount?.replace(".", ",").orEmpty())
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        title = { Text("Editar item importado") },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                item {
+                    Text(
+                        text = "Os dados originais da NFC-e serão preservados. A correção altera apenas a visualização e os relatórios do aplicativo.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                item {
+                    Text(
+                        text = "Original: ${item.fiscalDescription}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                item { OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Descrição") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
+                item { OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("Quantidade") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
+                item { OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("Unidade") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
+                item { OutlinedTextField(value = unitPrice, onValueChange = { unitPrice = it }, label = { Text("Valor unitário") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
+                item { OutlinedTextField(value = totalAmount, onValueChange = { totalAmount = it }, label = { Text("Valor total") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = description.isNotBlank() && !saving,
+                onClick = { onSave(description, quantity, unit, unitPrice, totalAmount) },
+            ) { Text(if (saving) "Salvando..." else "Salvar correção") }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (item.manuallyEdited) {
+                    TextButton(enabled = !saving, onClick = onRestoreOriginal) { Text("Restaurar original") }
+                }
+                TextButton(enabled = !saving, onClick = onDismiss) { Text("Cancelar") }
+            }
+        },
+    )
 }
 
 @Composable
