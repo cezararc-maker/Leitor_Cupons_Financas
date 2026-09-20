@@ -124,3 +124,16 @@ Para uso diário, execute:
 ```
 
 O modo diário não usa `-wipe-data`, portanto os dados persistidos pelo Room devem permanecer entre as execuções. Use `-ResetAvd` apenas para recuperação do dispositivo virtual.
+
+
+## Teclado físico
+
+O AVD do projeto usa `hw.keyboard=yes`, permitindo digitação com o teclado físico do computador. O script `scripts/executar-app-emulador.ps1` reaplica essa configuração antes de iniciar o AVD.
+
+Se o Emulator já estiver aberto quando a configuração for alterada, feche-o e abra novamente para que a mudança seja aplicada.
+
+## Persistência local validada
+
+Foi validado que um produto cadastrado permanece salvo após fechar e reabrir o Android Emulator. Isso confirma, no fluxo atual do MVP, a persistência local por Room entre execuções normais do AVD.
+
+Não use `-ResetAvd` no uso diário, pois esse modo executa `-wipe-data` e apaga os dados do dispositivo virtual.
