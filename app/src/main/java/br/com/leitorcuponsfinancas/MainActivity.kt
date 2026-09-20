@@ -134,6 +134,11 @@ private fun HomeScreen(
             style = MaterialTheme.typography.bodyLarge,
         )
 
+        Text(
+            text = "O cadastro mestre guarda os produtos usados para classificação e vínculos. Os itens importados das NFC-e ficam em Histórico e gastos.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+
         Button(
             onClick = onProducts,
             modifier = Modifier.fillMaxWidth(),
