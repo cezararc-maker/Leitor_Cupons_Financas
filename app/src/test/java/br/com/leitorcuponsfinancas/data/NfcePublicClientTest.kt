@@ -37,7 +37,7 @@ class NfcePublicClientTest {
         )
 
         assertEquals(
-            "https://www.dfe.ms.gov.br/nfce/qrcode/?p=def|2|1",
+            "https://www.dfe.ms.gov.br/nfce/qrcode/?p=def%7C2%7C1",
             resolved,
         )
     }
