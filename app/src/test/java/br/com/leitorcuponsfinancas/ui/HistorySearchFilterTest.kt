@@ -107,6 +107,8 @@ class HistorySearchFilterTest {
         merchantCnpj = "12345678000190",
         receiptNumber = "1",
         receiptSeries = "1",
+        sourceType = "NFCE",
+        createdByName = "Teste",
         fiscalDescription = description,
         itemCode = id.toString(),
         quantity = "1",
@@ -123,6 +125,7 @@ class HistorySearchFilterTest {
         correctedUnit = null,
         correctedUnitPrice = null,
         correctedTotalAmount = null,
+        correctedByName = null,
         correctedAt = null,
     )
 }
