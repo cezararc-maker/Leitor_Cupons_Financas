@@ -4,6 +4,32 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Resolve-AndroidCli {
+    $Command = Get-Command android -ErrorAction SilentlyContinue
+    if ($Command) {
+        if ($Command.Source) { return $Command.Source }
+        if ($Command.Path) { return $Command.Path }
+    }
+
+    $Candidates = @(
+        (Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Links\\android.exe"),
+        (Join-Path $env:LOCALAPPDATA "Microsoft\\WindowsApps\\android.exe")
+    )
+
+    foreach ($Candidate in $Candidates) {
+        if (Test-Path $Candidate) { return $Candidate }
+    }
+
+    $Root = Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Packages"
+    if (Test-Path $Root) {
+        $Found = Get-ChildItem -Path $Root -Filter "android.exe" -File -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if ($Found) { return $Found.FullName }
+    }
+
+    return $null
+}
+
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $ProjectRoot
 
@@ -63,16 +89,9 @@ if ($SdkManager) {
         Write-Host "[OK] Android SDK Platform 36 ja instalado."
     }
 } else {
-    $AndroidCli = Get-Command android -ErrorAction SilentlyContinue
-    if (-not $AndroidCli) {
-        $WingetAndroid = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\android.exe"
-        if (Test-Path $WingetAndroid) {
-            $AndroidCli = Get-Item $WingetAndroid
-        }
-    }
+    $AndroidExe = Resolve-AndroidCli
 
-    if ($AndroidCli) {
-        $AndroidExe = if ($AndroidCli.Source) { $AndroidCli.Source } else { $AndroidCli.FullName }
+    if ($AndroidExe) {
         Write-Host "Instalando/verificando pacotes pelo Android CLI..."
         & $AndroidExe --sdk="$Sdk" sdk install platforms/android-36 build-tools/35.0.0 platform-tools
         if ($LASTEXITCODE -ne 0) {
