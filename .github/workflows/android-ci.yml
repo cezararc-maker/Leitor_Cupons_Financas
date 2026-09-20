@@ -16,21 +16,34 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses > /dev/null || true
+      - name: Locate Android SDK manager
+        id: sdk
+        shell: bash
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $SDK_ROOT"
+            exit 1
+          fi
+          echo "sdk_root=$SDK_ROOT" >> "$GITHUB_OUTPUT"
+          echo "sdkmanager=$SDKMANAGER" >> "$GITHUB_OUTPUT"
 
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-37" "build-tools;36.0.0"
+        shell: bash
+        run: |
+          yes | "${{ steps.sdk.outputs.sdkmanager }}" --licenses > /dev/null || true
+          "${{ steps.sdk.outputs.sdkmanager }}" "platforms;android-37" "build-tools;36.0.0"
 
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.6.0"
 
-      - name: Unit tests
-        run: gradle test
+      - name: Unit tests and compile
+        run: gradle test assembleDebug
