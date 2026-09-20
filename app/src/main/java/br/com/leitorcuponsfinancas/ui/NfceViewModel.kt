@@ -9,6 +9,7 @@ import br.com.leitorcuponsfinancas.data.NfcePublicClient
 import br.com.leitorcuponsfinancas.data.QrImageReadResult
 import br.com.leitorcuponsfinancas.data.QrImageReader
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
+import br.com.leitorcuponsfinancas.data.UserProfileStore
 import br.com.leitorcuponsfinancas.domain.NfcePageParseResult
 import br.com.leitorcuponsfinancas.domain.NfceReceipt
 import java.time.Instant
@@ -47,6 +48,7 @@ data class NfceDuplicateState(
 class NfceViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getInstance(application)
+    private val userProfileStore = UserProfileStore.getInstance(application)
     private val receiptRepository = ReceiptRepository(
         receiptDao = database.receiptDao(),
         productDao = database.productDao(),
@@ -155,6 +157,7 @@ class NfceViewModel(application: Application) : AndroidViewModel(application) {
                 val result = receiptRepository.save(
                     accessKey = accessKey,
                     receipt = receipt,
+                    actor = userProfileStore.profile.value,
                 )
 
                 _saveState.value = if (result.inserted) {
