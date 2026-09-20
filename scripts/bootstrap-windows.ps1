@@ -58,7 +58,7 @@ if ($SdkManager) {
     Write-Warning "sdkmanager.bat nao localizado. Se o build reclamar do Android 36, instale-o pelo SDK Manager do Android Studio."
 }
 
-$GradleVersion = "9.6.0"
+$GradleVersion = "8.13"
 
 if (-not (Test-Path ".\gradlew.bat")) {
     $CacheRoot = Join-Path $env:TEMP "LeitorCuponsFinancas"
