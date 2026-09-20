@@ -25,13 +25,13 @@ function Write-Section {
 function Run-Android {
     param(
         [string]$Label,
-        [string[]]$Args
+        [string[]]$AndroidArgs
     )
 
     Write-Section $Label
-    ("COMANDO: android " + ($Args -join " ")) | Tee-Object -FilePath $Log -Append
+    ("COMANDO: android " + ($AndroidArgs -join " ")) | Tee-Object -FilePath $Log -Append
 
-    & android @Args 2>&1 | Tee-Object -FilePath $Log -Append
+    & android @AndroidArgs 2>&1 | Tee-Object -FilePath $Log -Append
     $Code = $LASTEXITCODE
 
     ("EXITCODE: " + $Code) | Tee-Object -FilePath $Log -Append
@@ -54,14 +54,14 @@ Get-CimInstance Win32_OperatingSystem |
 "where android:" | Tee-Object -FilePath $Log -Append
 (& where.exe android 2>&1 | Out-String) | Tee-Object -FilePath $Log -Append
 
-Run-Android -Label "VERSAO" -Args @("--version") | Out-Null
-Run-Android -Label "INFO" -Args @("--sdk=$Sdk", "info") | Out-Null
-Run-Android -Label "HELP SDK INSTALL" -Args @("sdk", "install", "-h") | Out-Null
-Run-Android -Label "UPDATE CLI" -Args @("update") | Out-Null
+Run-Android -Label "VERSAO" -AndroidArgs @("--version") | Out-Null
+Run-Android -Label "INFO" -AndroidArgs @("--sdk=$Sdk", "info") | Out-Null
+Run-Android -Label "HELP SDK INSTALL" -AndroidArgs @("sdk", "install", "-h") | Out-Null
+Run-Android -Label "UPDATE CLI" -AndroidArgs @("update") | Out-Null
 
-Run-Android -Label "LISTA PLATFORM 36" -Args @("--sdk=$Sdk", "-v", "sdk", "list", "platforms/android-36", "--all-versions") | Out-Null
-Run-Android -Label "LISTA BUILD TOOLS 35" -Args @("--sdk=$Sdk", "-v", "sdk", "list", "build-tools/35.0.0", "--all-versions") | Out-Null
-Run-Android -Label "LISTA PLATFORM TOOLS" -Args @("--sdk=$Sdk", "-v", "sdk", "list", "platform-tools", "--all-versions") | Out-Null
+Run-Android -Label "LISTA PLATFORM 36" -AndroidArgs @("--sdk=$Sdk", "-v", "sdk", "list", "platforms/android-36", "--all-versions") | Out-Null
+Run-Android -Label "LISTA BUILD TOOLS 35" -AndroidArgs @("--sdk=$Sdk", "-v", "sdk", "list", "build-tools/35.0.0", "--all-versions") | Out-Null
+Run-Android -Label "LISTA PLATFORM TOOLS" -AndroidArgs @("--sdk=$Sdk", "-v", "sdk", "list", "platform-tools", "--all-versions") | Out-Null
 
 $Failures = @()
 $Packages = @(
@@ -71,7 +71,7 @@ $Packages = @(
 )
 
 foreach ($Package in $Packages) {
-    $Code = Run-Android -Label ("INSTALACAO " + $Package) -Args @("--sdk=$Sdk", "-v", "sdk", "install", $Package)
+    $Code = Run-Android -Label ("INSTALACAO " + $Package) -AndroidArgs @("--sdk=$Sdk", "-v", "sdk", "install", $Package)
     if ($Code -ne 0) {
         $Failures += $Package
     }
