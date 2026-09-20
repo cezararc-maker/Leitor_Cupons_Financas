@@ -229,6 +229,22 @@ class ReceiptRepository(
         item: HistoryItemRow,
         productId: Long,
     ): ProductLinkResult {
+        if (item.sourceType == "MANUAL") {
+            val updated = receiptDao.updateItemProduct(
+                itemId = item.itemId,
+                productId = productId,
+            )
+
+            return if (updated > 0) {
+                ProductLinkResult.Success(
+                    linkId = 0,
+                    updatedItems = 1,
+                )
+            } else {
+                ProductLinkResult.Error("O item manual não foi encontrado no histórico.")
+            }
+        }
+
         val merchantCnpj = normalizeCnpj(item.merchantCnpj)
             ?: return ProductLinkResult.Error(
                 "Não foi possível criar o vínculo sem o CNPJ do estabelecimento.",
