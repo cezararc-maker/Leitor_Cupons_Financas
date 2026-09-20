@@ -273,6 +273,31 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         _linkState.value = HistoryLinkState(saving = true)
 
         viewModelScope.launch {
+            val duplicate = productRepository.findDuplicateName(cleanName)
+
+            if (duplicate != null) {
+                when (
+                    val result = receiptRepository.linkHistoryItem(
+                        item = item,
+                        productId = duplicate.id,
+                    )
+                ) {
+                    is ProductLinkResult.Success -> {
+                        _linkState.value = HistoryLinkState(
+                            message = buildString {
+                                append("O produto mestre \"${duplicate.normalizedName}\" já existia e foi utilizado.")
+                                append(" Itens atualizados: ${result.updatedItems}.")
+                            },
+                        )
+                    }
+
+                    is ProductLinkResult.Error -> {
+                        _linkState.value = HistoryLinkState(error = result.message)
+                    }
+                }
+                return@launch
+            }
+
             val now = System.currentTimeMillis()
             val product = ProductEntity(
                 fiscalDescription = item.fiscalDescription.takeIf {
