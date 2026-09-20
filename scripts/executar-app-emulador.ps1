@@ -28,26 +28,49 @@ Write-Host "[1/4] Verificando emulador..." -ForegroundColor Yellow
 & $Adb start-server | Out-Null
 $Devices = (& $Adb devices | Out-String)
 
+function Start-ProjectAvd {
+    Write-Host "Iniciando $AvdName..."
+    Start-Process -FilePath $Emulator -ArgumentList @(
+        "@$AvdName",
+        "-gpu", "auto",
+        "-no-audio",
+        "-no-boot-anim",
+        "-memory", "1536",
+        "-cores", "2"
+    )
+}
+
 if ($Devices -notmatch "emulator-\d+\s+device") {
     $RunningAvd = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
         Where-Object {
             ($_.Name -eq "emulator.exe" -or $_.Name -like "qemu-system-*.exe") -and
             $_.CommandLine -match [regex]::Escape($AvdName)
-        } |
-        Select-Object -First 1
+        }
 
     if ($RunningAvd) {
-        Write-Host "[INFO] O AVD $AvdName ja esta em execucao; aguardando conexao ADB..." -ForegroundColor DarkYellow
+        Write-Host "[INFO] Processo do AVD encontrado sem conexao ADB. Verificando se esta apenas inicializando..." -ForegroundColor DarkYellow
+        Start-Sleep -Seconds 10
+
+        $DevicesAfterWait = (& $Adb devices | Out-String)
+
+        if ($DevicesAfterWait -notmatch "emulator-\d+\s+device") {
+            Write-Host "[INFO] Processo residual detectado. Encerrando e reiniciando o AVD..." -ForegroundColor DarkYellow
+
+            $RunningAvd |
+                ForEach-Object {
+                    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+                }
+
+            Start-Sleep -Seconds 3
+            & $Adb kill-server 2>$null | Out-Null
+            & $Adb start-server | Out-Null
+
+            Start-ProjectAvd
+        } else {
+            Write-Host "[OK] AVD conectou ao ADB durante a verificacao." -ForegroundColor Green
+        }
     } else {
-        Write-Host "Iniciando $AvdName..."
-        Start-Process -FilePath $Emulator -ArgumentList @(
-            "@$AvdName",
-            "-gpu", "auto",
-            "-no-audio",
-            "-no-boot-anim",
-            "-memory", "1536",
-            "-cores", "2"
-        )
+        Start-ProjectAvd
     }
 }
 
