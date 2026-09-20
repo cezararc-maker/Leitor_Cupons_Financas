@@ -484,8 +484,11 @@ fun HistoryScreen(
 private fun HistoryItemCard(
     item: HistoryItemRow,
     onEdit: () -> Unit,
-    onLink: () -> Unit,
+    onEditLink: () -> Unit,
+    onDelete: () -> Unit,
 ) {
+    var menuExpanded by remember(item.itemId) { mutableStateOf(false) }
+
     Card(Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -498,17 +501,74 @@ private fun HistoryItemCard(
                 sourceLabel,
             ).joinToString(" • ")
 
-            if (header.isNotBlank()) {
-                Text(
-                    text = header,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (header.isNotBlank()) {
+                        Text(
+                            text = header,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
 
-            Text(
-                text = item.displayDescription,
-                style = MaterialTheme.typography.titleMedium,
-            )
+                    Text(
+                        text = item.displayDescription,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Text(
+                            text = "⋮",
+                            style = MaterialTheme.typography.headlineSmall,
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Editar item") },
+                            onClick = {
+                                menuExpanded = false
+                                onEdit()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    if (item.productId == null) {
+                                        "Vincular / editar vínculo"
+                                    } else {
+                                        "Editar vinculação"
+                                    },
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onEditLink()
+                            },
+                        )
+
+                        if (item.sourceType == "MANUAL") {
+                            DropdownMenuItem(
+                                text = { Text("Excluir") },
+                                onClick = {
+                                    menuExpanded = false
+                                    onDelete()
+                                },
+                            )
+                        }
+                    }
+                }
+            }
 
             item.createdByName?.let { author ->
                 Text(
@@ -547,13 +607,6 @@ private fun HistoryItemCard(
                 style = MaterialTheme.typography.bodyMedium,
             )
 
-            OutlinedButton(
-                onClick = onEdit,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Editar item")
-            }
-
             if (item.productId != null) {
                 Text(
                     text = buildString {
@@ -571,7 +624,7 @@ private fun HistoryItemCard(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 OutlinedButton(
-                    onClick = onLink,
+                    onClick = onEditLink,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Vincular a produto")
@@ -580,7 +633,6 @@ private fun HistoryItemCard(
         }
     }
 }
-
 @Composable
 private fun EditHistoryItemDialog(
     item: HistoryItemRow,
