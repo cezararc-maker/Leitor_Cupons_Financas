@@ -113,6 +113,7 @@ Set-AvdSetting "hw.lcd.height" "1280"
 Set-AvdSetting "hw.lcd.density" "320"
 Set-AvdSetting "hw.camera.back" "none"
 Set-AvdSetting "hw.camera.front" "none"
+Set-AvdSetting "hw.keyboard" "yes"
 Set-AvdSetting "showDeviceFrame" "no"
 Set-AvdSetting "disk.dataPartition.size" "2G"
 
