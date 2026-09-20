@@ -1,0 +1,365 @@
+package br.com.leitorcuponsfinancas.ui
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.leitorcuponsfinancas.data.HistoryItemRow
+import br.com.leitorcuponsfinancas.data.ProductEntity
+import java.math.BigDecimal
+import java.math.RoundingMode
+
+@Composable
+fun HistoryScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    historyViewModel: HistoryViewModel = viewModel(),
+) {
+    val periodType by historyViewModel.periodType.collectAsStateWithLifecycle()
+    val dateRange by historyViewModel.dateRange.collectAsStateWithLifecycle()
+    val historyItems by historyViewModel.items.collectAsStateWithLifecycle()
+    val products by historyViewModel.products.collectAsStateWithLifecycle()
+    val linkState by historyViewModel.linkState.collectAsStateWithLifecycle()
+
+    var linkingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
+
+    val total = historyItems
+        .mapNotNull { it.totalAmount?.toBigDecimalOrNull() }
+        .fold(BigDecimal.ZERO, BigDecimal::add)
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Button(onClick = onBack) {
+                Text("Voltar")
+            }
+        }
+
+        item {
+            Text(
+                text = "Histórico e Gastos",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                HistoryPeriodType.entries.forEach { type ->
+                    if (type == periodType) {
+                        Button(onClick = { historyViewModel.selectPeriod(type) }) {
+                            Text(type.label)
+                        }
+                    } else {
+                        OutlinedButton(onClick = { historyViewModel.selectPeriod(type) }) {
+                            Text(type.label)
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(onClick = historyViewModel::previousPeriod) {
+                    Text("‹")
+                }
+
+                Text(
+                    text = dateRange.label,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+
+                OutlinedButton(onClick = historyViewModel::nextPeriod) {
+                    Text("›")
+                }
+            }
+        }
+
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "Resumo do período",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text("Itens: ${historyItems.size}")
+                    Text("Total dos itens: R$ ${formatHistoryMoney(total)}")
+                    Text(
+                        text = "Não vinculados: ${historyItems.count { it.productId == null }}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+
+        linkState.message?.let { message ->
+            item {
+                HistoryMessageCard(
+                    title = "Vínculo aprendido",
+                    message = message,
+                )
+            }
+        }
+
+        linkState.error?.let { error ->
+            item {
+                HistoryMessageCard(
+                    title = "Não foi possível vincular",
+                    message = error,
+                )
+            }
+        }
+
+        if (historyItems.isEmpty()) {
+            item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp)) {
+                        Text(
+                            text = "Nenhum item neste período.",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = "Use as setas ou altere o tipo de período para consultar outros lançamentos.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+        }
+
+        items(
+            items = historyItems,
+            key = { it.itemId },
+        ) { item ->
+            HistoryItemCard(
+                item = item,
+                onLink = {
+                    historyViewModel.clearLinkMessage()
+                    linkingItem = item
+                },
+            )
+        }
+    }
+
+    linkingItem?.let { item ->
+        ProductLinkDialog(
+            item = item,
+            products = products,
+            onDismiss = { linkingItem = null },
+            onSelect = { product ->
+                historyViewModel.linkItem(item, product)
+                linkingItem = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun HistoryItemCard(
+    item: HistoryItemRow,
+    onLink: () -> Unit,
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            val header = listOfNotNull(
+                item.issuedAt?.take(10),
+                item.merchantName,
+            ).joinToString(" • ")
+
+            if (header.isNotBlank()) {
+                Text(
+                    text = header,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            Text(
+                text = item.fiscalDescription,
+                style = MaterialTheme.typography.titleMedium,
+            )
+
+            item.itemCode?.let {
+                Text(
+                    text = "Código no estabelecimento: $it",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            Text(
+                text = listOfNotNull(
+                    item.quantity?.let { "Qtd.: ${formatHistoryNumber(it)}" },
+                    item.unit?.let { "UN: $it" },
+                    item.unitPrice?.let { "Unit.: R$ ${formatHistoryMoney(it)}" },
+                    item.totalAmount?.let { "Total: R$ ${formatHistoryMoney(it)}" },
+                ).joinToString(" • "),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            if (item.productId != null) {
+                Text(
+                    text = buildString {
+                        append("Produto: ")
+                        append(item.productName ?: "Produto cadastrado")
+                        item.sector?.let { append(" • $it") }
+                        item.category?.let { append(" • $it") }
+                        item.subcategory?.let { append(" • $it") }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                Text(
+                    text = "Produto ainda não reconhecido.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                OutlinedButton(
+                    onClick = onLink,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Vincular a produto")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProductLinkDialog(
+    item: HistoryItemRow,
+    products: List<ProductEntity>,
+    onDismiss: () -> Unit,
+    onSelect: (ProductEntity) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Vincular produto")
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = item.fiscalDescription,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+
+                if (products.isEmpty()) {
+                    Text(
+                        "Nenhum produto cadastrado. Volte à tela de produtos e cadastre um produto primeiro.",
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 380.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(
+                            items = products,
+                            key = { it.id },
+                        ) { product ->
+                            OutlinedButton(
+                                onClick = { onSelect(product) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(Modifier.fillMaxWidth()) {
+                                    Text(product.normalizedName)
+                                    Text(
+                                        text = listOfNotNull(
+                                            product.sector,
+                                            product.category,
+                                            product.subcategory,
+                                        ).joinToString(" • "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        },
+    )
+}
+
+@Composable
+private fun HistoryMessageCard(
+    title: String,
+    message: String,
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(message)
+        }
+    }
+}
+
+private fun formatHistoryMoney(value: BigDecimal): String = value
+    .setScale(2, RoundingMode.HALF_UP)
+    .toPlainString()
+    .replace(".", ",")
+
+private fun formatHistoryMoney(value: String): String =
+    value.toBigDecimalOrNull()
+        ?.let(::formatHistoryMoney)
+        ?: value
+
+private fun formatHistoryNumber(value: String): String =
+    value.toBigDecimalOrNull()
+        ?.stripTrailingZeros()
+        ?.toPlainString()
+        ?.replace(".", ",")
+        ?: value
