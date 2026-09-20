@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.leitorcuponsfinancas.data.HistoryItemRow
 import br.com.leitorcuponsfinancas.data.ProductEntity
+import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import br.com.leitorcuponsfinancas.domain.ProductSuggestionEngine
 import br.com.leitorcuponsfinancas.domain.SmartProductSuggestion
 import java.math.BigDecimal
@@ -74,8 +75,14 @@ fun HistoryScreen(
     var deletingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
     var reviewingItemId by rememberSaveable { mutableStateOf<Long?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var sortMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var sortMode by rememberSaveable { mutableStateOf(HistorySortMode.DEFAULT) }
 
-    val unrecognizedItems = filteredItems.filter { it.productId == null }
+    val sortedItems = remember(filteredItems, sortMode) {
+        sortHistoryItems(filteredItems, sortMode)
+    }
+
+    val unrecognizedItems = sortedItems.filter { it.productId == null }
 
     val total = filteredItems
         .mapNotNull { it.displayTotalAmount?.toBigDecimalOrNull() }
@@ -236,6 +243,36 @@ fun HistoryScreen(
         }
 
         item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                Box {
+                    OutlinedButton(
+                        onClick = { sortMenuExpanded = true },
+                    ) {
+                        Text("Ordenar: ${sortMode.label}")
+                    }
+
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false },
+                    ) {
+                        HistorySortMode.entries.forEach { mode ->
+                            DropdownMenuItem(
+                                text = { Text(mode.label) },
+                                onClick = {
+                                    sortMode = mode
+                                    sortMenuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
             Card(Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -348,7 +385,7 @@ fun HistoryScreen(
         }
 
         items(
-            items = filteredItems,
+            items = sortedItems,
             key = { it.itemId },
         ) { item ->
             HistoryItemCard(
