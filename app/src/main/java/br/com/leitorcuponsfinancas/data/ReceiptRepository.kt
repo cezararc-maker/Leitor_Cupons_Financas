@@ -95,18 +95,22 @@ class ReceiptRepository(
         val normalizedTotal = normalizeOptionalDecimal(totalAmount)
             ?: return ItemCorrectionResult.Error("Valor total inválido.")
 
+        val originalQuantity = canonicalStoredDecimal(item.quantity)
+        val originalUnitPrice = canonicalStoredDecimal(item.unitPrice)
+        val originalTotal = canonicalStoredDecimal(item.totalAmount)
+
         val normalizedUnit = unit.trim().ifBlank { item.unit.orEmpty() }
 
         val correctedDescription = normalizedDescription
             .takeUnless { it == item.fiscalDescription }
         val correctedQuantity = normalizedQuantity
-            .takeUnless { it == item.quantity.orEmpty() }
+            .takeUnless { it == originalQuantity }
         val correctedUnit = normalizedUnit
             .takeUnless { it == item.unit.orEmpty() }
         val correctedUnitPrice = normalizedUnitPrice
-            .takeUnless { it == item.unitPrice.orEmpty() }
+            .takeUnless { it == originalUnitPrice }
         val correctedTotalAmount = normalizedTotal
-            .takeUnless { it == item.totalAmount.orEmpty() }
+            .takeUnless { it == originalTotal }
 
         val hasCorrection = listOf(
             correctedDescription,
@@ -266,12 +270,20 @@ class ReceiptRepository(
         val trimmed = value.trim()
         if (trimmed.isBlank()) return ""
 
-        val normalized = trimmed
-            .replace(".", "")
-            .replace(",", ".")
-            .replace(Regex("""[^0-9.-]"""), "")
+        val cleaned = trimmed.replace(Regex("""[^0-9,.-]"""), "")
+        val normalized = if (cleaned.contains(",")) {
+            cleaned.replace(".", "").replace(",", ".")
+        } else {
+            cleaned
+        }
 
         return normalized.toBigDecimalOrNull()?.stripTrailingZeros()?.toPlainString()
+    }
+
+    private fun canonicalStoredDecimal(value: String?): String {
+        val stored = value?.trim().orEmpty()
+        if (stored.isBlank()) return ""
+        return stored.toBigDecimalOrNull()?.stripTrailingZeros()?.toPlainString() ?: stored
     }
 
     private fun normalizeCnpj(value: String?): String? = value
