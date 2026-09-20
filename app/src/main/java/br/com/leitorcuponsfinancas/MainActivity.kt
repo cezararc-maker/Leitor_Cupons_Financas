@@ -58,7 +58,7 @@ private fun LeitorCuponsApp(
     productViewModel: ProductViewModel = viewModel(),
 ) {
     val products by productViewModel.products.collectAsStateWithLifecycle()
-    val learnedDescriptions by productViewModel.learnedDescriptions.collectAsStateWithLifecycle()
+    val learnedLinks by productViewModel.learnedLinks.collectAsStateWithLifecycle()
     var screen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
 
     Column(Modifier.fillMaxSize()) {
@@ -99,7 +99,7 @@ private fun LeitorCuponsApp(
 
                 ProductScreen(
                     products = products,
-                    learnedDescriptions = learnedDescriptions,
+                    learnedLinks = learnedLinks,
                     onSave = productViewModel::save,
                     onDeactivate = productViewModel::deactivate,
                     modifier = Modifier.fillMaxSize(),
