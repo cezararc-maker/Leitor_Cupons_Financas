@@ -323,6 +323,20 @@ class ReceiptRepository(
             }
         }
 
+        val linkedProduct = productDao.findById(productId)
+        if (
+            item.sourceType != "MANUAL" &&
+            linkedProduct != null &&
+            linkedProduct.fiscalDescription.isNullOrBlank()
+        ) {
+            productDao.update(
+                linkedProduct.copy(
+                    fiscalDescription = item.fiscalDescription,
+                    updatedAt = now,
+                ),
+            )
+        }
+
         val updatedItems = if (itemCode != null) {
             receiptDao.updateEquivalentItemsByCode(
                 merchantCnpjDigits = merchantCnpj,
