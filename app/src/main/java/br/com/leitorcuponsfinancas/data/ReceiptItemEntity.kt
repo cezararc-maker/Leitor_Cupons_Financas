@@ -28,5 +28,7 @@ data class ReceiptItemEntity(
     val correctedUnit: String? = null,
     val correctedUnitPrice: String? = null,
     val correctedTotalAmount: String? = null,
+    val correctedById: String? = null,
+    val correctedByName: String? = null,
     val correctedAt: Long? = null,
 )
