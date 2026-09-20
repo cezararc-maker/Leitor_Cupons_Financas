@@ -8,6 +8,43 @@ $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Pa
 Set-Location $ProjectRoot
 
 Write-Host "============================================================" -ForegroundColor Cyan
+
+function Resolve-AndroidCli {
+    $Command = Get-Command android -ErrorAction SilentlyContinue
+    if ($Command) {
+        if ($Command.Source) { return $Command.Source }
+        if ($Command.Path) { return $Command.Path }
+    }
+
+    $Candidates = @(
+        (Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Links\\android.exe"),
+        (Join-Path $env:LOCALAPPDATA "Microsoft\\WindowsApps\\android.exe")
+    )
+
+    foreach ($Candidate in $Candidates) {
+        if (Test-Path $Candidate) {
+            return $Candidate
+        }
+    }
+
+    $SearchRoots = @(
+        (Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Packages"),
+        (Join-Path $env:LOCALAPPDATA "Packages")
+    )
+
+    foreach ($Root in $SearchRoots) {
+        if (Test-Path $Root) {
+            $Found = Get-ChildItem -Path $Root -Filter "android.exe" -File -Recurse -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            if ($Found) {
+                return $Found.FullName
+            }
+        }
+    }
+
+    return $null
+}
+
 Write-Host " LEITOR CUPONS FINANCAS - AMBIENTE MINIMO WINDOWS" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
@@ -42,21 +79,10 @@ $env:Path = "$($env:JAVA_HOME)\bin;$env:LOCALAPPDATA\Microsoft\WinGet\Links;$env
 
 [Environment]::SetEnvironmentVariable("JAVA_HOME", $env:JAVA_HOME, "User")
 
-$AndroidExe = $null
-$AndroidCommand = Get-Command android -ErrorAction SilentlyContinue
-if ($AndroidCommand) {
-    $AndroidExe = $AndroidCommand.Source
-}
+$AndroidExe = Resolve-AndroidCli
 
 if (-not $AndroidExe) {
-    $WingetAndroid = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\android.exe"
-    if (Test-Path $WingetAndroid) {
-        $AndroidExe = $WingetAndroid
-    }
-}
-
-if (-not $AndroidExe) {
-    throw "Android CLI foi instalado, mas android.exe nao foi localizado. Feche e reabra o PowerShell e execute novamente."
+    throw "Android CLI foi instalado, mas android.exe nao foi localizado nas pastas conhecidas do WinGet. Execute 'where.exe android' em um novo PowerShell e envie o resultado."
 }
 
 $Sdk = Join-Path $env:LOCALAPPDATA "Android\Sdk"
