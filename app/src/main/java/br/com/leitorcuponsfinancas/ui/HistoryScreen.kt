@@ -824,7 +824,7 @@ private fun UnrecognizedReviewDialog(
         onDismissRequest = onDismiss,
         title = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text("Revisar não reconhecidos")
                 Text(
@@ -834,67 +834,75 @@ private fun UnrecognizedReviewDialog(
             }
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 470.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(
-                    text = item.fiscalDescription,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-
-                item.itemCode?.let {
+                item {
                     Text(
-                        text = "Código no estabelecimento: $it",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = item.fiscalDescription,
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 }
 
-                item.merchantName?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                item.itemCode?.let { code ->
+                    item {
+                        Text(
+                            text = "Código no estabelecimento: $code",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+
+                item.merchantName?.let { merchant ->
+                    item {
+                        Text(
+                            text = merchant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
 
                 smartSuggestion?.let { suggestion ->
-                    SmartSuggestionCard(
-                        suggestion = suggestion,
-                        onUseExisting = onSelect,
-                        onCreateNew = onCreateSuggested,
+                    item {
+                        SmartSuggestionCard(
+                            suggestion = suggestion,
+                            onUseExisting = onSelect,
+                            onCreateNew = onCreateSuggested,
+                        )
+                    }
+                }
+
+                item {
+                    Text(
+                        text = "Escolha o produto mestre. O vínculo também será reaplicado aos itens equivalentes deste estabelecimento.",
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
 
-                Text(
-                    text = "Escolha o produto mestre. O vínculo também será reaplicado aos itens equivalentes deste estabelecimento.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-
                 if (products.isEmpty()) {
-                    Text("Nenhum produto mestre cadastrado.")
+                    item {
+                        Text("Nenhum produto mestre cadastrado.")
+                    }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.heightIn(max = 360.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(
-                            items = products,
-                            key = { it.id },
-                        ) { product ->
-                            OutlinedButton(
-                                onClick = { onSelect(product) },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Column(Modifier.fillMaxWidth()) {
-                                    Text(product.normalizedName)
-                                    Text(
-                                        text = listOfNotNull(
-                                            product.sector,
-                                            product.category,
-                                            product.subcategory,
-                                        ).joinToString(" • "),
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
+                    items(
+                        items = products,
+                        key = { it.id },
+                    ) { product ->
+                        OutlinedButton(
+                            onClick = { onSelect(product) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(Modifier.fillMaxWidth()) {
+                                Text(product.normalizedName)
+                                Text(
+                                    text = listOfNotNull(
+                                        product.sector,
+                                        product.category,
+                                        product.subcategory,
+                                    ).joinToString(" • "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                             }
                         }
                     }
@@ -950,6 +958,7 @@ private fun ProductLinkDialog(
         text = {
             if (creatingNew) {
                 LazyColumn(
+                    modifier = Modifier.heightIn(max = 470.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     item {
@@ -1008,91 +1017,99 @@ private fun ProductLinkDialog(
                     }
                 }
             } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 470.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
-                        text = item.displayDescription,
-                        style = MaterialTheme.typography.titleSmall,
-                    )
+                    item {
+                        Text(
+                            text = item.displayDescription,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                    }
 
                     item.productName?.let { current ->
-                        Text(
-                            text = "Vínculo atual: $current",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                        item {
+                            Text(
+                                text = "Vínculo atual: $current",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
 
                     smartSuggestion?.let { suggestion ->
-                        SmartSuggestionCard(
-                            suggestion = suggestion,
-                            onUseExisting = onSelect,
-                            onCreateNew = { newSuggestion ->
-                                onCreateProduct(
-                                    newSuggestion.name,
-                                    newSuggestion.sector,
-                                    newSuggestion.category,
-                                    newSuggestion.subcategory.orEmpty(),
-                                    newSuggestion.unit,
-                                )
-                            },
-                        )
+                        item {
+                            SmartSuggestionCard(
+                                suggestion = suggestion,
+                                onUseExisting = onSelect,
+                                onCreateNew = { newSuggestion ->
+                                    onCreateProduct(
+                                        newSuggestion.name,
+                                        newSuggestion.sector,
+                                        newSuggestion.category,
+                                        newSuggestion.subcategory.orEmpty(),
+                                        newSuggestion.unit,
+                                    )
+                                },
+                            )
+                        }
                     }
 
-                    OutlinedButton(
-                        enabled = !saving,
-                        onClick = { creatingNew = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Criar novo produto mestre")
+                    item {
+                        OutlinedButton(
+                            enabled = !saving,
+                            onClick = { creatingNew = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Criar novo produto mestre")
+                        }
                     }
 
                     if (products.isEmpty()) {
-                        Text(
-                            text = "Ainda não há produtos mestres cadastrados. Crie um novo produto acima.",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                        item {
+                            Text(
+                                text = "Ainda não há produtos mestres cadastrados. Crie um novo produto acima.",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     } else {
-                        Text(
-                            text = if (item.productId == null) {
-                                "Selecione um produto mestre existente:"
-                            } else {
-                                "Selecione outro produto para trocar a vinculação:"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                        item {
+                            Text(
+                                text = if (item.productId == null) {
+                                    "Selecione um produto mestre existente:"
+                                } else {
+                                    "Selecione outro produto para trocar a vinculação:"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
 
-                        LazyColumn(
-                            modifier = Modifier.heightIn(max = 330.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            items(
-                                items = products,
-                                key = { it.id },
-                            ) { product ->
-                                OutlinedButton(
-                                    enabled = !saving,
-                                    onClick = { onSelect(product) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Column(Modifier.fillMaxWidth()) {
-                                        Text(
-                                            if (product.id == item.productId) {
-                                                "${product.normalizedName} • atual"
-                                            } else {
-                                                product.normalizedName
-                                            },
-                                        )
-                                        Text(
-                                            text = listOfNotNull(
-                                                product.sector,
-                                                product.category,
-                                                product.subcategory,
-                                            ).joinToString(" • "),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                    }
+                        items(
+                            items = products,
+                            key = { it.id },
+                        ) { product ->
+                            OutlinedButton(
+                                enabled = !saving,
+                                onClick = { onSelect(product) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(Modifier.fillMaxWidth()) {
+                                    Text(
+                                        if (product.id == item.productId) {
+                                            "${product.normalizedName} • atual"
+                                        } else {
+                                            product.normalizedName
+                                        },
+                                    )
+                                    Text(
+                                        text = listOfNotNull(
+                                            product.sector,
+                                            product.category,
+                                            product.subcategory,
+                                        ).joinToString(" • "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
                                 }
                             }
                         }
@@ -1137,6 +1154,7 @@ private fun ProductLinkDialog(
         },
     )
 }
+
 @Composable
 private fun SmartSuggestionCard(
     suggestion: SmartProductSuggestion,
@@ -1150,71 +1168,74 @@ private fun SmartSuggestionCard(
     }
 
     Card(Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Sugestão inteligente • $confidenceLabel",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = "Sugestão • $confidenceLabel",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+
+                when (suggestion) {
+                    is SmartProductSuggestion.ExistingProduct -> {
+                        Text(
+                            text = suggestion.product.normalizedName,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            text = listOfNotNull(
+                                suggestion.product.sector,
+                                suggestion.product.category,
+                                suggestion.product.subcategory,
+                            ).joinToString(" • "),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
+                    is SmartProductSuggestion.NewProduct -> {
+                        Text(
+                            text = suggestion.name,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            text = listOfNotNull(
+                                suggestion.sector,
+                                suggestion.category,
+                                suggestion.subcategory,
+                            ).joinToString(" • "),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
 
             when (suggestion) {
                 is SmartProductSuggestion.ExistingProduct -> {
-                    Text(
-                        text = suggestion.product.normalizedName,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = listOfNotNull(
-                            suggestion.product.sector,
-                            suggestion.product.category,
-                            suggestion.product.subcategory,
-                        ).joinToString(" • "),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        text = suggestion.reason,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Button(
+                    TextButton(
                         onClick = { onUseExisting(suggestion.product) },
-                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Usar sugestão")
+                        Text("Usar")
                     }
                 }
 
                 is SmartProductSuggestion.NewProduct -> {
-                    Text(
-                        text = suggestion.name,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = listOfNotNull(
-                            suggestion.sector,
-                            suggestion.category,
-                            suggestion.subcategory,
-                        ).joinToString(" • "),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        text = suggestion.reason,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Button(
+                    TextButton(
                         onClick = { onCreateNew(suggestion) },
-                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Criar e vincular")
+                        Text("Criar")
                     }
                 }
             }
         }
     }
 }
-
 @Composable
 private fun HistoryMessageCard(
     title: String,
