@@ -16,6 +16,14 @@ if (-not $env:JAVA_HOME) {
     if (Test-Path (Join-Path $AndroidStudioJbr "bin\java.exe")) {
         $env:JAVA_HOME = $AndroidStudioJbr
         Write-Host "[OK] JAVA_HOME configurado pelo Android Studio."
+    } else {
+        $MicrosoftJdk = Get-ChildItem -Path (Join-Path $env:ProgramFiles "Microsoft") -Directory -Filter "jdk-17*" -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+        if ($MicrosoftJdk -and (Test-Path (Join-Path $MicrosoftJdk.FullName "bin\java.exe"))) {
+            $env:JAVA_HOME = $MicrosoftJdk.FullName
+            Write-Host "[OK] JAVA_HOME configurado pelo Microsoft OpenJDK 17."
+        }
     }
 }
 
@@ -55,7 +63,24 @@ if ($SdkManager) {
         Write-Host "[OK] Android SDK Platform 36 ja instalado."
     }
 } else {
-    Write-Warning "sdkmanager.bat nao localizado. Se o build reclamar do Android 36, instale-o pelo SDK Manager do Android Studio."
+    $AndroidCli = Get-Command android -ErrorAction SilentlyContinue
+    if (-not $AndroidCli) {
+        $WingetAndroid = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\android.exe"
+        if (Test-Path $WingetAndroid) {
+            $AndroidCli = Get-Item $WingetAndroid
+        }
+    }
+
+    if ($AndroidCli) {
+        $AndroidExe = if ($AndroidCli.Source) { $AndroidCli.Source } else { $AndroidCli.FullName }
+        Write-Host "Instalando/verificando pacotes pelo Android CLI..."
+        & $AndroidExe --sdk="$Sdk" sdk install platforms/android-36 build-tools/35.0.0 platform-tools
+        if ($LASTEXITCODE -ne 0) {
+            throw "Falha ao instalar os pacotes do Android SDK pela Android CLI."
+        }
+    } else {
+        throw "Nem sdkmanager.bat nem Android CLI foram localizados. Execute scripts\instalar-ambiente-minimo.ps1."
+    }
 }
 
 $GradleVersion = "8.13"
