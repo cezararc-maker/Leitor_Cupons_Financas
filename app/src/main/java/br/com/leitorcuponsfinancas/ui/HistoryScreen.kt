@@ -877,50 +877,161 @@ private fun UnrecognizedReviewDialog(
 private fun ProductLinkDialog(
     item: HistoryItemRow,
     products: List<ProductEntity>,
+    saving: Boolean,
     onDismiss: () -> Unit,
     onSelect: (ProductEntity) -> Unit,
+    onCreateProduct: (String, String, String, String, String) -> Unit,
 ) {
+    var creatingNew by remember(item.itemId) { mutableStateOf(false) }
+    var name by remember(item.itemId) { mutableStateOf(item.displayDescription) }
+    var sector by remember(item.itemId) { mutableStateOf("") }
+    var category by remember(item.itemId) { mutableStateOf("") }
+    var subcategory by remember(item.itemId) { mutableStateOf("") }
+    var unit by remember(item.itemId) {
+        mutableStateOf(item.displayUnit.orEmpty().ifBlank { "UN" })
+    }
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!saving) onDismiss() },
         title = {
-            Text("Vincular produto")
+            Text(
+                when {
+                    creatingNew -> "Criar produto mestre"
+                    item.productId != null -> "Editar vinculação"
+                    else -> "Vincular produto"
+                },
+            )
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(
-                    text = item.fiscalDescription,
-                    style = MaterialTheme.typography.titleSmall,
-                )
-
-                if (products.isEmpty()) {
+            if (creatingNew) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    item {
+                        Text(
+                            text = "O novo produto mestre será criado e este item será vinculado automaticamente.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Nome do produto *") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = sector,
+                            onValueChange = { sector = it },
+                            label = { Text("Setor *") },
+                            placeholder = { Text("Ex.: Alimentação") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = category,
+                            onValueChange = { category = it },
+                            label = { Text("Categoria *") },
+                            placeholder = { Text("Ex.: Mercado") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = subcategory,
+                            onValueChange = { subcategory = it },
+                            label = { Text("Subcategoria (opcional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = unit,
+                            onValueChange = { unit = it },
+                            label = { Text("Unidade") },
+                            placeholder = { Text("UN, KG, L...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     Text(
-                        "Nenhum produto cadastrado. Volte à tela de produtos e cadastre um produto primeiro.",
+                        text = item.displayDescription,
+                        style = MaterialTheme.typography.titleSmall,
                     )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.heightIn(max = 380.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+
+                    item.productName?.let { current ->
+                        Text(
+                            text = "Vínculo atual: $current",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+
+                    OutlinedButton(
+                        enabled = !saving,
+                        onClick = { creatingNew = true },
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        items(
-                            items = products,
-                            key = { it.id },
-                        ) { product ->
-                            OutlinedButton(
-                                onClick = { onSelect(product) },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Column(Modifier.fillMaxWidth()) {
-                                    Text(product.normalizedName)
-                                    Text(
-                                        text = listOfNotNull(
-                                            product.sector,
-                                            product.category,
-                                            product.subcategory,
-                                        ).joinToString(" • "),
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
+                        Text("Criar novo produto mestre")
+                    }
+
+                    if (products.isEmpty()) {
+                        Text(
+                            text = "Ainda não há produtos mestres cadastrados. Crie um novo produto acima.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    } else {
+                        Text(
+                            text = if (item.productId == null) {
+                                "Selecione um produto mestre existente:"
+                            } else {
+                                "Selecione outro produto para trocar a vinculação:"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+
+                        LazyColumn(
+                            modifier = Modifier.heightIn(max = 330.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            items(
+                                items = products,
+                                key = { it.id },
+                            ) { product ->
+                                OutlinedButton(
+                                    enabled = !saving,
+                                    onClick = { onSelect(product) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Column(Modifier.fillMaxWidth()) {
+                                        Text(
+                                            if (product.id == item.productId) {
+                                                "${product.normalizedName} • atual"
+                                            } else {
+                                                product.normalizedName
+                                            },
+                                        )
+                                        Text(
+                                            text = listOfNotNull(
+                                                product.sector,
+                                                product.category,
+                                                product.subcategory,
+                                            ).joinToString(" • "),
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -928,15 +1039,43 @@ private fun ProductLinkDialog(
                 }
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            if (creatingNew) {
+                Button(
+                    enabled = !saving &&
+                        name.isNotBlank() &&
+                        sector.isNotBlank() &&
+                        category.isNotBlank(),
+                    onClick = {
+                        onCreateProduct(
+                            name,
+                            sector,
+                            category,
+                            subcategory,
+                            unit,
+                        )
+                    },
+                ) {
+                    Text(if (saving) "Criando..." else "Criar e vincular")
+                }
+            }
+        },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+            TextButton(
+                enabled = !saving,
+                onClick = {
+                    if (creatingNew) {
+                        creatingNew = false
+                    } else {
+                        onDismiss()
+                    }
+                },
+            ) {
+                Text(if (creatingNew) "Voltar" else "Cancelar")
             }
         },
     )
 }
-
 @Composable
 private fun HistoryMessageCard(
     title: String,
