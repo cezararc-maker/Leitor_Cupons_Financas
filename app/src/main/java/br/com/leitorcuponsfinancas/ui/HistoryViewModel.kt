@@ -265,7 +265,9 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             val product = ProductEntity(
-                fiscalDescription = item.fiscalDescription,
+                fiscalDescription = item.fiscalDescription.takeIf {
+                    item.sourceType != "MANUAL"
+                },
                 normalizedName = cleanName,
                 sector = cleanSector,
                 category = cleanCategory,
