@@ -8,13 +8,15 @@ import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ProductViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val database = AppDatabase.getInstance(application)
     private val repository = ProductRepository(
-        AppDatabase.getInstance(application).productDao(),
+        database.productDao(),
     )
 
     val products = repository.products.stateIn(
@@ -22,6 +24,24 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),
     )
+
+    val learnedDescriptions = database.merchantProductLinkDao()
+        .observeAll()
+        .map { links ->
+            links
+                .groupBy { it.productId }
+                .mapValues { (_, productLinks) ->
+                    productLinks
+                        .map { it.fiscalDescription.trim() }
+                        .filter { it.isNotBlank() }
+                        .distinctBy { it.uppercase() }
+                }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyMap(),
+        )
 
     fun save(
         existing: ProductEntity?,
