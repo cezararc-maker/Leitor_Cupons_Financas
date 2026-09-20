@@ -3,6 +3,7 @@ package br.com.leitorcuponsfinancas.ui
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,9 +64,11 @@ fun HistoryScreen(
     val products by historyViewModel.products.collectAsStateWithLifecycle()
     val linkState by historyViewModel.linkState.collectAsStateWithLifecycle()
     val editState by historyViewModel.editState.collectAsStateWithLifecycle()
+    val deleteState by historyViewModel.deleteState.collectAsStateWithLifecycle()
 
     var linkingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
     var editingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
+    var deletingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
     var reviewingItemId by rememberSaveable { mutableStateOf<Long?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
 
@@ -298,6 +303,24 @@ fun HistoryScreen(
             }
         }
 
+        deleteState.message?.let { message ->
+            item {
+                HistoryMessageCard(
+                    title = "Lançamento excluído",
+                    message = message,
+                )
+            }
+        }
+
+        deleteState.error?.let { error ->
+            item {
+                HistoryMessageCard(
+                    title = "Não foi possível excluir",
+                    message = error,
+                )
+            }
+        }
+
         if (filteredItems.isEmpty()) {
             item {
                 Card(Modifier.fillMaxWidth()) {
@@ -333,9 +356,13 @@ fun HistoryScreen(
                     historyViewModel.clearEditMessage()
                     editingItem = item
                 },
-                onLink = {
+                onEditLink = {
                     historyViewModel.clearLinkMessage()
                     linkingItem = item
+                },
+                onDelete = {
+                    historyViewModel.clearDeleteMessage()
+                    deletingItem = item
                 },
             )
         }
@@ -345,9 +372,21 @@ fun HistoryScreen(
         ProductLinkDialog(
             item = item,
             products = products,
+            saving = linkState.saving,
             onDismiss = { linkingItem = null },
             onSelect = { product ->
                 historyViewModel.linkItem(item, product)
+                linkingItem = null
+            },
+            onCreateProduct = { name, sector, category, subcategory, unit ->
+                historyViewModel.createProductAndLink(
+                    item = item,
+                    name = name,
+                    sector = sector,
+                    category = category,
+                    subcategory = subcategory,
+                    unit = unit,
+                )
                 linkingItem = null
             },
         )
@@ -358,6 +397,11 @@ fun HistoryScreen(
             item = item,
             saving = editState.saving,
             onDismiss = { editingItem = null },
+            onEditLink = {
+                historyViewModel.clearLinkMessage()
+                linkingItem = item
+                editingItem = null
+            },
             onRestoreOriginal = {
                 historyViewModel.restoreOriginalItem(item)
                 editingItem = null
@@ -372,6 +416,39 @@ fun HistoryScreen(
                     totalAmount = totalAmount,
                 )
                 editingItem = null
+            },
+        )
+    }
+
+    deletingItem?.let { item ->
+        AlertDialog(
+            onDismissRequest = {
+                if (!deleteState.deleting) deletingItem = null
+            },
+            title = { Text("Excluir lançamento manual?") },
+            text = {
+                Text(
+                    text = "O item \"${item.displayDescription}\" será removido do Histórico e Gastos. Esta ação não afeta o cadastro mestre de produtos.",
+                )
+            },
+            confirmButton = {
+                Button(
+                    enabled = !deleteState.deleting,
+                    onClick = {
+                        historyViewModel.deleteManualItem(item)
+                        deletingItem = null
+                    },
+                ) {
+                    Text(if (deleteState.deleting) "Excluindo..." else "Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !deleteState.deleting,
+                    onClick = { deletingItem = null },
+                ) {
+                    Text("Cancelar")
+                }
             },
         )
     }
