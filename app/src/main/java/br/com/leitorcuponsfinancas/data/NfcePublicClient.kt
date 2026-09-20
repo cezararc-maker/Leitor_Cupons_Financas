@@ -12,7 +12,7 @@ object NfcePublicClient {
 
     private const val OFFICIAL_HOST = "www.dfe.ms.gov.br"
     private const val ALT_OFFICIAL_HOST = "dfe.ms.gov.br"
-    private const val MAX_REDIRECTS = 5
+    private const val MAX_REDIRECTS = 7
 
     suspend fun fetch(url: String): NfcePageParseResult = withContext(Dispatchers.IO) {
         var currentUrl = normalizeOfficialUrl(url)
@@ -23,7 +23,7 @@ object NfcePublicClient {
         val cookies = mutableMapOf<String, String>()
 
         try {
-            repeat(MAX_REDIRECTS + 1) { redirectCount ->
+            for (redirectCount in 0..MAX_REDIRECTS) {
                 val response = Jsoup.connect(currentUrl)
                     .userAgent(
                         "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 " +
@@ -50,19 +50,14 @@ object NfcePublicClient {
                             "A SEFAZ-MS retornou um redirecionamento sem endereço de destino.",
                         )
 
-                    val resolved = resolveRedirect(
+                    currentUrl = normalizeRedirect(
                         currentUrl = currentUrl,
-                        location = location,
+                        destination = location,
                     ) ?: return@withContext NfcePageParseResult.Error(
-                        "A consulta foi redirecionada para um endereço inválido.",
+                        "A consulta foi redirecionada para um endereço fora do domínio oficial da SEFAZ-MS.",
                     )
 
-                    currentUrl = normalizeOfficialUrl(resolved)
-                        ?: return@withContext NfcePageParseResult.Error(
-                            "A consulta foi redirecionada para um endereço fora do domínio oficial da SEFAZ-MS.",
-                        )
-
-                    return@repeat
+                    continue
                 }
 
                 val finalUrl = normalizeOfficialUrl(response.url().toExternalForm())
@@ -76,8 +71,24 @@ object NfcePublicClient {
                     )
                 }
 
+                val body = response.body()
+                val intermediateRedirect = findHtmlRedirect(
+                    html = body,
+                    currentUrl = finalUrl,
+                )
+
+                if (intermediateRedirect != null) {
+                    if (redirectCount >= MAX_REDIRECTS) {
+                        return@withContext NfcePageParseResult.Error(
+                            "A SEFAZ-MS excedeu o limite de redirecionamentos internos da consulta.",
+                        )
+                    }
+                    currentUrl = intermediateRedirect
+                    continue
+                }
+
                 return@withContext NfcePageParser.parse(
-                    html = response.body(),
+                    html = body,
                     sourceUrl = finalUrl,
                 )
             }
@@ -89,6 +100,46 @@ object NfcePublicClient {
             NfcePageParseResult.Error(
                 "Não foi possível consultar a SEFAZ-MS: ${error.message ?: error::class.java.simpleName}",
             )
+        }
+    }
+
+    internal fun findHtmlRedirect(
+        html: String,
+        currentUrl: String,
+    ): String? {
+        if (html.isBlank()) return null
+
+        val document = Jsoup.parse(html, currentUrl)
+
+        val metaContent = document
+            .selectFirst("meta[http-equiv~=(?i)refresh]")
+            ?.attr("content")
+            ?.trim()
+
+        val metaDestination = metaContent
+            ?.substringAfter("url=", missingDelimiterValue = "")
+            ?.trim()
+            ?.trim('\'', '"')
+            ?.takeIf { it.isNotBlank() }
+
+        if (metaDestination != null) {
+            normalizeRedirect(currentUrl, metaDestination)?.let { return it }
+        }
+
+        val scriptText = document.select("script")
+            .joinToString("\n") { it.data() }
+
+        val scriptRegex = Regex(
+            """(?i)(?:window\.)?location(?:\.href)?\s*=\s*['"]([^'"]+)['"]""",
+        )
+        val scriptDestination = scriptRegex.find(scriptText)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+
+        return scriptDestination?.let {
+            normalizeRedirect(currentUrl, it)
         }
     }
 
@@ -131,5 +182,17 @@ object NfcePublicClient {
         return runCatching {
             current.resolve(safeLocation).toString()
         }.getOrNull()
+    }
+
+    private fun normalizeRedirect(
+        currentUrl: String,
+        destination: String,
+    ): String? {
+        val resolved = resolveRedirect(
+            currentUrl = currentUrl,
+            location = destination,
+        ) ?: return null
+
+        return normalizeOfficialUrl(resolved)
     }
 }
