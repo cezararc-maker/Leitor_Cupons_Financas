@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReceiptDao {
@@ -23,6 +24,47 @@ interface ReceiptDao {
 
     @Query("SELECT COUNT(*) FROM receipts")
     suspend fun countReceipts(): Int
+
+    @Query(
+        """
+        SELECT
+            ri.id AS itemId,
+            r.id AS receiptId,
+            r.issuedDate AS issuedDate,
+            r.issuedAt AS issuedAt,
+            r.merchantName AS merchantName,
+            r.merchantCnpj AS merchantCnpj,
+            r.number AS receiptNumber,
+            r.series AS receiptSeries,
+            ri.fiscalDescription AS fiscalDescription,
+            ri.itemCode AS itemCode,
+            ri.quantity AS quantity,
+            ri.unit AS unit,
+            ri.unitPrice AS unitPrice,
+            ri.totalAmount AS totalAmount,
+            ri.productId AS productId,
+            p.normalizedName AS productName,
+            p.sector AS sector,
+            p.category AS category,
+            p.subcategory AS subcategory
+        FROM receipt_items ri
+        INNER JOIN receipts r ON r.id = ri.receiptId
+        LEFT JOIN products p ON p.id = ri.productId
+        WHERE r.issuedDate IS NOT NULL
+          AND r.issuedDate BETWEEN :startDate AND :endDate
+        ORDER BY r.issuedDate DESC, r.id DESC, ri.lineNumber ASC
+        """,
+    )
+    fun observeHistory(
+        startDate: String,
+        endDate: String,
+    ): Flow<List<HistoryItemRow>>
+
+    @Query("UPDATE receipt_items SET productId = :productId WHERE id = :itemId")
+    suspend fun updateItemProduct(
+        itemId: Long,
+        productId: Long,
+    )
 
     @Transaction
     suspend fun insertReceiptWithItems(
