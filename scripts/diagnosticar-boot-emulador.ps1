@@ -13,10 +13,11 @@ $PackageName = "br.com.leitorcuponsfinancas"
 $Apk = Join-Path $ProjectRoot "app\build\outputs\apk\debug\app-debug.apk"
 
 $ReportDir = Join-Path $ProjectRoot "data\runtime\reports"
-$Log = Join-Path $ReportDir "emulator_safe_boot.log"
+$StdOutLog = Join-Path $ReportDir "emulator_safe_boot_stdout.log"
+$StdErrLog = Join-Path $ReportDir "emulator_safe_boot_stderr.log"
 
 New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
-Remove-Item $Log -Force -ErrorAction SilentlyContinue
+Remove-Item $StdOutLog, $StdErrLog -Force -ErrorAction SilentlyContinue
 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host " LEITOR CUPONS FINANCAS - BOOT SEGURO DO EMULADOR" -ForegroundColor Cyan
@@ -64,12 +65,13 @@ $Arguments = @(
 
 $Process = Start-Process -FilePath $Emulator `
     -ArgumentList $Arguments `
-    -RedirectStandardOutput $Log `
-    -RedirectStandardError $Log `
+    -RedirectStandardOutput $StdOutLog `
+    -RedirectStandardError $StdErrLog `
     -PassThru
 
 Write-Host "PID do Emulator: $($Process.Id)"
-Write-Host "Log: $Log"
+Write-Host "STDOUT: $StdOutLog"
+Write-Host "STDERR: $StdErrLog"
 
 Write-Host ""
 Write-Host "[3/5] Aguardando ADB e boot do Android..." -ForegroundColor Yellow
@@ -85,8 +87,11 @@ for ($Attempt = 1; $Attempt -le 180; $Attempt++) {
         Write-Host "[ERRO] Emulator encerrou durante o boot. ExitCode: $($Process.ExitCode)" -ForegroundColor Red
         Write-Host ""
         Write-Host "Ultimas linhas do log:" -ForegroundColor Yellow
-        if (Test-Path $Log) {
-            Get-Content $Log -Tail 120
+        if (Test-Path $StdErrLog) {
+            Get-Content $StdErrLog -Tail 120
+        }
+        if (Test-Path $StdOutLog) {
+            Get-Content $StdOutLog -Tail 120
         }
         throw "Falha no boot seguro do Android Emulator."
     }
@@ -112,8 +117,11 @@ for ($Attempt = 1; $Attempt -le 180; $Attempt++) {
 if (-not $Ready -or -not $Serial) {
     Write-Host ""
     Write-Host "Ultimas linhas do log:" -ForegroundColor Yellow
-    if (Test-Path $Log) {
-        Get-Content $Log -Tail 120
+    if (Test-Path $StdErrLog) {
+        Get-Content $StdErrLog -Tail 120
+    }
+    if (Test-Path $StdOutLog) {
+        Get-Content $StdOutLog -Tail 120
     }
     throw "O Android nao concluiu o boot no modo seguro."
 }
@@ -138,4 +146,6 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host "[OK] App aberto no Emulator em modo grafico seguro." -ForegroundColor Green
-Write-Host "Log desta inicializacao: $Log"
+Write-Host "Logs desta inicializacao:"
+Write-Host $StdOutLog
+Write-Host $StdErrLog
