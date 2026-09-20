@@ -169,7 +169,10 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
             ) {
                 is ProductLinkResult.Success -> {
                     _linkState.value = HistoryLinkState(
-                        message = "\"${item.fiscalDescription}\" vinculado a \"${product.normalizedName}\".",
+                        message = buildString {
+                            append("\"${item.fiscalDescription}\" vinculado a \"${product.normalizedName}\".")
+                            append(" Itens atualizados no histórico: ${result.updatedItems}.")
+                        },
                     )
                 }
 
