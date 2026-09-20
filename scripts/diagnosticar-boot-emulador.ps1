@@ -41,9 +41,19 @@ Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
         Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
     }
 
-& $Adb kill-server 2>$null | Out-Null
+try {
+    & $Adb kill-server 2>$null | Out-Null
+} catch {
+    Write-Host "[INFO] ADB ja estava parado." -ForegroundColor DarkYellow
+}
+
 Start-Sleep -Seconds 2
-& $Adb start-server | Out-Null
+
+try {
+    & $Adb start-server | Out-Null
+} catch {
+    throw "Nao foi possivel iniciar o ADB server."
+}
 
 Write-Host ""
 Write-Host "[2/5] Iniciando em modo grafico seguro..." -ForegroundColor Yellow
