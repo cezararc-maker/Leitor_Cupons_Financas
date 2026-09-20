@@ -61,10 +61,14 @@ class ReceiptRepository(
         return ReceiptSaveResult(
             receiptId = insertResult.receiptId,
             inserted = insertResult.inserted,
+            firstImportedAt = insertResult.firstImportedAt,
             matchedItems = items.count { it.productId != null },
             totalItems = items.size,
         )
     }
+
+    suspend fun findImportedReceipt(accessKey: String): ReceiptEntity? =
+        receiptDao.findReceiptByAccessKey(accessKey)
 
     fun observeHistory(
         startDate: String,
@@ -212,6 +216,7 @@ class ReceiptRepository(
 data class ReceiptSaveResult(
     val receiptId: Long,
     val inserted: Boolean,
+    val firstImportedAt: Long,
     val matchedItems: Int,
     val totalItems: Int,
 )
