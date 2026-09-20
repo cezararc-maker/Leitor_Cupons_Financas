@@ -36,10 +36,18 @@ if (-not $ComputerSystem.HypervisorPresent) {
 Write-Host "[OK] Hipervisor do Windows carregado." -ForegroundColor Green
 
 Write-Host ""
-Write-Host "[1/4] Instalando Android Emulator e imagem Android 14 x86_64..." -ForegroundColor Yellow
-& $SdkManager --sdk_root="$Sdk" "emulator" "$ImagePackage"
+Write-Host "[1/4] Instalando componentes necessarios..." -ForegroundColor Yellow
+
+if (Test-Path $Emulator) {
+    Write-Host "[OK] Android Emulator ja existe. A versao atual sera preservada." -ForegroundColor Green
+    & $SdkManager --sdk_root="$Sdk" "$ImagePackage"
+} else {
+    Write-Host "[INFO] Android Emulator ainda nao existe; instalando componente base..." -ForegroundColor DarkYellow
+    & $SdkManager --sdk_root="$Sdk" "emulator" "$ImagePackage"
+}
+
 if ($LASTEXITCODE -ne 0) {
-    throw "Falha ao instalar Android Emulator ou a imagem do sistema."
+    throw "Falha ao instalar os componentes do Android Emulator."
 }
 
 if (-not (Test-Path $Emulator)) {
@@ -99,7 +107,7 @@ function Set-AvdSetting {
 }
 
 Set-AvdSetting "hw.ramSize" "1536"
-Set-AvdSetting "hw.cpu.ncore" "2"
+Set-AvdSetting "hw.cpu.ncore" "1"
 Set-AvdSetting "hw.lcd.width" "720"
 Set-AvdSetting "hw.lcd.height" "1280"
 Set-AvdSetting "hw.lcd.density" "320"
@@ -114,7 +122,7 @@ Write-Host "AVD: $AvdName"
 Write-Host "Android: 14 / API 34"
 Write-Host "Imagem: AOSP x86_64"
 Write-Host "RAM: 1536 MB"
-Write-Host "CPU: 2 cores"
+Write-Host "CPU: 1 core"
 Write-Host "Resolucao: 720 x 1280"
 Write-Host ""
 Write-Host "Proximo passo: scripts\executar-app-emulador.ps1"
