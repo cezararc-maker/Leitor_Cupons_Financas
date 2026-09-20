@@ -218,7 +218,9 @@ private fun ProductFormDialog(
                     OutlinedTextField(
                         value = fiscalDescription,
                         onValueChange = { fiscalDescription = it },
-                        label = { Text("Descrição fiscal (opcional)") },
+                        label = { Text("Descrição fiscal da NFC-e (opcional)") },
+                        placeholder = { Text("Ex.: ARROZ TIO LAUTERIOT1") },
+                        supportingText = { Text("Use o texto como aparece na nota; pode deixar em branco e ensinar depois pelo Histórico.") },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
