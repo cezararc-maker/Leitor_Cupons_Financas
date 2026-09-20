@@ -72,3 +72,14 @@ No Windows, o caminho preferencial para aceleração do Android Emulator é a Wi
 O perfil usa Android 14 / API 34 com imagem AOSP `x86_64`, 1536 MB de RAM, 2 CPUs, resolução 720 x 1280 e câmeras desativadas nesta fase.
 
 A câmera será habilitada posteriormente quando iniciarmos os testes reais de QR Code/NFC-e.
+
+
+## Recuperacao do AVD
+
+Se o emulador abrir mas não aparecer no ADB ou não concluir o boot, execute:
+
+```powershell
+.\scripts\executar-app-emulador.ps1 -ResetAvd
+```
+
+Esse modo encerra processos residuais, reinicia o ADB, executa um cold boot sem snapshots e usa `-wipe-data` para restaurar somente os dados do dispositivo virtual. Os logs de inicialização ficam em `data/runtime/reports/emulator_stdout.log` e `data/runtime/reports/emulator_stderr.log`.
