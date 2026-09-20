@@ -40,7 +40,7 @@ fun ProfileScreen(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Button(onClick = onBack) { Text("Voltar") }
+        BackArrowButton(onClick = onBack)
 
         Text("Perfil local", style = MaterialTheme.typography.headlineSmall)
         Text(
