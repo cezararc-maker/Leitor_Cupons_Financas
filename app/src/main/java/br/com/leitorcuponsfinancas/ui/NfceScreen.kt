@@ -1,5 +1,7 @@
 package br.com.leitorcuponsfinancas.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +17,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -42,6 +45,30 @@ fun NfceScreen(
 
     val lookupState by nfceViewModel.lookupState.collectAsStateWithLifecycle()
     val saveState by nfceViewModel.saveState.collectAsStateWithLifecycle()
+    val imageState by nfceViewModel.imageState.collectAsStateWithLifecycle()
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            localResult = null
+            localError = false
+            consultationUrl = null
+            accessKey = null
+            nfceViewModel.clearLookup()
+            nfceViewModel.readQrImage(uri)
+        }
+    }
+
+    LaunchedEffect(imageState.qrText) {
+        imageState.qrText?.let { text ->
+            qrText = text
+            localResult = null
+            localError = false
+            consultationUrl = null
+            accessKey = null
+        }
+    }
 
     Column(
         modifier = modifier
@@ -60,7 +87,7 @@ fun NfceScreen(
         )
 
         Text(
-            text = "No desktop, cole o link ou conteúdo do QR Code. A câmera e a leitura por imagem serão adicionadas nas próximas etapas.",
+            text = "Cole o link, selecione uma imagem com o QR Code ou, no celular, use a câmera quando essa etapa estiver habilitada.",
             style = MaterialTheme.typography.bodyMedium,
         )
 
@@ -73,11 +100,35 @@ fun NfceScreen(
         }
 
         OutlinedButton(
-            onClick = { },
-            enabled = false,
+            onClick = { imagePicker.launch(arrayOf("image/*")) },
+            enabled = !imageState.reading,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Selecionar imagem com QR Code — próxima etapa")
+            Text(
+                if (imageState.reading) {
+                    "Lendo QR Code da imagem..."
+                } else {
+                    "Selecionar imagem com QR Code"
+                },
+            )
+        }
+
+        if (imageState.reading) {
+            CircularProgressIndicator()
+        }
+
+        imageState.qrText?.let {
+            Text(
+                text = "QR Code encontrado na imagem e carregado no campo abaixo.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        imageState.error?.let { error ->
+            MessageCard(
+                title = "Não foi possível ler a imagem",
+                message = error,
+            )
         }
 
         Text(
@@ -93,6 +144,7 @@ fun NfceScreen(
                 consultationUrl = null
                 accessKey = null
                 nfceViewModel.clearLookup()
+                nfceViewModel.clearImageState()
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -113,6 +165,7 @@ fun NfceScreen(
                 consultationUrl = null
                 accessKey = null
                 nfceViewModel.clearLookup()
+                nfceViewModel.clearImageState()
             },
             label = { Text("URL ou conteúdo da NFC-e") },
             placeholder = { Text("https://.../nfce/qrcode?p=...") },
