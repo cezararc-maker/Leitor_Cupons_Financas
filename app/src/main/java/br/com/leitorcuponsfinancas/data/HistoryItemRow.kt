@@ -9,6 +9,8 @@ data class HistoryItemRow(
     val merchantCnpj: String?,
     val receiptNumber: String?,
     val receiptSeries: String?,
+    val sourceType: String,
+    val createdByName: String?,
     val fiscalDescription: String,
     val itemCode: String?,
     val quantity: String?,
@@ -25,6 +27,7 @@ data class HistoryItemRow(
     val correctedUnit: String?,
     val correctedUnitPrice: String?,
     val correctedTotalAmount: String?,
+    val correctedByName: String?,
     val correctedAt: Long?,
 ) {
     val displayDescription: String
