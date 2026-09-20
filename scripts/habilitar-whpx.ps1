@@ -33,16 +33,21 @@ $Feature = Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform
 
 if ($Feature.State -eq "Enabled") {
     Write-Host "[OK] Windows Hypervisor Platform ja esta habilitada." -ForegroundColor Green
-    Write-Host "Pode seguir para scripts\instalar-emulador-lite.ps1."
+
+    $ComputerSystem = Get-CimInstance Win32_ComputerSystem
+    if ($ComputerSystem.HypervisorPresent) {
+        Write-Host "[OK] Hipervisor do Windows esta carregado." -ForegroundColor Green
+        Write-Host "Pode seguir para scripts\instalar-emulador-lite.ps1."
+    } else {
+        Write-Host "[ACAO NECESSARIA] O recurso esta habilitado, mas o hipervisor ainda nao esta carregado." -ForegroundColor Yellow
+        Write-Host "Reinicie o Windows antes de continuar." -ForegroundColor Yellow
+    }
     exit 0
 }
 
 $Result = Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -All -NoRestart
 
 Write-Host ""
-if ($Result.RestartNeeded) {
-    Write-Host "[OK] Windows Hypervisor Platform habilitada." -ForegroundColor Green
-    Write-Host "[ACAO NECESSARIA] Reinicie o Windows antes de instalar/iniciar o emulador." -ForegroundColor Yellow
-} else {
-    Write-Host "[OK] Windows Hypervisor Platform habilitada sem reinicio pendente." -ForegroundColor Green
-}
+Write-Host "[OK] Windows Hypervisor Platform habilitada." -ForegroundColor Green
+Write-Host "[ACAO NECESSARIA] Reinicie o Windows antes de instalar/iniciar o emulador." -ForegroundColor Yellow
+Write-Host "A documentacao oficial do Android recomenda reiniciar apos habilitar WHPX." -ForegroundColor DarkYellow
