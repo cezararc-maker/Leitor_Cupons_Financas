@@ -42,6 +42,9 @@ import br.com.leitorcuponsfinancas.data.HistoryItemRow
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun HistoryScreen(
@@ -411,9 +414,11 @@ private fun HistoryItemCard(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
+            val sourceLabel = if (item.sourceType == "MANUAL") "Manual" else "NFC-e"
             val header = listOfNotNull(
                 item.issuedAt?.take(10),
                 item.merchantName,
+                sourceLabel,
             ).joinToString(" • ")
 
             if (header.isNotBlank()) {
@@ -428,9 +433,21 @@ private fun HistoryItemCard(
                 style = MaterialTheme.typography.titleMedium,
             )
 
+            item.createdByName?.let { author ->
+                Text(
+                    text = "Incluído por: $author",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
             if (item.manuallyEdited) {
                 Text(
-                    text = "Editado manualmente • original preservado",
+                    text = buildString {
+                        append("✎ Corrigido")
+                        item.correctedByName?.let { append(" por $it") }
+                        item.correctedAt?.let { append(" em ${formatAuditDateTime(it)}") }
+                        append(" • original preservado")
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -518,15 +535,17 @@ private fun EditHistoryItemDialog(
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
                     Text(
-                        text = "Os dados originais da NFC-e serão preservados. A correção altera apenas a visualização e os relatórios do aplicativo.",
+                        text = if (item.sourceType == "MANUAL") "A edição ficará registrada com usuário e data." else "Os dados originais da NFC-e serão preservados. A correção altera apenas a visualização e os relatórios do aplicativo.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                item {
-                    Text(
-                        text = "Original: ${item.fiscalDescription}",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                if (item.sourceType != "MANUAL") {
+                    item {
+                        Text(
+                            text = "Original da NFC-e: ${item.fiscalDescription}",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
                 item { OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Descrição") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
                 item { OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text("Quantidade") }, singleLine = true, modifier = Modifier.fillMaxWidth()) }
@@ -747,3 +766,12 @@ private fun formatHistoryNumber(value: String): String =
         ?.toPlainString()
         ?.replace(".", ",")
         ?: value
+
+private fun formatAuditDateTime(timestamp: Long): String =
+    DateTimeFormatter
+        .ofPattern("dd/MM/yyyy 'às' HH:mm")
+        .format(
+            Instant
+                .ofEpochMilli(timestamp)
+                .atZone(ZoneId.systemDefault()),
+        )
