@@ -90,9 +90,24 @@ object NfcePageParser {
         val totalAmount = findPayableTotal(document.body(), bodyText)
 
         if (merchantName == null && items.isEmpty()) {
-            return NfcePageParseResult.Error(
-                "A página foi recebida, mas o formato não corresponde ao DANFE NFC-e público esperado da SEFAZ-MS.",
-            )
+            val title = cleanText(document.title()).takeIf { it.isNotBlank() }
+            val hasScripts = document.select("script").isNotEmpty()
+            val looksLikeJavascriptShell = hasScripts &&
+                document.select("table").isEmpty() &&
+                bodyText.length < 1_500
+
+            val diagnostic = when {
+                looksLikeJavascriptShell ->
+                    "A página recebida parece depender de JavaScript para montar o DANFE."
+
+                title != null ->
+                    "A SEFAZ-MS devolveu uma página diferente do DANFE esperado (título: $title)."
+
+                else ->
+                    "A página foi recebida, mas o formato não corresponde ao DANFE NFC-e público esperado da SEFAZ-MS."
+            }
+
+            return NfcePageParseResult.Error(diagnostic)
         }
 
         return NfcePageParseResult.Success(
