@@ -15,9 +15,10 @@ internal object HistorySearchFilter {
 
         return items.filter { item ->
             val candidates = listOfNotNull(
+                item.displayDescription,
                 item.fiscalDescription,
                 item.productName,
-            ).map(ProductNormalizer::searchKey)
+            ).distinct().map(ProductNormalizer::searchKey)
 
             when (mode) {
                 HistorySearchMode.STARTS_WITH ->
