@@ -43,6 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.leitorcuponsfinancas.data.HistoryItemRow
 import br.com.leitorcuponsfinancas.data.ProductEntity
+import br.com.leitorcuponsfinancas.domain.ProductSuggestionEngine
+import br.com.leitorcuponsfinancas.domain.SmartProductSuggestion
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
@@ -62,6 +64,7 @@ fun HistoryScreen(
     val searchQuery by historyViewModel.searchQuery.collectAsStateWithLifecycle()
     val searchMode by historyViewModel.searchMode.collectAsStateWithLifecycle()
     val products by historyViewModel.products.collectAsStateWithLifecycle()
+    val learnedLinks by historyViewModel.learnedLinks.collectAsStateWithLifecycle()
     val linkState by historyViewModel.linkState.collectAsStateWithLifecycle()
     val editState by historyViewModel.editState.collectAsStateWithLifecycle()
     val deleteState by historyViewModel.deleteState.collectAsStateWithLifecycle()
@@ -369,9 +372,19 @@ fun HistoryScreen(
     }
 
     linkingItem?.let { item ->
+        val smartSuggestion = remember(item.itemId, products, learnedLinks) {
+            ProductSuggestionEngine.suggest(
+                description = item.displayDescription,
+                unit = item.displayUnit,
+                products = products,
+                learnedLinks = learnedLinks,
+            )
+        }
+
         ProductLinkDialog(
             item = item,
             products = products,
+            smartSuggestion = smartSuggestion,
             saving = linkState.saving,
             onDismiss = { linkingItem = null },
             onSelect = { product ->
@@ -464,15 +477,36 @@ fun HistoryScreen(
                 .getOrNull(reviewIndex + 1)
                 ?.itemId
 
+            val smartSuggestion = remember(currentItem.itemId, products, learnedLinks) {
+                ProductSuggestionEngine.suggest(
+                    description = currentItem.displayDescription,
+                    unit = currentItem.displayUnit,
+                    products = products,
+                    learnedLinks = learnedLinks,
+                )
+            }
+
             UnrecognizedReviewDialog(
                 item = currentItem,
                 position = reviewIndex + 1,
                 total = unrecognizedItems.size,
                 products = products,
+                smartSuggestion = smartSuggestion,
                 onDismiss = { reviewingItemId = null },
                 onSkip = { reviewingItemId = nextItemId },
                 onSelect = { product ->
                     historyViewModel.linkItem(currentItem, product)
+                    reviewingItemId = nextItemId
+                },
+                onCreateSuggested = { suggestion ->
+                    historyViewModel.createProductAndLink(
+                        item = currentItem,
+                        name = suggestion.name,
+                        sector = suggestion.sector,
+                        category = suggestion.category,
+                        subcategory = suggestion.subcategory.orEmpty(),
+                        unit = suggestion.unit,
+                    )
                     reviewingItemId = nextItemId
                 },
             )
