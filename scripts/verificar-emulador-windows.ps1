@@ -26,13 +26,23 @@ Get-CimInstance Win32_BIOS |
 
 Write-Host ""
 Write-Host "[3/4] Recursos do Windows..." -ForegroundColor Yellow
-Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction SilentlyContinue |
-    Select-Object FeatureName, State |
-    Format-List
 
-Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction SilentlyContinue |
-    Select-Object FeatureName, State |
-    Format-List
+$IsAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator
+)
+
+if ($IsAdmin) {
+    Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction SilentlyContinue |
+        Select-Object FeatureName, State |
+        Format-List
+
+    Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction SilentlyContinue |
+        Select-Object FeatureName, State |
+        Format-List
+} else {
+    Write-Host "[INFO] PowerShell sem elevacao. A leitura dos recursos opcionais do Windows foi ignorada." -ForegroundColor DarkYellow
+    Write-Host "       Execute como Administrador somente quando formos configurar o WHPX." -ForegroundColor DarkYellow
+}
 
 Write-Host ""
 Write-Host "[4/4] Android Emulator..." -ForegroundColor Yellow
