@@ -814,9 +814,11 @@ private fun UnrecognizedReviewDialog(
     position: Int,
     total: Int,
     products: List<ProductEntity>,
+    smartSuggestion: SmartProductSuggestion?,
     onDismiss: () -> Unit,
     onSkip: () -> Unit,
     onSelect: (ProductEntity) -> Unit,
+    onCreateSuggested: (SmartProductSuggestion.NewProduct) -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -851,6 +853,14 @@ private fun UnrecognizedReviewDialog(
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                smartSuggestion?.let { suggestion ->
+                    SmartSuggestionCard(
+                        suggestion = suggestion,
+                        onUseExisting = onSelect,
+                        onCreateNew = onCreateSuggested,
                     )
                 }
 
@@ -911,6 +921,7 @@ private fun UnrecognizedReviewDialog(
 private fun ProductLinkDialog(
     item: HistoryItemRow,
     products: List<ProductEntity>,
+    smartSuggestion: SmartProductSuggestion?,
     saving: Boolean,
     onDismiss: () -> Unit,
     onSelect: (ProductEntity) -> Unit,
@@ -1013,6 +1024,22 @@ private fun ProductLinkDialog(
                         )
                     }
 
+                    smartSuggestion?.let { suggestion ->
+                        SmartSuggestionCard(
+                            suggestion = suggestion,
+                            onUseExisting = onSelect,
+                            onCreateNew = { newSuggestion ->
+                                onCreateProduct(
+                                    newSuggestion.name,
+                                    newSuggestion.sector,
+                                    newSuggestion.category,
+                                    newSuggestion.subcategory.orEmpty(),
+                                    newSuggestion.unit,
+                                )
+                            },
+                        )
+                    }
+
                     OutlinedButton(
                         enabled = !saving,
                         onClick = { creatingNew = true },
@@ -1110,6 +1137,84 @@ private fun ProductLinkDialog(
         },
     )
 }
+@Composable
+private fun SmartSuggestionCard(
+    suggestion: SmartProductSuggestion,
+    onUseExisting: (ProductEntity) -> Unit,
+    onCreateNew: (SmartProductSuggestion.NewProduct) -> Unit,
+) {
+    val confidenceLabel = when {
+        suggestion.confidence >= 90 -> "Alta confiança"
+        suggestion.confidence >= 75 -> "Boa sugestão"
+        else -> "Sugestão possível"
+    }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = "Sugestão inteligente • $confidenceLabel",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+
+            when (suggestion) {
+                is SmartProductSuggestion.ExistingProduct -> {
+                    Text(
+                        text = suggestion.product.normalizedName,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = listOfNotNull(
+                            suggestion.product.sector,
+                            suggestion.product.category,
+                            suggestion.product.subcategory,
+                        ).joinToString(" • "),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = suggestion.reason,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Button(
+                        onClick = { onUseExisting(suggestion.product) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Usar sugestão")
+                    }
+                }
+
+                is SmartProductSuggestion.NewProduct -> {
+                    Text(
+                        text = suggestion.name,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = listOfNotNull(
+                            suggestion.sector,
+                            suggestion.category,
+                            suggestion.subcategory,
+                        ).joinToString(" • "),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = suggestion.reason,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Button(
+                        onClick = { onCreateNew(suggestion) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Criar e vincular")
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun HistoryMessageCard(
     title: String,
