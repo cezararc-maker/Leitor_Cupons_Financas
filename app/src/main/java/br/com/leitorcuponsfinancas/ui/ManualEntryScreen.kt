@@ -42,6 +42,7 @@ fun ManualEntryScreen(
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
 
     var merchantName by remember { mutableStateOf("") }
+    var merchantCnpj by remember { mutableStateOf("") }
     var dateText by remember {
         mutableStateOf(LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
     }
@@ -241,8 +242,26 @@ fun ManualEntryScreen(
                     merchantName = it
                     viewModel.clearMessage()
                 },
-                label = { Text("Estabelecimento (opcional)") },
-                placeholder = { Text("Ex.: Padaria do bairro") },
+                label = { Text("Nome do estabelecimento / empresa (opcional)") },
+                placeholder = { Text("Ex.: Padaria Pão de Queijo") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        }
+
+        item {
+            OutlinedTextField(
+                value = merchantCnpj,
+                onValueChange = { value ->
+                    merchantCnpj = value.filter { it.isDigit() }.take(14)
+                    viewModel.clearMessage()
+                },
+                label = { Text("CNPJ do estabelecimento (opcional)") },
+                placeholder = { Text("14 dígitos") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                supportingText = {
+                    Text("O vínculo manual funciona mesmo sem CNPJ. Se informado, o CNPJ fica salvo no lançamento.")
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -296,6 +315,7 @@ fun ManualEntryScreen(
                 onClick = {
                     viewModel.save(
                         merchantName = merchantName,
+                        merchantCnpj = merchantCnpj,
                         dateText = dateText,
                         description = description,
                         quantity = quantity,
