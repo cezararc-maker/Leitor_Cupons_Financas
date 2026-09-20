@@ -51,9 +51,19 @@ function Stop-ProjectAvd {
 }
 
 function Restart-Adb {
-    & $Adb kill-server 2>$null | Out-Null
+    try {
+        & $Adb kill-server 2>$null | Out-Null
+    } catch {
+        Write-Host "[INFO] ADB ja estava parado." -ForegroundColor DarkYellow
+    }
+
     Start-Sleep -Seconds 1
-    & $Adb start-server | Out-Null
+
+    try {
+        & $Adb start-server | Out-Null
+    } catch {
+        throw "Nao foi possivel iniciar o ADB server."
+    }
 }
 
 function Start-ProjectAvd {
@@ -65,19 +75,20 @@ function Start-ProjectAvd {
 
     $Arguments = @(
         "@$AvdName",
-        "-gpu", "auto",
+        "-gpu", "swiftshader",
+        "-feature", "-Vulkan",
         "-no-audio",
         "-no-boot-anim",
         "-no-snapshot",
         "-memory", "1536",
-        "-cores", "2"
+        "-cores", "1"
     )
 
     if ($WipeData) {
         $Arguments += "-wipe-data"
         Write-Host "[INFO] Iniciando AVD com reset de fabrica e cold boot..." -ForegroundColor DarkYellow
     } else {
-        Write-Host "Iniciando $AvdName em cold boot..."
+        Write-Host "Iniciando $AvdName em modo compativel (SwiftShader, Vulkan off, 1 CPU)..."
     }
 
     Start-Process -FilePath $Emulator `
