@@ -23,4 +23,10 @@ data class ReceiptItemEntity(
     val unitPrice: String? = null,
     val totalAmount: String? = null,
     val productId: Long? = null,
+    val correctedDescription: String? = null,
+    val correctedQuantity: String? = null,
+    val correctedUnit: String? = null,
+    val correctedUnitPrice: String? = null,
+    val correctedTotalAmount: String? = null,
+    val correctedAt: Long? = null,
 )
