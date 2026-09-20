@@ -16,6 +16,9 @@ interface ReceiptDao {
     @Query("SELECT id FROM receipts WHERE accessKey = :accessKey LIMIT 1")
     suspend fun findReceiptIdByAccessKey(accessKey: String): Long?
 
+    @Query("SELECT * FROM receipts WHERE accessKey = :accessKey LIMIT 1")
+    suspend fun findReceiptByAccessKey(accessKey: String): ReceiptEntity?
+
     @Insert
     suspend fun insertItems(items: List<ReceiptItemEntity>)
 
@@ -128,12 +131,13 @@ interface ReceiptDao {
         val insertedId = insertReceipt(receipt)
 
         if (insertedId == -1L) {
-            val existingId = findReceiptIdByAccessKey(receipt.accessKey)
+            val existing = findReceiptByAccessKey(receipt.accessKey)
                 ?: error("NFC-e duplicada sem registro existente localizado.")
 
             return ReceiptInsertResult(
-                receiptId = existingId,
+                receiptId = existing.id,
                 inserted = false,
+                firstImportedAt = existing.createdAt,
             )
         }
 
@@ -148,6 +152,7 @@ interface ReceiptDao {
         return ReceiptInsertResult(
             receiptId = insertedId,
             inserted = true,
+            firstImportedAt = receipt.createdAt,
         )
     }
 }
@@ -155,4 +160,5 @@ interface ReceiptDao {
 data class ReceiptInsertResult(
     val receiptId: Long,
     val inserted: Boolean,
+    val firstImportedAt: Long,
 )
