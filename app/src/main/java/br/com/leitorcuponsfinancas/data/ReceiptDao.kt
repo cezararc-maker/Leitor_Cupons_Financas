@@ -39,6 +39,8 @@ interface ReceiptDao {
             r.merchantCnpj AS merchantCnpj,
             r.number AS receiptNumber,
             r.series AS receiptSeries,
+            r.sourceType AS sourceType,
+            r.createdByName AS createdByName,
             ri.fiscalDescription AS fiscalDescription,
             ri.itemCode AS itemCode,
             ri.quantity AS quantity,
@@ -51,6 +53,7 @@ interface ReceiptDao {
             ri.correctedUnit AS correctedUnit,
             ri.correctedUnitPrice AS correctedUnitPrice,
             ri.correctedTotalAmount AS correctedTotalAmount,
+            ri.correctedByName AS correctedByName,
             ri.correctedAt AS correctedAt,
             p.normalizedName AS productName,
             p.sector AS sector,
@@ -83,6 +86,8 @@ interface ReceiptDao {
             correctedUnit = :correctedUnit,
             correctedUnitPrice = :correctedUnitPrice,
             correctedTotalAmount = :correctedTotalAmount,
+            correctedById = :correctedById,
+            correctedByName = :correctedByName,
             correctedAt = :correctedAt
         WHERE id = :itemId
         """,
@@ -94,6 +99,8 @@ interface ReceiptDao {
         correctedUnit: String?,
         correctedUnitPrice: String?,
         correctedTotalAmount: String?,
+        correctedById: String?,
+        correctedByName: String?,
         correctedAt: Long?,
     ): Int
 
@@ -105,6 +112,8 @@ interface ReceiptDao {
             correctedUnit = NULL,
             correctedUnitPrice = NULL,
             correctedTotalAmount = NULL,
+            correctedById = NULL,
+            correctedByName = NULL,
             correctedAt = NULL
         WHERE id = :itemId
         """,
