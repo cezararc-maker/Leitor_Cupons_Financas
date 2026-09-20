@@ -74,6 +74,22 @@ fun NfceScreen(
             style = MaterialTheme.typography.titleMedium,
         )
 
+        OutlinedButton(
+            onClick = {
+                qrText = "http://www.dfe.ms.gov.br/nfce/qrcode?p=50260912345678000195650010000001231123456783|3|1"
+                result = null
+                isError = false
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Usar exemplo de teste")
+        }
+
+        Text(
+            text = "O exemplo é sintético e serve apenas para validar o parser local.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+
         OutlinedTextField(
             value = qrText,
             onValueChange = {
