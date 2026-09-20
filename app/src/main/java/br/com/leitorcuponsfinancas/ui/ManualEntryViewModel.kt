@@ -51,7 +51,6 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
         quantity: String,
         unit: String,
         unitPrice: String,
-        totalAmount: String,
         productId: Long?,
     ) {
         if (_saveState.value.saving) return
@@ -66,16 +65,18 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
 
-        if (merchantName.isBlank()) {
-            _saveState.value = ManualEntrySaveState(error = "Informe o estabelecimento.")
-            return
-        }
         if (description.isBlank()) {
             _saveState.value = ManualEntrySaveState(error = "Informe a descrição do item.")
             return
         }
-        if (totalAmount.isBlank()) {
-            _saveState.value = ManualEntrySaveState(error = "Informe o valor total.")
+        val calculatedTotal = ManualEntryCalculator.calculateTotal(
+            quantity = quantity,
+            unitPrice = unitPrice,
+        )
+        if (calculatedTotal == null) {
+            _saveState.value = ManualEntrySaveState(
+                error = "Informe quantidade e valor válidos, maiores que zero.",
+            )
             return
         }
 
@@ -91,13 +92,14 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
                     quantity = quantity,
                     unit = unit,
                     unitPrice = unitPrice,
-                    totalAmount = totalAmount,
                     productId = productId,
                     actor = profileStore.profile.value,
                 )
 
                 _saveState.value = ManualEntrySaveState(
-                    message = "Lançamento manual salvo no Histórico e Gastos.",
+                    message = "Lançamento manual salvo. Total: R$ ${
+                        ManualEntryCalculator.formatMoney(calculatedTotal)
+                    }.",
                 )
             } catch (error: Exception) {
                 _saveState.value = ManualEntrySaveState(
