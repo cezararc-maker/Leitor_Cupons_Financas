@@ -23,5 +23,8 @@ data class ReceiptEntity(
     val issuedAt: String? = null,
     val issuedDate: String? = null,
     val totalAmount: String? = null,
+    val sourceType: String = "NFCE",
+    val createdById: String? = null,
+    val createdByName: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
 )
