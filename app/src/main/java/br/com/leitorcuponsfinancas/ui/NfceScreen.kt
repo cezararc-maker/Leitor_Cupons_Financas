@@ -38,8 +38,10 @@ fun NfceScreen(
     var localResult by rememberSaveable { mutableStateOf<String?>(null) }
     var localError by rememberSaveable { mutableStateOf(false) }
     var consultationUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var accessKey by rememberSaveable { mutableStateOf<String?>(null) }
 
     val lookupState by nfceViewModel.lookupState.collectAsStateWithLifecycle()
+    val saveState by nfceViewModel.saveState.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -89,6 +91,7 @@ fun NfceScreen(
                 localResult = null
                 localError = false
                 consultationUrl = null
+                accessKey = null
                 nfceViewModel.clearLookup()
             },
             modifier = Modifier.fillMaxWidth(),
@@ -108,6 +111,7 @@ fun NfceScreen(
                 localResult = null
                 localError = false
                 consultationUrl = null
+                accessKey = null
                 nfceViewModel.clearLookup()
             },
             label = { Text("URL ou conteúdo da NFC-e") },
@@ -140,6 +144,7 @@ fun NfceScreen(
                         }
                         localError = false
                         consultationUrl = data.consultationUrl
+                        accessKey = data.accessKey
                         nfceViewModel.clearLookup()
                     }
 
@@ -147,6 +152,7 @@ fun NfceScreen(
                         localResult = parsed.message
                         localError = true
                         consultationUrl = null
+                        accessKey = null
                         nfceViewModel.clearLookup()
                     }
                 }
@@ -190,6 +196,36 @@ fun NfceScreen(
 
         lookupState.receipt?.let { receipt ->
             ReceiptCard(receipt)
+
+            Button(
+                enabled = accessKey != null && !saveState.saving,
+                onClick = {
+                    accessKey?.let(nfceViewModel::saveReceipt)
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    if (saveState.saving) {
+                        "Salvando NFC-e..."
+                    } else {
+                        "Salvar NFC-e no histórico"
+                    },
+                )
+            }
+        }
+
+        saveState.message?.let { message ->
+            MessageCard(
+                title = "Histórico atualizado",
+                message = message,
+            )
+        }
+
+        saveState.error?.let { error ->
+            MessageCard(
+                title = "Não foi possível salvar",
+                message = error,
+            )
         }
 
         Text(
