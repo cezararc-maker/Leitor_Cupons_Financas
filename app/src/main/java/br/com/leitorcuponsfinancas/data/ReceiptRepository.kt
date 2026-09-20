@@ -76,6 +76,7 @@ class ReceiptRepository(
 
     suspend fun saveManualPurchase(
         merchantName: String,
+        merchantCnpj: String,
         issuedDate: String,
         description: String,
         quantity: String,
@@ -85,6 +86,10 @@ class ReceiptRepository(
         actor: LocalUserProfile,
     ): ReceiptSaveResult {
         val normalizedMerchant = merchantName.trim().ifBlank { "Compra manual" }
+        val normalizedCnpj = merchantCnpj.filter(Char::isDigit)
+        if (normalizedCnpj.isNotBlank() && normalizedCnpj.length != 14) {
+            error("O CNPJ deve possuir 14 dígitos.")
+        }
         val normalizedDescription = description.trim()
 
         if (normalizedDescription.isBlank()) {
@@ -116,6 +121,7 @@ class ReceiptRepository(
             accessKey = "MANUAL:$manualId",
             sourceUrl = "manual://purchase/$manualId",
             merchantName = normalizedMerchant,
+            merchantCnpj = normalizedCnpj.ifBlank { null },
             issuedAt = issuedDate,
             issuedDate = parseIsoDate(issuedDate),
             totalAmount = normalizedTotal,
