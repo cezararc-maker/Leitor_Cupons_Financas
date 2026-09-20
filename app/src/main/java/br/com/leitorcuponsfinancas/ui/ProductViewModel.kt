@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
+import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.domain.ProductNormalizer
@@ -25,22 +26,15 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         initialValue = emptyList(),
     )
 
-    val learnedDescriptions = database.merchantProductLinkDao()
+    val learnedLinks = database.merchantProductLinkDao()
         .observeAll()
         .map { links ->
-            links
-                .groupBy { it.productId }
-                .mapValues { (_, productLinks) ->
-                    productLinks
-                        .map { it.fiscalDescription.trim() }
-                        .filter { it.isNotBlank() }
-                        .distinctBy { it.uppercase() }
-                }
+            links.groupBy { it.productId }
         }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyMap(),
+            initialValue = emptyMap<Long, List<MerchantProductLinkEntity>>(),
         )
 
     fun save(
