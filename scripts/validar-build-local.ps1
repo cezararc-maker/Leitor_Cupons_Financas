@@ -45,8 +45,8 @@ if (Test-Path $BuildDir) {
 Write-Host "[OK] Build anterior removido." -ForegroundColor Green
 
 Write-Host ""
-Write-Host "[3/4] Executando testes e compilacao com um worker..." -ForegroundColor Yellow
-& .\gradlew.bat clean test assembleDebug --no-daemon --max-workers=1
+Write-Host "[3/4] Executando testes de debug e compilacao com um worker..." -ForegroundColor Yellow
+& .\gradlew.bat clean testDebugUnitTest assembleDebug --no-daemon --max-workers=1
 
 if ($LASTEXITCODE -ne 0) {
     throw "Testes ou compilacao falharam."
