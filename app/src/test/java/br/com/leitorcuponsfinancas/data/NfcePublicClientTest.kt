@@ -28,6 +28,33 @@ class NfcePublicClientTest {
     }
 
     @Test
+    fun resolvesRelativeRedirectInsideOfficialHost() {
+        val current = "https://www.dfe.ms.gov.br/nfce/qrcode/?p=abc%7C2%7C1"
+
+        val resolved = NfcePublicClient.resolveRedirect(
+            currentUrl = current,
+            location = "/nfce/qrcode/?p=def|2|1",
+        )
+
+        assertEquals(
+            "https://www.dfe.ms.gov.br/nfce/qrcode/?p=def|2|1",
+            resolved,
+        )
+    }
+
+    @Test
+    fun upgradesHttpRedirectBackToHttps() {
+        val redirected = NfcePublicClient.normalizeOfficialUrl(
+            "http://www.dfe.ms.gov.br/nfce/qrcode/?p=abc|2|1",
+        )
+
+        assertEquals(
+            "https://www.dfe.ms.gov.br/nfce/qrcode/?p=abc%7C2%7C1",
+            redirected,
+        )
+    }
+
+    @Test
     fun rejectsLookalikeAndForeignHosts() {
         assertNull(
             NfcePublicClient.normalizeOfficialUrl(
