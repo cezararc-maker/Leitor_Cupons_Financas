@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.leitorcuponsfinancas.ui.HistoryScreen
 import br.com.leitorcuponsfinancas.ui.NfceScreen
 import br.com.leitorcuponsfinancas.ui.ProductScreen
 import br.com.leitorcuponsfinancas.ui.ProductViewModel
@@ -45,6 +46,7 @@ private enum class AppScreen {
     HOME,
     PRODUCTS,
     NFCE,
+    HISTORY,
 }
 
 @Composable
@@ -77,6 +79,7 @@ private fun LeitorCuponsApp(
                 productCount = products.size,
                 onProducts = { screen = AppScreen.PRODUCTS },
                 onNfce = { screen = AppScreen.NFCE },
+                onHistory = { screen = AppScreen.HISTORY },
             )
 
             AppScreen.PRODUCTS -> Column(Modifier.fillMaxSize()) {
@@ -99,6 +102,11 @@ private fun LeitorCuponsApp(
                 onBack = { screen = AppScreen.HOME },
                 modifier = Modifier.fillMaxSize(),
             )
+
+            AppScreen.HISTORY -> HistoryScreen(
+                onBack = { screen = AppScreen.HOME },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
@@ -108,6 +116,7 @@ private fun HomeScreen(
     productCount: Int,
     onProducts: () -> Unit,
     onNfce: () -> Unit,
+    onHistory: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -137,6 +146,13 @@ private fun HomeScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Ler NFC-e por QR Code")
+        }
+
+        Button(
+            onClick = onHistory,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Histórico e gastos")
         }
     }
 }
