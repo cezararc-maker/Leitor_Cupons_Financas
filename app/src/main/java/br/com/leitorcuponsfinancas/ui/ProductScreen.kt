@@ -163,12 +163,38 @@ private fun ProductCard(
                 ).joinToString(" • "),
                 style = MaterialTheme.typography.bodyMedium,
             )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Unidade: ${product.unit}",
+                style = MaterialTheme.typography.bodySmall,
+            )
+
             product.fiscalDescription?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Fiscal: $it",
+                    text = "Descrição principal na NFC-e: $it",
                     style = MaterialTheme.typography.bodySmall,
                 )
+            }
+
+            if (learnedDescriptions.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Descrições aprendidas:",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                learnedDescriptions.take(4).forEach { description ->
+                    Text(
+                        text = "• $description",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (learnedDescriptions.size > 4) {
+                    Text(
+                        text = "+${learnedDescriptions.size - 4} outra(s)",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
     }
@@ -198,9 +224,24 @@ private fun ProductFormDialog(
     var category by remember(product?.id) { mutableStateOf(product?.category.orEmpty()) }
     var subcategory by remember(product?.id) { mutableStateOf(product?.subcategory.orEmpty()) }
     var unit by remember(product?.id) { mutableStateOf(product?.unit ?: "UN") }
+    var customUnitMode by remember(product?.id) {
+        mutableStateOf(
+            product?.unit
+                ?.let { saved ->
+                    ManualUnitType.entries.none {
+                        it != ManualUnitType.OTHER && it.code == saved.uppercase()
+                    }
+                }
+                ?: false,
+        )
+    }
+    var showUnitPicker by remember(product?.id) { mutableStateOf(false) }
     var notes by remember(product?.id) { mutableStateOf(product?.notes.orEmpty()) }
 
-    val valid = name.isNotBlank() && sector.isNotBlank() && category.isNotBlank()
+    val valid = name.isNotBlank() &&
+        sector.isNotBlank() &&
+        category.isNotBlank() &&
+        unit.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -261,14 +302,48 @@ private fun ProductFormDialog(
                     )
                 }
                 item {
-                    OutlinedTextField(
-                        value = unit,
-                        onValueChange = { unit = it },
-                        label = { Text("Unidade") },
-                        placeholder = { Text("UN, KG, L...") },
-                        singleLine = true,
+                    OutlinedButton(
+                        onClick = { showUnitPicker = true },
                         modifier = Modifier.fillMaxWidth(),
-                    )
+                    ) {
+                        val selected = ManualUnitType.entries.firstOrNull {
+                            it != ManualUnitType.OTHER && it.code == unit.uppercase()
+                        }
+                        Text(
+                            text = selected?.let { "Unidade: ${it.label} (${it.code})" }
+                                ?: "Unidade: ${unit.ifBlank { "Escolher" }}",
+                        )
+                    }
+                }
+
+                if (customUnitMode) {
+                    item {
+                        OutlinedTextField(
+                            value = unit,
+                            onValueChange = { unit = it.uppercase() },
+                            label = { Text("Unidade personalizada *") },
+                            placeholder = { Text("Ex.: CX, DZ, BDJ") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+
+                if (learnedDescriptions.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Descrições aprendidas automaticamente:",
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                    }
+                    learnedDescriptions.forEach { learned ->
+                        item {
+                            Text(
+                                text = "• $learned",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
                 }
                 item {
                     OutlinedTextField(
@@ -316,4 +391,47 @@ private fun ProductFormDialog(
             }
         },
     )
+    if (showUnitPicker) {
+        AlertDialog(
+            onDismissRequest = { showUnitPicker = false },
+            title = { Text("Escolher tipo de unidade") },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(ManualUnitType.entries) { option ->
+                        OutlinedButton(
+                            onClick = {
+                                if (option == ManualUnitType.OTHER) {
+                                    customUnitMode = true
+                                    if (
+                                        ManualUnitType.entries.any {
+                                            it != ManualUnitType.OTHER &&
+                                                it.code == unit.uppercase()
+                                        }
+                                    ) {
+                                        unit = ""
+                                    }
+                                } else {
+                                    customUnitMode = false
+                                    unit = option.code
+                                }
+                                showUnitPicker = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("${option.label} (${option.code})")
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showUnitPicker = false }) {
+                    Text("Cancelar")
+                }
+            },
+        )
+    }
 }
