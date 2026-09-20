@@ -1,5 +1,6 @@
 package br.com.leitorcuponsfinancas.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.Arrangement
@@ -12,9 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -30,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +65,7 @@ fun HistoryScreen(
 ) {
     val periodType by historyViewModel.periodType.collectAsStateWithLifecycle()
     val dateRange by historyViewModel.dateRange.collectAsStateWithLifecycle()
+    val chartBars by historyViewModel.chartBars.collectAsStateWithLifecycle()
     val historyItems by historyViewModel.items.collectAsStateWithLifecycle()
     val filteredItems by historyViewModel.filteredItems.collectAsStateWithLifecycle()
     val searchQuery by historyViewModel.searchQuery.collectAsStateWithLifecycle()
@@ -164,6 +170,12 @@ fun HistoryScreen(
                     Text("›")
                 }
             }
+        }
+        item {
+            HistoryPeriodChart(
+                bars = chartBars,
+                onSelect = historyViewModel::selectChartBar,
+            )
         }
 
         if (searchOpen) {
