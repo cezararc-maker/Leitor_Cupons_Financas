@@ -134,12 +134,31 @@ class ReceiptRepository(
             }
         }
 
-        receiptDao.updateItemProduct(
-            itemId = item.itemId,
-            productId = productId,
-        )
+        val updatedItems = if (itemCode != null) {
+            receiptDao.updateEquivalentItemsByCode(
+                merchantCnpjDigits = merchantCnpj,
+                itemCode = itemCode,
+                productId = productId,
+            )
+        } else {
+            receiptDao.updateEquivalentItemsByDescription(
+                merchantCnpjDigits = merchantCnpj,
+                fiscalDescription = item.fiscalDescription,
+                productId = productId,
+            )
+        }
 
-        return ProductLinkResult.Success(savedLink.id)
+        if (updatedItems == 0) {
+            receiptDao.updateItemProduct(
+                itemId = item.itemId,
+                productId = productId,
+            )
+        }
+
+        return ProductLinkResult.Success(
+            linkId = savedLink.id,
+            updatedItems = if (updatedItems > 0) updatedItems else 1,
+        )
     }
 
     private suspend fun findLearnedProductId(
@@ -198,6 +217,10 @@ data class ReceiptSaveResult(
 )
 
 sealed interface ProductLinkResult {
-    data class Success(val linkId: Long) : ProductLinkResult
+    data class Success(
+        val linkId: Long,
+        val updatedItems: Int,
+    ) : ProductLinkResult
+
     data class Error(val message: String) : ProductLinkResult
 }
