@@ -12,15 +12,15 @@ function Resolve-AndroidCli {
     }
 
     $Candidates = @(
-        (Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Links\\android.exe"),
-        (Join-Path $env:LOCALAPPDATA "Microsoft\\WindowsApps\\android.exe")
+        (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\android.exe"),
+        (Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\android.exe")
     )
 
     foreach ($Candidate in $Candidates) {
         if (Test-Path $Candidate) { return $Candidate }
     }
 
-    $Root = Join-Path $env:LOCALAPPDATA "Microsoft\\WinGet\\Packages"
+    $Root = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
     if (Test-Path $Root) {
         $Found = Get-ChildItem -Path $Root -Filter "android.exe" -File -Recurse -ErrorAction SilentlyContinue |
             Select-Object -First 1
@@ -54,7 +54,7 @@ if (-not $env:JAVA_HOME) {
 }
 
 if (-not $env:JAVA_HOME -or -not (Test-Path (Join-Path $env:JAVA_HOME "bin\java.exe"))) {
-    throw "JDK nao encontrado. Instale o Android Studio ou configure JAVA_HOME."
+    throw "JDK nao encontrado. Execute scripts\instalar-ambiente-minimo.ps1 ou configure JAVA_HOME."
 }
 
 $Sdk = $env:ANDROID_HOME
@@ -68,7 +68,7 @@ if (-not $Sdk) {
 }
 
 if (-not $Sdk -or -not (Test-Path $Sdk)) {
-    throw "Android SDK nao encontrado. Abra o Android Studio e instale o Android SDK antes de continuar."
+    throw "Android SDK nao encontrado. Execute scripts\instalar-ambiente-minimo.ps1 para instalar o Android SDK."
 }
 
 $EscapedSdk = $Sdk.Replace("\", "\\")
