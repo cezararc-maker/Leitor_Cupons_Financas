@@ -12,6 +12,7 @@ class ReceiptRepository(
     suspend fun save(
         accessKey: String,
         receipt: NfceReceipt,
+        actor: LocalUserProfile? = null,
     ): ReceiptSaveResult {
         val products = productDao.listActiveOnce()
         val merchantCnpj = normalizeCnpj(receipt.merchantCnpj)
@@ -27,6 +28,9 @@ class ReceiptRepository(
             issuedAt = receipt.issuedAt,
             issuedDate = parseIsoDate(receipt.issuedAt),
             totalAmount = receipt.totalAmount?.toPlainString(),
+            sourceType = "NFCE",
+            createdById = actor?.id,
+            createdByName = actor?.displayName,
         )
 
         val items = receipt.items.mapIndexed { index, item ->
@@ -70,6 +74,71 @@ class ReceiptRepository(
     suspend fun findImportedReceipt(accessKey: String): ReceiptEntity? =
         receiptDao.findReceiptByAccessKey(accessKey)
 
+    suspend fun saveManualPurchase(
+        merchantName: String,
+        issuedDate: String,
+        description: String,
+        quantity: String,
+        unit: String,
+        unitPrice: String,
+        totalAmount: String,
+        productId: Long?,
+        actor: LocalUserProfile,
+    ): ReceiptSaveResult {
+        val normalizedMerchant = merchantName.trim()
+        val normalizedDescription = description.trim()
+
+        if (normalizedMerchant.isBlank()) {
+            error("Informe o estabelecimento.")
+        }
+        if (normalizedDescription.isBlank()) {
+            error("Informe a descrição do item.")
+        }
+
+        val normalizedQuantity = normalizeOptionalDecimal(quantity)
+            ?: error("Quantidade inválida.")
+        val normalizedUnitPrice = normalizeOptionalDecimal(unitPrice)
+            ?: error("Valor unitário inválido.")
+        val normalizedTotal = normalizeOptionalDecimal(totalAmount)
+            ?: error("Valor total inválido.")
+
+        val manualId = java.util.UUID.randomUUID().toString()
+        val now = System.currentTimeMillis()
+
+        val receipt = ReceiptEntity(
+            accessKey = "MANUAL:$manualId",
+            sourceUrl = "manual://purchase/$manualId",
+            merchantName = normalizedMerchant,
+            issuedAt = issuedDate,
+            issuedDate = parseIsoDate(issuedDate),
+            totalAmount = normalizedTotal.ifBlank { null },
+            sourceType = "MANUAL",
+            createdById = actor.id,
+            createdByName = actor.displayName,
+            createdAt = now,
+        )
+
+        val item = ReceiptItemEntity(
+            receiptId = 0,
+            lineNumber = 1,
+            fiscalDescription = normalizedDescription,
+            quantity = normalizedQuantity.ifBlank { null },
+            unit = unit.trim().ifBlank { "UN" },
+            unitPrice = normalizedUnitPrice.ifBlank { null },
+            totalAmount = normalizedTotal.ifBlank { null },
+            productId = productId,
+        )
+
+        val inserted = receiptDao.insertReceiptWithItems(receipt, listOf(item))
+        return ReceiptSaveResult(
+            receiptId = inserted.receiptId,
+            inserted = inserted.inserted,
+            firstImportedAt = inserted.firstImportedAt,
+            matchedItems = if (productId != null) 1 else 0,
+            totalItems = 1,
+        )
+    }
+
     fun observeHistory(
         startDate: String,
         endDate: String,
@@ -82,6 +151,7 @@ class ReceiptRepository(
         unit: String,
         unitPrice: String,
         totalAmount: String,
+        actor: LocalUserProfile,
     ): ItemCorrectionResult {
         val normalizedDescription = description.trim()
         if (normalizedDescription.isBlank()) {
@@ -127,6 +197,8 @@ class ReceiptRepository(
             correctedUnit = correctedUnit,
             correctedUnitPrice = correctedUnitPrice,
             correctedTotalAmount = correctedTotalAmount,
+            correctedById = if (hasCorrection) actor.id else null,
+            correctedByName = if (hasCorrection) actor.displayName else null,
             correctedAt = if (hasCorrection) System.currentTimeMillis() else null,
         )
 
