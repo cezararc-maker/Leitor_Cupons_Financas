@@ -46,6 +46,7 @@ fun NfceScreen(
     val lookupState by nfceViewModel.lookupState.collectAsStateWithLifecycle()
     val saveState by nfceViewModel.saveState.collectAsStateWithLifecycle()
     val imageState by nfceViewModel.imageState.collectAsStateWithLifecycle()
+    val duplicateState by nfceViewModel.duplicateState.collectAsStateWithLifecycle()
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -56,6 +57,7 @@ fun NfceScreen(
             consultationUrl = null
             accessKey = null
             nfceViewModel.clearLookup()
+            nfceViewModel.clearDuplicateState()
             nfceViewModel.readQrImage(uri)
         }
     }
@@ -67,6 +69,7 @@ fun NfceScreen(
             localError = false
             consultationUrl = null
             accessKey = null
+            nfceViewModel.clearDuplicateState()
         }
     }
 
@@ -145,6 +148,7 @@ fun NfceScreen(
                 accessKey = null
                 nfceViewModel.clearLookup()
                 nfceViewModel.clearImageState()
+                nfceViewModel.clearDuplicateState()
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -166,6 +170,7 @@ fun NfceScreen(
                 accessKey = null
                 nfceViewModel.clearLookup()
                 nfceViewModel.clearImageState()
+                nfceViewModel.clearDuplicateState()
             },
             label = { Text("URL ou conteúdo da NFC-e") },
             placeholder = { Text("https://.../nfce/qrcode?p=...") },
@@ -199,6 +204,7 @@ fun NfceScreen(
                         consultationUrl = data.consultationUrl
                         accessKey = data.accessKey
                         nfceViewModel.clearLookup()
+                        nfceViewModel.checkDuplicate(data.accessKey)
                     }
 
                     is NfceQrParseResult.Error -> {
@@ -207,6 +213,7 @@ fun NfceScreen(
                         consultationUrl = null
                         accessKey = null
                         nfceViewModel.clearLookup()
+                        nfceViewModel.clearDuplicateState()
                     }
                 }
             },
@@ -219,6 +226,26 @@ fun NfceScreen(
             MessageCard(
                 title = if (localError) "Não foi possível validar" else "Validação do QR Code",
                 message = message,
+            )
+        }
+
+        if (duplicateState.checking) {
+            Text(
+                text = "Verificando se esta NFC-e já foi importada...",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        if (duplicateState.alreadyImported) {
+            MessageCard(
+                title = "NFC-e já importada",
+                message = buildString {
+                    append("Esta nota já foi importada")
+                    duplicateState.formattedFirstImportedAt?.let { importedAt ->
+                        append(" em $importedAt")
+                    }
+                    append(". Nenhum novo lançamento será criado.")
+                },
             )
         }
 
@@ -251,17 +278,20 @@ fun NfceScreen(
             ReceiptCard(receipt)
 
             Button(
-                enabled = accessKey != null && !saveState.saving,
+                enabled = accessKey != null &&
+                    !saveState.saving &&
+                    !duplicateState.checking &&
+                    !duplicateState.alreadyImported,
                 onClick = {
                     accessKey?.let(nfceViewModel::saveReceipt)
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    if (saveState.saving) {
-                        "Salvando NFC-e..."
-                    } else {
-                        "Salvar NFC-e no histórico"
+                    when {
+                        saveState.saving -> "Salvando NFC-e..."
+                        duplicateState.alreadyImported -> "NFC-e já importada"
+                        else -> "Salvar NFC-e no histórico"
                     },
                 )
             }
