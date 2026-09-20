@@ -1056,13 +1056,15 @@ private fun ProductLinkDialog(
                         }
                     }
 
-                    item {
-                        OutlinedButton(
-                            enabled = !saving,
-                            onClick = { creatingNew = true },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Criar novo produto mestre")
+                    if (smartSuggestion !is SmartProductSuggestion.ExistingProduct) {
+                        item {
+                            OutlinedButton(
+                                enabled = !saving,
+                                onClick = { creatingNew = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Criar novo produto mestre")
+                            }
                         }
                     }
 
@@ -1110,6 +1112,18 @@ private fun ProductLinkDialog(
                                         ).joinToString(" • "),
                                         style = MaterialTheme.typography.bodySmall,
                                     )
+                                }
+                            }
+                        }
+
+                        if (smartSuggestion is SmartProductSuggestion.ExistingProduct) {
+                            item {
+                                TextButton(
+                                    enabled = !saving,
+                                    onClick = { creatingNew = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text("Não é esse produto? Criar outro")
                                 }
                             }
                         }
