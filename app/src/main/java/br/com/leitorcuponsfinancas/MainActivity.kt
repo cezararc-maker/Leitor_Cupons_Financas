@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.leitorcuponsfinancas.ui.NfceScreen
 import br.com.leitorcuponsfinancas.ui.ProductScreen
 import br.com.leitorcuponsfinancas.ui.ProductViewModel
 import br.com.leitorcuponsfinancas.ui.theme.LeitorCuponsTheme
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
 private enum class AppScreen {
     HOME,
     PRODUCTS,
+    NFCE,
 }
 
 @Composable
@@ -74,6 +76,7 @@ private fun LeitorCuponsApp(
             AppScreen.HOME -> HomeScreen(
                 productCount = products.size,
                 onProducts = { screen = AppScreen.PRODUCTS },
+                onNfce = { screen = AppScreen.NFCE },
             )
 
             AppScreen.PRODUCTS -> Column(Modifier.fillMaxSize()) {
@@ -91,6 +94,11 @@ private fun LeitorCuponsApp(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+
+            AppScreen.NFCE -> NfceScreen(
+                onBack = { screen = AppScreen.HOME },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
@@ -99,6 +107,7 @@ private fun LeitorCuponsApp(
 private fun HomeScreen(
     productCount: Int,
     onProducts: () -> Unit,
+    onNfce: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -124,11 +133,10 @@ private fun HomeScreen(
         }
 
         Button(
-            onClick = { },
-            enabled = false,
+            onClick = onNfce,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Ler NFC-e por QR Code — próxima etapa")
+            Text("Ler NFC-e por QR Code")
         }
     }
 }
