@@ -1,10 +1,13 @@
 package br.com.leitorcuponsfinancas.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
 import br.com.leitorcuponsfinancas.data.NfcePublicClient
+import br.com.leitorcuponsfinancas.data.QrImageReadResult
+import br.com.leitorcuponsfinancas.data.QrImageReader
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
 import br.com.leitorcuponsfinancas.domain.NfcePageParseResult
 import br.com.leitorcuponsfinancas.domain.NfceReceipt
@@ -25,6 +28,12 @@ data class NfceSaveState(
     val error: String? = null,
 )
 
+data class NfceImageState(
+    val reading: Boolean = false,
+    val qrText: String? = null,
+    val error: String? = null,
+)
+
 class NfceViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getInstance(application)
@@ -39,6 +48,40 @@ class NfceViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _saveState = MutableStateFlow(NfceSaveState())
     val saveState: StateFlow<NfceSaveState> = _saveState.asStateFlow()
+
+    private val _imageState = MutableStateFlow(NfceImageState())
+    val imageState: StateFlow<NfceImageState> = _imageState.asStateFlow()
+
+    fun readQrImage(uri: Uri) {
+        if (_imageState.value.reading) return
+
+        _imageState.value = NfceImageState(reading = true)
+
+        viewModelScope.launch {
+            when (
+                val result = QrImageReader.read(
+                    context = getApplication(),
+                    uri = uri,
+                )
+            ) {
+                is QrImageReadResult.Success -> {
+                    _imageState.value = NfceImageState(
+                        qrText = result.text,
+                    )
+                }
+
+                is QrImageReadResult.Error -> {
+                    _imageState.value = NfceImageState(
+                        error = result.message,
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearImageState() {
+        _imageState.value = NfceImageState()
+    }
 
     fun lookup(url: String) {
         if (_lookupState.value.loading) return
