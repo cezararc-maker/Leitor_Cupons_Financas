@@ -20,7 +20,7 @@ if (-not $env:JAVA_HOME) {
 }
 
 if (-not $env:JAVA_HOME -or -not (Test-Path (Join-Path $env:JAVA_HOME "bin\java.exe"))) {
-    throw "JDK 17 nao encontrado. Instale o Android Studio ou configure JAVA_HOME para um JDK 17."
+    throw "JDK nao encontrado. Instale o Android Studio ou configure JAVA_HOME."
 }
 
 $Sdk = $env:ANDROID_HOME
@@ -41,6 +41,23 @@ $EscapedSdk = $Sdk.Replace("\", "\\")
 Set-Content -Path "local.properties" -Value "sdk.dir=$EscapedSdk" -Encoding ASCII
 Write-Host "[OK] Android SDK: $Sdk"
 
+$SdkManager = Get-ChildItem -Path (Join-Path $Sdk "cmdline-tools") -Filter "sdkmanager.bat" -Recurse -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
+if ($SdkManager) {
+    $Platform36 = Join-Path $Sdk "platforms\android-36\android.jar"
+    if (-not (Test-Path $Platform36)) {
+        Write-Host ""
+        Write-Host "Instalando Android SDK Platform 36..."
+        cmd /c "echo y|`"$($SdkManager.FullName)`" `"platforms;android-36`" `"build-tools;36.0.0`""
+        if ($LASTEXITCODE -ne 0) {
+            throw "Falha ao instalar Android SDK Platform 36."
+        }
+    } else {
+        Write-Host "[OK] Android SDK Platform 36 ja instalado."
+    }
+} else {
+    Write-Warning "sdkmanager.bat nao localizado. Se o build reclamar do Android 36, instale-o pelo SDK Manager do Android Studio."
+}
+
 $GradleVersion = "9.6.0"
 
 if (-not (Test-Path ".\gradlew.bat")) {
@@ -53,14 +70,12 @@ if (-not (Test-Path ".\gradlew.bat")) {
     if (-not (Test-Path (Join-Path $GradleHome "bin\gradle.bat"))) {
         Write-Host "[1/3] Baixando Gradle $GradleVersion..."
         Invoke-WebRequest -Uri "https://services.gradle.org/distributions/gradle-$GradleVersion-bin.zip" -OutFile $ZipPath
-
         Write-Host "[2/3] Extraindo Gradle..."
         Expand-Archive -Path $ZipPath -DestinationPath $CacheRoot -Force
     }
 
     Write-Host "[3/3] Criando Gradle Wrapper do projeto..."
     & (Join-Path $GradleHome "bin\gradle.bat") wrapper --gradle-version $GradleVersion --distribution-type bin
-
     if ($LASTEXITCODE -ne 0) {
         throw "Falha ao gerar o Gradle Wrapper."
     }
@@ -75,16 +90,20 @@ if ($LASTEXITCODE -ne 0) {
 
 if (-not $SkipTests) {
     Write-Host ""
-    Write-Host "Executando testes unitarios..."
-    & .\gradlew.bat test
+    Write-Host "Executando testes e compilando APK de debug..."
+    & .\gradlew.bat test assembleDebug
     if ($LASTEXITCODE -ne 0) {
-        throw "Os testes falharam."
+        throw "Testes ou compilacao falharam."
     }
 
     Write-Host ""
-    Write-Host "[OK] Todos os testes passaram."
+    Write-Host "[OK] Testes e compilacao concluidos."
+    $Apk = Join-Path $ProjectRoot "app\build\outputs\apk\debug\app-debug.apk"
+    if (Test-Path $Apk) {
+        Write-Host "[OK] APK de debug: $Apk"
+    }
 }
 
 Write-Host ""
 Write-Host "Projeto: $ProjectRoot"
-Write-Host "Abra esta pasta no Android Studio para iniciar o emulador."
+Write-Host "O emulador e opcional nesta fase. Veja docs\EMULATOR_LITE.md."
