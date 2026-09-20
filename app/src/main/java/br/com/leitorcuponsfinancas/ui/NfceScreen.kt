@@ -1,5 +1,7 @@
 package br.com.leitorcuponsfinancas.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -23,7 +25,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.leitorcuponsfinancas.domain.NfceQrParseResult
@@ -42,11 +46,30 @@ fun NfceScreen(
     var localError by rememberSaveable { mutableStateOf(false) }
     var consultationUrl by rememberSaveable { mutableStateOf<String?>(null) }
     var accessKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var cameraOpen by rememberSaveable { mutableStateOf(false) }
+    var cameraPermissionError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val hasCamera = context.packageManager.hasSystemFeature(
+        PackageManager.FEATURE_CAMERA_ANY,
+    )
 
     val lookupState by nfceViewModel.lookupState.collectAsStateWithLifecycle()
     val saveState by nfceViewModel.saveState.collectAsStateWithLifecycle()
     val imageState by nfceViewModel.imageState.collectAsStateWithLifecycle()
     val duplicateState by nfceViewModel.duplicateState.collectAsStateWithLifecycle()
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            cameraPermissionError = null
+            cameraOpen = true
+        } else {
+            cameraPermissionError =
+                "Permissão de câmera negada. Autorize a câmera para escanear o QR Code."
+        }
+    }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -73,6 +96,28 @@ fun NfceScreen(
         }
     }
 
+    if (cameraOpen) {
+        QrCameraScreen(
+            onQrFound = { value ->
+                cameraOpen = false
+                cameraPermissionError = null
+                qrText = value
+                localResult = null
+                localError = false
+                consultationUrl = null
+                accessKey = null
+                nfceViewModel.clearLookup()
+                nfceViewModel.clearImageState()
+                nfceViewModel.clearDuplicateState()
+            },
+            onCancel = {
+                cameraOpen = false
+            },
+            modifier = modifier,
+        )
+        return
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -90,16 +135,41 @@ fun NfceScreen(
         )
 
         Text(
-            text = "Cole o link, selecione uma imagem com o QR Code ou, no celular, use a câmera quando essa etapa estiver habilitada.",
+            text = "Escaneie pela câmera, selecione uma imagem com o QR Code ou cole o link da NFC-e.",
             style = MaterialTheme.typography.bodyMedium,
         )
 
         OutlinedButton(
-            onClick = { },
-            enabled = false,
+            onClick = {
+                cameraPermissionError = null
+                val granted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.CAMERA,
+                ) == PackageManager.PERMISSION_GRANTED
+
+                if (granted) {
+                    cameraOpen = true
+                } else {
+                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                }
+            },
+            enabled = hasCamera,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Escanear com câmera — disponível no celular")
+            Text(
+                if (hasCamera) {
+                    "Escanear com câmera"
+                } else {
+                    "Câmera não disponível neste dispositivo"
+                },
+            )
+        }
+
+        cameraPermissionError?.let { error ->
+            MessageCard(
+                title = "Câmera não autorizada",
+                message = error,
+            )
         }
 
         OutlinedButton(
