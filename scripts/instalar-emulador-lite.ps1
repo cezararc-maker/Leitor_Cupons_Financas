@@ -28,6 +28,13 @@ if (-not (Test-Path $AvdManager)) {
     throw "avdmanager.bat nao encontrado em $AvdManager"
 }
 
+$ComputerSystem = Get-CimInstance Win32_ComputerSystem
+if (-not $ComputerSystem.HypervisorPresent) {
+    throw "O hipervisor do Windows ainda nao esta carregado. Reinicie o Windows depois de habilitar WHPX e execute novamente."
+}
+
+Write-Host "[OK] Hipervisor do Windows carregado." -ForegroundColor Green
+
 Write-Host ""
 Write-Host "[1/4] Instalando Android Emulator e imagem Android 14 x86_64..." -ForegroundColor Yellow
 & $SdkManager --sdk_root="$Sdk" "emulator" "$ImagePackage"
@@ -43,7 +50,7 @@ Write-Host ""
 Write-Host "[2/4] Validando aceleracao..." -ForegroundColor Yellow
 & $Emulator -accel-check
 if ($LASTEXITCODE -ne 0) {
-    throw "O Android Emulator nao encontrou aceleracao utilizavel. Confirme WHPX e reinicie o Windows."
+    throw "O Android Emulator nao encontrou aceleracao utilizavel, apesar do hipervisor do Windows estar carregado. Execute scripts\verificar-emulador-windows.ps1 para diagnostico."
 }
 
 Write-Host ""
