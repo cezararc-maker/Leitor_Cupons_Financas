@@ -127,9 +127,7 @@ fun NfceScreen(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Button(onClick = onBack) {
-            Text("Voltar")
-        }
+        BackArrowButton(onClick = onBack)
 
         Text(
             text = "Ler NFC-e",
