@@ -12,6 +12,7 @@ $Sdk = Join-Path $env:LOCALAPPDATA "Android\Sdk"
 $Adb = Join-Path $Sdk "platform-tools\adb.exe"
 $Apk = Join-Path $ProjectRoot "app\build\outputs\apk\debug\app-debug.apk"
 $PackageName = "br.com.leitorcuponsfinancas"
+$RunEmulatorScript = Join-Path $ProjectRoot "scripts\executar-app-emulador.ps1"
 
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host " LEITOR CUPONS FINANCAS - ATUALIZAR APP NO EMULADOR" -ForegroundColor Cyan
@@ -27,12 +28,15 @@ Write-Host "[1/4] Localizando emulador ativo..." -ForegroundColor Yellow
 & $Adb start-server | Out-Null
 $Devices = (& $Adb devices | Out-String)
 
-if ($Devices -notmatch "(?m)^(emulator-\d+)\s+device\b") {
-    throw "Nenhum Android Emulator ativo e conectado ao ADB. Abra o emulador primeiro."
-}
+$EmulatorWasClosed = $Devices -notmatch "(?m)^(emulator-\d+)\s+device\b"
 
-$Serial = $Matches[1]
-Write-Host "[OK] Emulador conectado: $Serial" -ForegroundColor Green
+if ($EmulatorWasClosed) {
+    Write-Host "[INFO] Emulator fechado. O script vai compilar e abri-lo automaticamente." -ForegroundColor DarkYellow
+    $Serial = $null
+} else {
+    $Serial = $Matches[1]
+    Write-Host "[OK] Emulador conectado: $Serial" -ForegroundColor Green
+}
 
 Write-Host ""
 Write-Host "[2/4] Gerando APK de debug..." -ForegroundColor Yellow
@@ -59,6 +63,20 @@ if ($SkipBuild) {
 
 if (-not (Test-Path $Apk)) {
     throw "APK nao encontrado: $Apk"
+}
+
+if ($EmulatorWasClosed) {
+    if (-not (Test-Path $RunEmulatorScript)) {
+        throw "Script para iniciar o Emulator nao encontrado: $RunEmulatorScript"
+    }
+
+    Write-Host ""
+    Write-Host "[3/4] Emulator fechado; iniciando Android e instalando o APK..." -ForegroundColor Yellow
+    & $RunEmulatorScript
+
+    Write-Host ""
+    Write-Host "[OK] Fluxo concluido: Emulator iniciado e app atualizado." -ForegroundColor Green
+    exit 0
 }
 
 Write-Host ""
