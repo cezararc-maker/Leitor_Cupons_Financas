@@ -16,3 +16,6 @@ app/build
 
 # Relatorios locais de diagnostico
 /data/runtime/reports/
+/gradle/
+/gradlew
+/gradlew.bat
