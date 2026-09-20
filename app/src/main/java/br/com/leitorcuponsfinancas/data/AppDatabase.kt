@@ -12,14 +12,16 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ProductEntity::class,
         ReceiptEntity::class,
         ReceiptItemEntity::class,
+        MerchantProductLinkEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun productDao(): ProductDao
     abstract fun receiptDao(): ReceiptDao
+    abstract fun merchantProductLinkDao(): MerchantProductLinkDao
 
     companion object {
         @Volatile
@@ -73,6 +75,62 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE receipts ADD COLUMN issuedDate TEXT",
+                )
+                db.execSQL(
+                    """
+                    UPDATE receipts
+                    SET issuedDate =
+                        substr(issuedAt, 7, 4) || '-' ||
+                        substr(issuedAt, 4, 2) || '-' ||
+                        substr(issuedAt, 1, 2)
+                    WHERE issuedAt IS NOT NULL
+                      AND length(issuedAt) >= 10
+                    """.trimIndent(),
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS merchant_product_links (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        merchantCnpj TEXT NOT NULL,
+                        itemCode TEXT,
+                        fiscalDescription TEXT NOT NULL,
+                        fiscalSearchKey TEXT NOT NULL,
+                        productId INTEGER NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        lastUsedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS
+                    index_merchant_product_links_merchantCnpj_itemCode
+                    ON merchant_product_links(merchantCnpj, itemCode)
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS
+                    index_merchant_product_links_merchantCnpj_fiscalSearchKey
+                    ON merchant_product_links(merchantCnpj, fiscalSearchKey)
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS
+                    index_merchant_product_links_productId
+                    ON merchant_product_links(productId)
+                    """.trimIndent(),
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -80,7 +138,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "leitor_cupons_financas.db",
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                     .also { instance = it }
             }
