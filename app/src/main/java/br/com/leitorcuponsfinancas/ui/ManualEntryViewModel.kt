@@ -46,6 +46,7 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
 
     fun save(
         merchantName: String,
+        merchantCnpj: String,
         dateText: String,
         description: String,
         quantity: String,
@@ -87,6 +88,7 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
                 val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
                 receiptRepository.saveManualPurchase(
                     merchantName = merchantName,
+                    merchantCnpj = merchantCnpj,
                     issuedDate = "${date.format(dateFormatter)} $time",
                     description = description,
                     quantity = quantity,
