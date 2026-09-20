@@ -1,5 +1,6 @@
 param(
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$SafeBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,10 +44,16 @@ if ($SkipBuild) {
         throw "gradlew.bat nao encontrado."
     }
 
-    & .\gradlew.bat assembleDebug --no-daemon --max-workers=1
+    if ($SafeBuild) {
+        Write-Host "[INFO] Build seguro: sem daemon e com 1 worker." -ForegroundColor DarkYellow
+        & .\gradlew.bat assembleDebug --no-daemon --max-workers=1
+    } else {
+        Write-Host "[INFO] Build rapido incremental com Gradle daemon." -ForegroundColor DarkYellow
+        & .\gradlew.bat assembleDebug --max-workers=2
+    }
 
     if ($LASTEXITCODE -ne 0) {
-        throw "Falha ao compilar o APK de debug."
+        throw "Falha ao compilar o APK de debug. Se houver bloqueio de arquivo, tente novamente com -SafeBuild."
     }
 }
 
