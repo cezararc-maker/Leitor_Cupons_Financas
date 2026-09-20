@@ -1,32 +1,39 @@
 package br.com.leitorcuponsfinancas.ui
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -51,6 +58,7 @@ fun HistoryScreen(
     val linkState by historyViewModel.linkState.collectAsStateWithLifecycle()
 
     var linkingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
 
     val total = filteredItems
         .mapNotNull { it.totalAmount?.toBigDecimalOrNull() }
@@ -68,10 +76,29 @@ fun HistoryScreen(
         }
 
         item {
-            Text(
-                text = "Histórico e Gastos",
-                style = MaterialTheme.typography.headlineSmall,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "Histórico e Gastos",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f),
+                )
+
+                IconButton(
+                    onClick = {
+                        searchOpen = !searchOpen
+                        if (!searchOpen) historyViewModel.clearSearch()
+                    },
+                ) {
+                    Text(
+                        text = if (searchOpen) "×" else "⌕",
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                }
+            }
         }
 
         item {
@@ -117,62 +144,77 @@ fun HistoryScreen(
             }
         }
 
-        item {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = historyViewModel::updateSearchQuery,
-                label = { Text("Pesquisar item") },
-                placeholder = { Text("Ex.: arroz, ig, zinho...") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        item {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = "Tipo de pesquisa",
-                    style = MaterialTheme.typography.titleSmall,
-                )
-
-                Row(
+        if (searchOpen) {
+            item {
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    if (searchMode == HistorySearchMode.STARTS_WITH) {
-                        Button(
-                            onClick = { historyViewModel.selectSearchMode(HistorySearchMode.STARTS_WITH) },
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 320.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .height(46.dp)
+                                .padding(start = 16.dp, end = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text("Início")
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { historyViewModel.selectSearchMode(HistorySearchMode.STARTS_WITH) },
-                        ) {
-                            Text("Início")
+                            Text(
+                                text = "⌕",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = historyViewModel::updateSearchQuery,
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                ),
+                                modifier = Modifier.weight(1f),
+                                decorationBox = { innerTextField ->
+                                    if (searchQuery.isBlank()) {
+                                        Text(
+                                            text = "Pesquisar item...",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                    }
+                                    innerTextField()
+                                },
+                            )
+
+                            if (searchQuery.isNotBlank()) {
+                                IconButton(onClick = historyViewModel::clearSearch) {
+                                    Text("×")
+                                }
+                            }
                         }
                     }
 
-                    if (searchMode == HistorySearchMode.CONTAINS) {
-                        Button(
-                            onClick = { historyViewModel.selectSearchMode(HistorySearchMode.CONTAINS) },
-                        ) {
-                            Text("Qualquer parte")
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { historyViewModel.selectSearchMode(HistorySearchMode.CONTAINS) },
-                        ) {
-                            Text("Qualquer parte")
-                        }
-                    }
-
-                    if (searchQuery.isNotBlank()) {
-                        TextButton(onClick = historyViewModel::clearSearch) {
-                            Text("Limpar")
-                        }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FilterChip(
+                            selected = searchMode == HistorySearchMode.STARTS_WITH,
+                            onClick = {
+                                historyViewModel.selectSearchMode(HistorySearchMode.STARTS_WITH)
+                            },
+                            label = { Text("Início") },
+                        )
+                        FilterChip(
+                            selected = searchMode == HistorySearchMode.CONTAINS,
+                            onClick = {
+                                historyViewModel.selectSearchMode(HistorySearchMode.CONTAINS)
+                            },
+                            label = { Text("Qualquer parte") },
+                        )
                     }
                 }
             }
