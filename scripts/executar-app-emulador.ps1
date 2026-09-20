@@ -44,36 +44,46 @@ Write-Host ""
 Write-Host "[2/4] Aguardando Android concluir a inicializacao..." -ForegroundColor Yellow
 
 $Ready = $false
-for ($Attempt = 1; $Attempt -le 90; $Attempt++) {
+$Serial = $null
+
+for ($Attempt = 1; $Attempt -le 120; $Attempt++) {
     Start-Sleep -Seconds 2
 
-    $DeviceState = (& $Adb get-state 2>$null | Out-String).Trim()
-    if ($DeviceState -eq "device") {
-        $Boot = (& $Adb shell getprop sys.boot_completed 2>$null | Out-String).Trim()
+    $DevicesText = (& $Adb devices | Out-String)
+
+    if ($DevicesText -match "(?m)^(emulator-\d+)\s+device\s*$") {
+        $Serial = $Matches[1]
+
+        $Boot = (& $Adb -s $Serial shell getprop sys.boot_completed 2>$null | Out-String).Trim()
+
         if ($Boot -eq "1") {
             $Ready = $true
             break
         }
     }
+
+    if (($Attempt % 10) -eq 0) {
+        Write-Host "Aguardando emulador... tentativa $Attempt/120" -ForegroundColor DarkYellow
+    }
 }
 
-if (-not $Ready) {
+if (-not $Ready -or -not $Serial) {
     throw "O Android nao concluiu a inicializacao dentro do limite de verificacao."
 }
 
-Write-Host "[OK] Android iniciado." -ForegroundColor Green
+Write-Host "[OK] Android iniciado: $Serial" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "[3/4] Instalando APK..." -ForegroundColor Yellow
-& $Adb install -r $Apk
+& $Adb -s $Serial install -r $Apk
 if ($LASTEXITCODE -ne 0) {
     throw "Falha ao instalar o APK no emulador."
 }
 
 Write-Host ""
 Write-Host "[4/4] Abrindo Leitor Cupons Financas..." -ForegroundColor Yellow
-& $Adb shell am force-stop $PackageName
-& $Adb shell am start -n "$PackageName/.MainActivity"
+& $Adb -s $Serial shell am force-stop $PackageName
+& $Adb -s $Serial shell am start -n "$PackageName/.MainActivity"
 
 if ($LASTEXITCODE -ne 0) {
     throw "APK instalado, mas o app nao pode ser iniciado automaticamente."
