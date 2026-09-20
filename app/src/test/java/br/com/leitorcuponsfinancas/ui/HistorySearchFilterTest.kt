@@ -118,5 +118,11 @@ class HistorySearchFilterTest {
         sector = null,
         category = null,
         subcategory = null,
+        correctedDescription = null,
+        correctedQuantity = null,
+        correctedUnit = null,
+        correctedUnitPrice = null,
+        correctedTotalAmount = null,
+        correctedAt = null,
     )
 }
