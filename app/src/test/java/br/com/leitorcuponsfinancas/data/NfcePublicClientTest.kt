@@ -55,6 +55,48 @@ class NfcePublicClientTest {
     }
 
     @Test
+    fun followsOfficialMetaRefresh() {
+        val html = """
+            <html>
+              <head>
+                <meta http-equiv="refresh" content="0;url=/nfce/qrcode/?p=abc|3|1">
+              </head>
+            </html>
+        """.trimIndent()
+
+        val redirected = NfcePublicClient.findHtmlRedirect(
+            html = html,
+            currentUrl = "https://www.dfe.ms.gov.br/nfce/qrcode?p=abc%7C3%7C1",
+        )
+
+        assertEquals(
+            "https://www.dfe.ms.gov.br/nfce/qrcode/?p=abc%7C3%7C1",
+            redirected,
+        )
+    }
+
+    @Test
+    fun followsOfficialJavascriptRedirect() {
+        val html = """
+            <html>
+              <body>
+                <script>window.location.href = "/nfce/qrcode/?p=abc|3|1";</script>
+              </body>
+            </html>
+        """.trimIndent()
+
+        val redirected = NfcePublicClient.findHtmlRedirect(
+            html = html,
+            currentUrl = "https://www.dfe.ms.gov.br/nfce/qrcode?p=abc%7C3%7C1",
+        )
+
+        assertEquals(
+            "https://www.dfe.ms.gov.br/nfce/qrcode/?p=abc%7C3%7C1",
+            redirected,
+        )
+    }
+
+    @Test
     fun rejectsLookalikeAndForeignHosts() {
         assertNull(
             NfcePublicClient.normalizeOfficialUrl(
