@@ -326,25 +326,25 @@ fun HistoryScreen(
     }
 
     reviewingItemId?.let { itemId ->
-        val reviewItem = unrecognizedItems.firstOrNull { it.itemId == itemId }
+        val reviewItem = unrecognizedItems
+            .firstOrNull { it.itemId == itemId }
+            ?: unrecognizedItems.firstOrNull()
 
-        if (reviewItem == null) {
-            reviewingItemId = unrecognizedItems.firstOrNull()?.itemId
-        } else {
-            val reviewIndex = unrecognizedItems.indexOfFirst { it.itemId == reviewItem.itemId }
+        reviewItem?.let { currentItem ->
+            val reviewIndex = unrecognizedItems.indexOfFirst { it.itemId == currentItem.itemId }
             val nextItemId = unrecognizedItems
                 .getOrNull(reviewIndex + 1)
                 ?.itemId
 
             UnrecognizedReviewDialog(
-                item = reviewItem,
+                item = currentItem,
                 position = reviewIndex + 1,
                 total = unrecognizedItems.size,
                 products = products,
                 onDismiss = { reviewingItemId = null },
                 onSkip = { reviewingItemId = nextItemId },
                 onSelect = { product ->
-                    historyViewModel.linkItem(reviewItem, product)
+                    historyViewModel.linkItem(currentItem, product)
                     reviewingItemId = nextItemId
                 },
             )
