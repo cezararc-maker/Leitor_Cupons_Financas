@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,12 +44,15 @@ fun HistoryScreen(
     val periodType by historyViewModel.periodType.collectAsStateWithLifecycle()
     val dateRange by historyViewModel.dateRange.collectAsStateWithLifecycle()
     val historyItems by historyViewModel.items.collectAsStateWithLifecycle()
+    val filteredItems by historyViewModel.filteredItems.collectAsStateWithLifecycle()
+    val searchQuery by historyViewModel.searchQuery.collectAsStateWithLifecycle()
+    val searchMode by historyViewModel.searchMode.collectAsStateWithLifecycle()
     val products by historyViewModel.products.collectAsStateWithLifecycle()
     val linkState by historyViewModel.linkState.collectAsStateWithLifecycle()
 
     var linkingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
 
-    val total = historyItems
+    val total = filteredItems
         .mapNotNull { it.totalAmount?.toBigDecimalOrNull() }
         .fold(BigDecimal.ZERO, BigDecimal::add)
 
@@ -114,6 +118,67 @@ fun HistoryScreen(
         }
 
         item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = historyViewModel::updateSearchQuery,
+                label = { Text("Pesquisar item") },
+                placeholder = { Text("Ex.: arroz, ig, zinho...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        item {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "Tipo de pesquisa",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (searchMode == HistorySearchMode.STARTS_WITH) {
+                        Button(
+                            onClick = { historyViewModel.selectSearchMode(HistorySearchMode.STARTS_WITH) },
+                        ) {
+                            Text("Início")
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { historyViewModel.selectSearchMode(HistorySearchMode.STARTS_WITH) },
+                        ) {
+                            Text("Início")
+                        }
+                    }
+
+                    if (searchMode == HistorySearchMode.CONTAINS) {
+                        Button(
+                            onClick = { historyViewModel.selectSearchMode(HistorySearchMode.CONTAINS) },
+                        ) {
+                            Text("Qualquer parte")
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { historyViewModel.selectSearchMode(HistorySearchMode.CONTAINS) },
+                        ) {
+                            Text("Qualquer parte")
+                        }
+                    }
+
+                    if (searchQuery.isNotBlank()) {
+                        TextButton(onClick = historyViewModel::clearSearch) {
+                            Text("Limpar")
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
             Card(Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -123,10 +188,14 @@ fun HistoryScreen(
                         text = "Resumo do período",
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    Text("Itens: ${historyItems.size}")
-                    Text("Total dos itens: R$ ${formatHistoryMoney(total)}")
+                    if (searchQuery.isBlank()) {
+                        Text("Itens: ${historyItems.size}")
+                    } else {
+                        Text("Resultados: ${filteredItems.size} de ${historyItems.size} itens")
+                    }
+                    Text("Total exibido: R$ ${formatHistoryMoney(total)}")
                     Text(
-                        text = "Não vinculados: ${historyItems.count { it.productId == null }}",
+                        text = "Não vinculados exibidos: ${filteredItems.count { it.productId == null }}",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -151,16 +220,24 @@ fun HistoryScreen(
             }
         }
 
-        if (historyItems.isEmpty()) {
+        if (filteredItems.isEmpty()) {
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp)) {
                         Text(
-                            text = "Nenhum item neste período.",
+                            text = if (searchQuery.isBlank()) {
+                                "Nenhum item neste período."
+                            } else {
+                                "Nenhum item encontrado."
+                            },
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            text = "Use as setas ou altere o tipo de período para consultar outros lançamentos.",
+                            text = if (searchQuery.isBlank()) {
+                                "Use as setas ou altere o tipo de período para consultar outros lançamentos."
+                            } else {
+                                "Tente outro termo ou altere o tipo de pesquisa."
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -169,7 +246,7 @@ fun HistoryScreen(
         }
 
         items(
-            items = historyItems,
+            items = filteredItems,
             key = { it.itemId },
         ) { item ->
             HistoryItemCard(
