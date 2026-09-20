@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           yes | "${{ steps.sdk.outputs.sdkmanager }}" --licenses > /dev/null || true
-          "${{ steps.sdk.outputs.sdkmanager }}" "platforms;android-37" "build-tools;36.0.0"
+          "${{ steps.sdk.outputs.sdkmanager }}" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
