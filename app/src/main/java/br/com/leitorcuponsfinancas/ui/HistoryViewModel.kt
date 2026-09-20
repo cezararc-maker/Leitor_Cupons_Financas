@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
 import br.com.leitorcuponsfinancas.data.HistoryItemRow
+import br.com.leitorcuponsfinancas.data.ItemCorrectionResult
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductLinkResult
 import br.com.leitorcuponsfinancas.data.ProductRepository
@@ -42,6 +43,12 @@ data class HistoryDateRange(
 )
 
 data class HistoryLinkState(
+    val saving: Boolean = false,
+    val message: String? = null,
+    val error: String? = null,
+)
+
+data class HistoryEditState(
     val saving: Boolean = false,
     val message: String? = null,
     val error: String? = null,
@@ -120,6 +127,9 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
     private val _linkState = MutableStateFlow(HistoryLinkState())
     val linkState: StateFlow<HistoryLinkState> = _linkState.asStateFlow()
 
+    private val _editState = MutableStateFlow(HistoryEditState())
+    val editState: StateFlow<HistoryEditState> = _editState.asStateFlow()
+
     fun selectPeriod(type: HistoryPeriodType) {
         _periodType.value = type
     }
@@ -150,6 +160,70 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
             _periodType.value,
             1,
         )
+    }
+
+    fun saveItemCorrection(
+        item: HistoryItemRow,
+        description: String,
+        quantity: String,
+        unit: String,
+        unitPrice: String,
+        totalAmount: String,
+    ) {
+        if (_editState.value.saving) return
+
+        _editState.value = HistoryEditState(saving = true)
+
+        viewModelScope.launch {
+            when (
+                val result = receiptRepository.saveItemCorrection(
+                    item = item,
+                    description = description,
+                    quantity = quantity,
+                    unit = unit,
+                    unitPrice = unitPrice,
+                    totalAmount = totalAmount,
+                )
+            ) {
+                is ItemCorrectionResult.Success -> {
+                    _editState.value = HistoryEditState(
+                        message = if (result.hasCorrection) {
+                            "Correção salva. Os dados originais da NFC-e foram preservados."
+                        } else {
+                            "Os valores informados são iguais aos dados originais da NFC-e."
+                        },
+                    )
+                }
+
+                is ItemCorrectionResult.Error -> {
+                    _editState.value = HistoryEditState(error = result.message)
+                }
+            }
+        }
+    }
+
+    fun restoreOriginalItem(item: HistoryItemRow) {
+        if (_editState.value.saving) return
+
+        _editState.value = HistoryEditState(saving = true)
+
+        viewModelScope.launch {
+            when (val result = receiptRepository.clearItemCorrection(item.itemId)) {
+                is ItemCorrectionResult.Success -> {
+                    _editState.value = HistoryEditState(
+                        message = "Correções removidas. O item voltou aos dados originais da NFC-e.",
+                    )
+                }
+
+                is ItemCorrectionResult.Error -> {
+                    _editState.value = HistoryEditState(error = result.message)
+                }
+            }
+        }
+    }
+
+    fun clearEditMessage() {
+        _editState.value = HistoryEditState()
     }
 
     fun linkItem(
