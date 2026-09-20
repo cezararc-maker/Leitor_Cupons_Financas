@@ -13,3 +13,6 @@
 app/build
 *.apk
 *.aab
+
+# Relatorios locais de diagnostico
+/data/runtime/reports/
