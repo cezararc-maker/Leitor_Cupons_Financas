@@ -44,6 +44,30 @@ class ProductSuggestionEngineTest {
     }
 
     @Test
+    fun usesExistingInstantNoodlesInsteadOfSuggestingDuplicate() {
+        val existing = ProductEntity(
+            id = 7,
+            normalizedName = "Macarrão instantâneo",
+            sector = "Alimentação",
+            category = "Mercado",
+            subcategory = "Massas",
+        )
+
+        val result = ProductSuggestionEngine.suggest(
+            description = "MAC.NISSIN LAMEN",
+            unit = "UN",
+            products = listOf(existing),
+            learnedLinks = emptyList(),
+        )
+
+        assertTrue(result is SmartProductSuggestion.ExistingProduct)
+        assertEquals(
+            7L,
+            (result as SmartProductSuggestion.ExistingProduct).product.id,
+        )
+    }
+
+    @Test
     fun suggestsInstantNoodlesForNissin() {
         val result = ProductSuggestionEngine.suggest(
             description = "NISSIN LAMEN GALINHA 85G",
