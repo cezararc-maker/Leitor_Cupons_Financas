@@ -46,9 +46,21 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         subcategory: String,
         unit: String,
         notes: String,
-    ) {
+    ): String? {
         val cleanName = ProductNormalizer.displayName(name)
-        if (cleanName.isBlank() || sector.isBlank() || category.isBlank()) return
+        if (cleanName.isBlank() || sector.isBlank() || category.isBlank()) {
+            return "Informe nome, setor e categoria."
+        }
+
+        val duplicate = products.value.firstOrNull { candidate ->
+            candidate.id != (existing?.id ?: 0L) &&
+                ProductNormalizer.searchKey(candidate.normalizedName) ==
+                    ProductNormalizer.searchKey(cleanName)
+        }
+
+        if (duplicate != null) {
+            return "Já existe um produto mestre chamado \"${duplicate.normalizedName}\"."
+        }
 
         val now = System.currentTimeMillis()
         val product = ProductEntity(
@@ -68,6 +80,8 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             repository.save(product)
         }
+
+        return null
     }
 
     fun deactivate(product: ProductEntity) {
