@@ -15,6 +15,9 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE active = 1 ORDER BY normalizedName COLLATE NOCASE")
     suspend fun listActiveOnce(): List<ProductEntity>
 
+    @Query("SELECT * FROM products WHERE id = :id LIMIT 1")
+    suspend fun findById(id: Long): ProductEntity?
+
     @Insert
     suspend fun insert(product: ProductEntity): Long
 
