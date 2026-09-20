@@ -49,12 +49,13 @@ fun ProductScreen(
         String,
         String,
         String,
-    ) -> Unit,
+    ) -> String?,
     onDeactivate: (ProductEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var editing by remember { mutableStateOf<ProductEntity?>(null) }
     var showForm by rememberSaveable { mutableStateOf(false) }
+    var saveError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Scaffold(
         modifier = modifier,
@@ -62,6 +63,7 @@ fun ProductScreen(
             FloatingActionButton(
                 onClick = {
                     editing = null
+                    saveError = null
                     showForm = true
                 },
             ) {
@@ -100,6 +102,7 @@ fun ProductScreen(
                         product = product,
                         onClick = {
                             editing = product
+                            saveError = null
                             showForm = true
                         },
                     )
@@ -112,12 +115,14 @@ fun ProductScreen(
         ProductFormDialog(
             product = editing,
             learnedLinks = editing?.let { learnedLinks[it.id] }.orEmpty(),
+            saveError = saveError,
             onDismiss = {
                 showForm = false
                 editing = null
+                saveError = null
             },
             onSave = { name, fiscalDescription, sector, category, subcategory, unit, notes ->
-                onSave(
+                val error = onSave(
                     editing,
                     name,
                     fiscalDescription,
@@ -127,8 +132,14 @@ fun ProductScreen(
                     unit,
                     notes,
                 )
-                showForm = false
-                editing = null
+
+                if (error == null) {
+                    showForm = false
+                    editing = null
+                    saveError = null
+                } else {
+                    saveError = error
+                }
             },
             onDeactivate = editing?.let { product ->
                 {
@@ -187,6 +198,7 @@ private fun ProductCard(
 private fun ProductFormDialog(
     product: ProductEntity?,
     learnedLinks: List<MerchantProductLinkEntity>,
+    saveError: String?,
     onDismiss: () -> Unit,
     onSave: (
         String,
@@ -310,6 +322,19 @@ private fun ProductFormDialog(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
+                    }
+                }
+
+                saveError?.let { error ->
+                    item {
+                        Card(Modifier.fillMaxWidth()) {
+                            Text(
+                                text = error,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(12.dp),
+                            )
+                        }
                     }
                 }
 
