@@ -58,7 +58,10 @@ fun HistoryScreen(
     val linkState by historyViewModel.linkState.collectAsStateWithLifecycle()
 
     var linkingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
+    var reviewingItemId by rememberSaveable { mutableStateOf<Long?>(null) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+
+    val unrecognizedItems = filteredItems.filter { it.productId == null }
 
     val total = filteredItems
         .mapNotNull { it.totalAmount?.toBigDecimalOrNull() }
@@ -237,9 +240,18 @@ fun HistoryScreen(
                     }
                     Text("Total exibido: R$ ${formatHistoryMoney(total)}")
                     Text(
-                        text = "Não vinculados exibidos: ${filteredItems.count { it.productId == null }}",
+                        text = "Não vinculados exibidos: ${unrecognizedItems.size}",
                         style = MaterialTheme.typography.bodyMedium,
                     )
+
+                    if (unrecognizedItems.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = { reviewingItemId = unrecognizedItems.first().itemId },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Revisar não reconhecidos (${unrecognizedItems.size})")
+                        }
+                    }
                 }
             }
         }
@@ -312,6 +324,32 @@ fun HistoryScreen(
             },
         )
     }
+
+    reviewingItemId?.let { itemId ->
+        val reviewItem = unrecognizedItems.firstOrNull { it.itemId == itemId }
+
+        if (reviewItem == null) {
+            reviewingItemId = unrecognizedItems.firstOrNull()?.itemId
+        } else {
+            val reviewIndex = unrecognizedItems.indexOfFirst { it.itemId == reviewItem.itemId }
+            val nextItemId = unrecognizedItems
+                .getOrNull(reviewIndex + 1)
+                ?.itemId
+
+            UnrecognizedReviewDialog(
+                item = reviewItem,
+                position = reviewIndex + 1,
+                total = unrecognizedItems.size,
+                products = products,
+                onDismiss = { reviewingItemId = null },
+                onSkip = { reviewingItemId = nextItemId },
+                onSelect = { product ->
+                    historyViewModel.linkItem(reviewItem, product)
+                    reviewingItemId = nextItemId
+                },
+            )
+        }
+    }
 }
 
 @Composable
@@ -383,6 +421,105 @@ private fun HistoryItemCard(
             }
         }
     }
+}
+
+@Composable
+private fun UnrecognizedReviewDialog(
+    item: HistoryItemRow,
+    position: Int,
+    total: Int,
+    products: List<ProductEntity>,
+    onDismiss: () -> Unit,
+    onSkip: () -> Unit,
+    onSelect: (ProductEntity) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text("Revisar não reconhecidos")
+                Text(
+                    text = "$position de $total",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = item.fiscalDescription,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                item.itemCode?.let {
+                    Text(
+                        text = "Código no estabelecimento: $it",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                item.merchantName?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                Text(
+                    text = "Escolha o produto mestre. O vínculo também será reaplicado aos itens equivalentes deste estabelecimento.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+
+                if (products.isEmpty()) {
+                    Text("Nenhum produto mestre cadastrado.")
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 360.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(
+                            items = products,
+                            key = { it.id },
+                        ) { product ->
+                            OutlinedButton(
+                                onClick = { onSelect(product) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(Modifier.fillMaxWidth()) {
+                                    Text(product.normalizedName)
+                                    Text(
+                                        text = listOfNotNull(
+                                            product.sector,
+                                            product.category,
+                                            product.subcategory,
+                                        ).joinToString(" • "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onSkip,
+                enabled = position < total,
+            ) {
+                Text("Pular")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Fechar")
+            }
+        },
+    )
 }
 
 @Composable
