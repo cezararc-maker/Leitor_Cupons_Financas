@@ -130,7 +130,7 @@ private fun HomeScreen(
         )
 
         Text(
-            text = "Produtos cadastrados: $productCount",
+            text = "Produtos no cadastro mestre: $productCount",
             style = MaterialTheme.typography.bodyLarge,
         )
 
@@ -138,7 +138,7 @@ private fun HomeScreen(
             onClick = onProducts,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Cadastrar e consultar produtos")
+            Text("Cadastro mestre de produtos")
         }
 
         Button(
