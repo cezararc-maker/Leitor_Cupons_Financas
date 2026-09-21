@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Fundo azul-claro -->
+    <path
+        android:fillColor="#DCEEFF"
+        android:pathData="M0,0H108V108H0Z" />
+
+    <!-- Medalhão central branco -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,7A47,47 0,1 1,54,101A47,47 0,1 1,54,7Z" />
+
+    <!-- Sombra suave do recibo -->
+    <path
+        android:fillColor="#D4E8F8"
+        android:pathData="M26,21H73Q79,21 79,27V72L84,77L78,83L72,78L66,83L60,78L54,83L48,78L42,83L36,78L30,83L26,79Z" />
+
+    <!-- Recibo -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#0A3268"
+        android:strokeWidth="3.2"
+        android:strokeLineJoin="round"
+        android:pathData="M24,19H72Q78,19 78,25V71L82,76L76,82L70,77L64,82L58,77L52,82L46,77L40,82L34,77L28,82L24,78Z" />
+
+    <!-- Dobra superior -->
+    <path
+        android:fillColor="#BFDDF7"
+        android:strokeColor="#0A3268"
+        android:strokeWidth="3.2"
+        android:strokeLineJoin="round"
+        android:pathData="M69,19Q78,19 78,28V34H69Z" />
+
+    <!-- Cantos de leitura QR -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#66A9E8"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:pathData="M31,29V25H35 M57,25H61V29 M31,49V53H35 M57,53H61V49" />
+
+    <!-- QR: localizador superior esquerdo -->
+    <path
+        android:fillColor="#0A3268"
+        android:pathData="M35,31H45V41H35Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M37.5,33.5H42.5V38.5H37.5Z" />
+    <path
+        android:fillColor="#66A9E8"
+        android:pathData="M39,35H41V37H39Z" />
+
+    <!-- QR: localizador superior direito -->
+    <path
+        android:fillColor="#0A3268"
+        android:pathData="M50,31H60V41H50Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52.5,33.5H57.5V38.5H52.5Z" />
+    <path
+        android:fillColor="#66A9E8"
+        android:pathData="M54,35H56V37H54Z" />
+
+    <!-- QR: localizador inferior esquerdo -->
+    <path
+        android:fillColor="#0A3268"
+        android:pathData="M35,44H45V54H35Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M37.5,46.5H42.5V51.5H37.5Z" />
+    <path
+        android:fillColor="#66A9E8"
+        android:pathData="M39,48H41V50H39Z" />
+
+    <!-- Módulos QR -->
+    <path
+        android:fillColor="#0A3268"
+        android:pathData="M47,32H49V35H47Z
+                          M47,37H50V40H47Z
+                          M46,42H49V45H46Z
+                          M50,42H53V45H50Z
+                          M54,43H57V46H54Z
+                          M47,47H50V50H47Z
+                          M51,49H54V52H51Z
+                          M56,47H60V51H56Z
+                          M46,52H49V55H46Z
+                          M52,53H55V56H52Z" />
+
+    <!-- Painel do gráfico -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#0A3268"
+        android:strokeWidth="3.2"
+        android:strokeLineJoin="round"
+        android:pathData="M57,56H88Q93,56 93,61V86Q93,91 88,91H57Q52,91 52,86V61Q52,56 57,56Z" />
+
+    <!-- Barras -->
+    <path
+        android:fillColor="#66A9E8"
+        android:strokeColor="#0A3268"
+        android:strokeWidth="2"
+        android:pathData="M60,79H66V87H60Z
+                          M70,73H76V87H70Z
+                          M80,66H86V87H80Z" />
+
+    <!-- Seta de crescimento -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#0A3268"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M59,72Q70,69 84,61
+                          M79,60L85,60L84,66" />
+</vector>
