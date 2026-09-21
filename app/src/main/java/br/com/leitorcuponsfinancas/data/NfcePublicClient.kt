@@ -166,7 +166,22 @@ object NfcePublicClient {
         val path = uri.path.orEmpty()
         if (!path.startsWith("/nfce/qrcode", ignoreCase = true)) return null
 
-        return encodedUrl
+        // A SEFAZ-MS publica oficialmente o endpoint com a barra antes da query.
+        // Alguns cupons imprimem ".../qrcode?p=..." e o servidor pode responder
+        // com uma casca JavaScript em vez do DANFE. Canonicalizamos para
+        // ".../qrcode/?p=..." sem alterar o payload assinado do QR Code.
+        val canonicalPath = "/nfce/qrcode/"
+        return runCatching {
+            URI(
+                uri.scheme,
+                uri.userInfo,
+                uri.host,
+                uri.port,
+                canonicalPath,
+                uri.rawQuery,
+                uri.rawFragment,
+            ).toASCIIString()
+        }.getOrNull()
     }
 
     internal fun resolveRedirect(
