@@ -3,6 +3,7 @@ package br.com.leitorcuponsfinancas.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -24,11 +25,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.leitorcuponsfinancas.data.ProductEntity
+import br.com.leitorcuponsfinancas.domain.ProductSuggestionEngine
+import br.com.leitorcuponsfinancas.domain.SmartProductSuggestion
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -39,6 +43,7 @@ fun ManualEntryScreen(
     viewModel: ManualEntryViewModel = viewModel(),
 ) {
     val products by viewModel.products.collectAsStateWithLifecycle()
+    val learnedLinks by viewModel.learnedLinks.collectAsStateWithLifecycle()
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
 
     var merchantName by remember { mutableStateOf("") }
@@ -54,6 +59,7 @@ fun ManualEntryScreen(
     var selectedProduct by remember { mutableStateOf<ProductEntity?>(null) }
     var showProducts by remember { mutableStateOf(false) }
     var showUnits by remember { mutableStateOf(false) }
+    var productDialogError by remember { mutableStateOf<String?>(null) }
 
     val calculatedTotal = remember(quantity, unitPrice) {
         ManualEntryCalculator.calculateTotal(
@@ -74,29 +80,57 @@ fun ManualEntryScreen(
         unitType.priceLabel
     }
 
+    val smartSuggestion = remember(description, effectiveUnit, products, learnedLinks) {
+        ProductSuggestionEngine.suggest(
+            description = description,
+            unit = effectiveUnit,
+            products = products,
+            learnedLinks = learnedLinks,
+        )
+    }
+
     val canSave = !saveState.saving &&
         description.isNotBlank() &&
         dateText.isNotBlank() &&
         quantity.isNotBlank() &&
         unitPrice.isNotBlank() &&
         calculatedTotal != null &&
-        effectiveUnit.isNotBlank()
+        effectiveUnit.isNotBlank() &&
+        selectedProduct != null
+
+    fun applyProduct(product: ProductEntity) {
+        selectedProduct = product
+
+        val productUnit = product.unit.trim().uppercase()
+        val recognizedUnit = ManualUnitType.entries.firstOrNull {
+            it != ManualUnitType.OTHER && it.code == productUnit
+        }
+
+        if (recognizedUnit != null) {
+            unitType = recognizedUnit
+            customUnit = ""
+        } else if (productUnit.isNotBlank()) {
+            unitType = ManualUnitType.OTHER
+            customUnit = productUnit
+        }
+
+        showProducts = false
+        productDialogError = null
+        viewModel.clearMessage()
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(20.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-        }
-
         item {
             Text(
                 text = "Lançamento manual",
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(
-                text = "Use quando não houver NFC-e ou cupom fiscal. Nome do item, unidade, quantidade e preço são obrigatórios. O total é calculado automaticamente.",
+                text = "Use quando não houver NFC-e ou cupom fiscal. Os campos com * são obrigatórios.",
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -108,7 +142,7 @@ fun ManualEntryScreen(
                     description = it
                     viewModel.clearMessage()
                 },
-                label = { Text("Nome do item *") },
+                label = { RequiredFieldLabel("Nome do item") },
                 placeholder = { Text("Ex.: Pão francês") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -117,25 +151,28 @@ fun ManualEntryScreen(
 
         item {
             OutlinedButton(
-                onClick = { showProducts = true },
+                onClick = {
+                    productDialogError = null
+                    showProducts = true
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
-                    selectedProduct?.let {
-                        "Produto mestre: ${it.normalizedName}"
-                    } ?: "Vincular a produto mestre (opcional)",
-                )
-            }
-
-            if (selectedProduct != null) {
-                TextButton(
-                    onClick = {
-                        selectedProduct = null
-                        viewModel.clearMessage()
-                    },
-                ) {
-                    Text("Remover vínculo")
+                if (selectedProduct == null) {
+                    RequiredButtonLabel("Vincular Produto Mestre")
+                } else {
+                    Text("Produto mestre: ${selectedProduct?.normalizedName}")
                 }
+            }
+            selectedProduct?.let { product ->
+                Text(
+                    text = listOfNotNull(
+                        product.sector,
+                        product.category,
+                        product.subcategory,
+                    ).joinToString(" • "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 
@@ -144,13 +181,16 @@ fun ManualEntryScreen(
                 onClick = { showUnits = true },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
-                    if (unitType == ManualUnitType.OTHER && customUnit.isNotBlank()) {
-                        "Unidade: ${customUnit.trim().uppercase()}"
-                    } else {
-                        "Unidade: ${unitType.label}"
-                    },
-                )
+                Row {
+                    Text(
+                        if (unitType == ManualUnitType.OTHER && customUnit.isNotBlank()) {
+                            "Unidade: ${customUnit.trim().uppercase()}"
+                        } else {
+                            "Unidade: ${unitType.label}"
+                        },
+                    )
+                    RequiredAsterisk()
+                }
             }
         }
 
@@ -162,7 +202,7 @@ fun ManualEntryScreen(
                         customUnit = it
                         viewModel.clearMessage()
                     },
-                    label = { Text("Tipo de unidade *") },
+                    label = { RequiredFieldLabel("Tipo de unidade") },
                     placeholder = { Text("Ex.: Caixa, dúzia, bandeja...") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -177,7 +217,7 @@ fun ManualEntryScreen(
                     quantity = it
                     viewModel.clearMessage()
                 },
-                label = { Text("${unitType.quantityLabel} *") },
+                label = { RequiredFieldLabel(unitType.quantityLabel) },
                 placeholder = {
                     Text(
                         when (unitType) {
@@ -200,7 +240,7 @@ fun ManualEntryScreen(
                     unitPrice = it
                     viewModel.clearMessage()
                 },
-                label = { Text("$priceLabel *") },
+                label = { RequiredFieldLabel(priceLabel) },
                 placeholder = { Text("Ex.: 1,50") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
@@ -257,7 +297,7 @@ fun ManualEntryScreen(
                 placeholder = { Text("14 dígitos") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 supportingText = {
-                    Text("O vínculo manual funciona mesmo sem CNPJ. Se informado, o CNPJ fica salvo no lançamento.")
+                    Text("Se informado, o CNPJ fica salvo no lançamento.")
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -271,7 +311,7 @@ fun ManualEntryScreen(
                     dateText = it
                     viewModel.clearMessage()
                 },
-                label = { Text("Data *") },
+                label = { RequiredFieldLabel("Data") },
                 placeholder = { Text("DD/MM/AAAA") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -370,46 +410,196 @@ fun ManualEntryScreen(
     }
 
     if (showProducts) {
-        AlertDialog(
-            onDismissRequest = { showProducts = false },
-            title = { Text("Escolher produto mestre") },
-            text = {
-                if (products.isEmpty()) {
-                    Text("Nenhum produto mestre cadastrado.")
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.heightIn(max = 380.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
+        ManualProductLinkDialog(
+            description = description,
+            effectiveUnit = effectiveUnit,
+            products = products,
+            suggestion = smartSuggestion,
+            currentProduct = selectedProduct,
+            error = productDialogError,
+            onDismiss = {
+                showProducts = false
+                productDialogError = null
+            },
+            onSelect = ::applyProduct,
+            onCreate = { name, sector, category, subcategory, unit ->
+                viewModel.createProductMaster(
+                    name = name,
+                    sector = sector,
+                    category = category,
+                    subcategory = subcategory,
+                    unit = unit,
+                    onCreated = ::applyProduct,
+                    onError = { productDialogError = it },
+                )
+            },
+        )
+    }
+}
+
+@Composable
+private fun ManualProductLinkDialog(
+    description: String,
+    effectiveUnit: String,
+    products: List<ProductEntity>,
+    suggestion: SmartProductSuggestion?,
+    currentProduct: ProductEntity?,
+    error: String?,
+    onDismiss: () -> Unit,
+    onSelect: (ProductEntity) -> Unit,
+    onCreate: (String, String, String, String, String) -> Unit,
+) {
+    var creatingNew by remember { mutableStateOf(false) }
+    var name by remember(description) { mutableStateOf(description) }
+    var sector by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("") }
+    var subcategory by remember { mutableStateOf("") }
+    var unit by remember(effectiveUnit) { mutableStateOf(effectiveUnit.ifBlank { "UN" }) }
+
+    fun useNewSuggestion(newSuggestion: SmartProductSuggestion.NewProduct) {
+        name = newSuggestion.name
+        sector = newSuggestion.sector
+        category = newSuggestion.category
+        subcategory = newSuggestion.subcategory.orEmpty()
+        unit = newSuggestion.unit
+        creatingNew = true
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(if (creatingNew) "Criar Produto Mestre" else "Vincular Produto Mestre")
+        },
+        text = {
+            if (creatingNew) {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 460.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    item {
+                        Text(
+                            text = "O produto será criado e vinculado automaticamente ao lançamento.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { RequiredFieldLabel("Nome do produto") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = sector,
+                            onValueChange = { sector = it },
+                            label = { RequiredFieldLabel("Setor") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = category,
+                            onValueChange = { category = it },
+                            label = { RequiredFieldLabel("Categoria") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = subcategory,
+                            onValueChange = { subcategory = it },
+                            label = { Text("Subcategoria (opcional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                    item {
+                        OutlinedTextField(
+                            value = unit,
+                            onValueChange = { unit = it.uppercase() },
+                            label = { RequiredFieldLabel("Unidade") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                    error?.let { message ->
+                        item {
+                            Text(
+                                text = message,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 460.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (description.isBlank()) {
+                        item {
+                            Text(
+                                text = "Digite primeiro o nome do item para receber uma sugestão inteligente.",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+
+                    suggestion?.let { smart ->
+                        item {
+                            ManualSmartSuggestionCard(
+                                suggestion = smart,
+                                onUseExisting = onSelect,
+                                onCreateNew = ::useNewSuggestion,
+                            )
+                        }
+                    }
+
+                    currentProduct?.let { current ->
+                        item {
+                            Text(
+                                text = "Vínculo atual: ${current.normalizedName}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+
+                    item {
+                        OutlinedButton(
+                            onClick = { creatingNew = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Criar novo produto mestre")
+                        }
+                    }
+
+                    if (products.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Produtos mestres existentes:",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                         items(products, key = { it.id }) { product ->
                             OutlinedButton(
-                                onClick = {
-                                    selectedProduct = product
-
-                                    if (description.isBlank()) {
-                                        description = product.normalizedName
-                                    }
-
-                                    val productUnit = product.unit.trim().uppercase()
-                                    val recognizedUnit = ManualUnitType.entries.firstOrNull {
-                                        it.code == productUnit
-                                    }
-
-                                    if (recognizedUnit != null) {
-                                        unitType = recognizedUnit
-                                        customUnit = ""
-                                    } else if (productUnit.isNotBlank()) {
-                                        unitType = ManualUnitType.OTHER
-                                        customUnit = productUnit
-                                    }
-
-                                    showProducts = false
-                                    viewModel.clearMessage()
-                                },
+                                onClick = { onSelect(product) },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Column(Modifier.fillMaxWidth()) {
-                                    Text(product.normalizedName)
+                                    Text(
+                                        if (product.id == currentProduct?.id) {
+                                            "${product.normalizedName} • atual"
+                                        } else {
+                                            product.normalizedName
+                                        },
+                                    )
                                     Text(
                                         text = listOfNotNull(
                                             product.sector,
@@ -423,13 +613,126 @@ fun ManualEntryScreen(
                         }
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showProducts = false }) {
-                    Text("Cancelar")
+            }
+        },
+        confirmButton = {
+            if (creatingNew) {
+                Button(
+                    enabled = name.isNotBlank() &&
+                        sector.isNotBlank() &&
+                        category.isNotBlank() &&
+                        unit.isNotBlank(),
+                    onClick = { onCreate(name, sector, category, subcategory, unit) },
+                ) {
+                    Text("Criar e vincular")
                 }
-            },
-        )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    if (creatingNew) {
+                        creatingNew = false
+                    } else {
+                        onDismiss()
+                    }
+                },
+            ) {
+                Text(if (creatingNew) "Voltar" else "Cancelar")
+            }
+        },
+    )
+}
+
+@Composable
+private fun ManualSmartSuggestionCard(
+    suggestion: SmartProductSuggestion,
+    onUseExisting: (ProductEntity) -> Unit,
+    onCreateNew: (SmartProductSuggestion.NewProduct) -> Unit,
+) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = if (suggestion.confidence >= 90) {
+                    "Sugestão inteligente • Alta confiança"
+                } else {
+                    "Sugestão inteligente"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+
+            when (suggestion) {
+                is SmartProductSuggestion.ExistingProduct -> {
+                    Text(
+                        text = suggestion.product.normalizedName,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = listOfNotNull(
+                            suggestion.product.sector,
+                            suggestion.product.category,
+                            suggestion.product.subcategory,
+                        ).joinToString(" • "),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Button(
+                        onClick = { onUseExisting(suggestion.product) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Usar sugestão")
+                    }
+                }
+
+                is SmartProductSuggestion.NewProduct -> {
+                    Text(
+                        text = suggestion.name,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = listOfNotNull(
+                            suggestion.sector,
+                            suggestion.category,
+                            suggestion.subcategory,
+                        ).joinToString(" • "),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Button(
+                        onClick = { onCreateNew(suggestion) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Criar produto sugerido")
+                    }
+                }
+            }
+        }
     }
+}
+
+@Composable
+private fun RequiredFieldLabel(text: String) {
+    Row {
+        Text(text)
+        RequiredAsterisk()
+    }
+}
+
+@Composable
+private fun RequiredButtonLabel(text: String) {
+    Row {
+        Text(text)
+        RequiredAsterisk()
+    }
+}
+
+@Composable
+private fun RequiredAsterisk() {
+    Text(
+        text = " *",
+        color = MaterialTheme.colorScheme.error,
+        fontWeight = FontWeight.Bold,
+    )
 }
