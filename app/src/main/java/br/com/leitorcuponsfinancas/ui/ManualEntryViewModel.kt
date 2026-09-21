@@ -4,10 +4,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
+import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
 import br.com.leitorcuponsfinancas.data.UserProfileStore
+import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -41,6 +43,15 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
         initialValue = emptyList(),
     )
 
+    val learnedLinks: StateFlow<List<MerchantProductLinkEntity>> =
+        database.merchantProductLinkDao()
+            .observeAll()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList(),
+            )
+
     private val _saveState = MutableStateFlow(ManualEntrySaveState())
     val saveState: StateFlow<ManualEntrySaveState> = _saveState.asStateFlow()
 
@@ -68,6 +79,12 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
 
         if (description.isBlank()) {
             _saveState.value = ManualEntrySaveState(error = "Informe a descrição do item.")
+            return
+        }
+        if (productId == null) {
+            _saveState.value = ManualEntrySaveState(
+                error = "Vincule o lançamento a um produto mestre antes de salvar.",
+            )
             return
         }
         val calculatedTotal = ManualEntryCalculator.calculateTotal(
@@ -111,6 +128,53 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun createProductMaster(
+        name: String,
+        sector: String,
+        category: String,
+        subcategory: String,
+        unit: String,
+        onCreated: (ProductEntity) -> Unit,
+        onError: (String) -> Unit,
+    ) {
+        val cleanName = ProductNormalizer.displayName(name)
+        val cleanSector = ProductNormalizer.displayName(sector)
+        val cleanCategory = ProductNormalizer.displayName(category)
+        val cleanSubcategory = ProductNormalizer.displayName(subcategory)
+        val cleanUnit = unit.trim().uppercase().ifBlank { "UN" }
+
+        if (cleanName.isBlank() || cleanSector.isBlank() || cleanCategory.isBlank()) {
+            onError("Informe nome, setor e categoria do produto mestre.")
+            return
+        }
+
+        viewModelScope.launch {
+            val duplicate = productRepository.findDuplicateName(cleanName)
+            if (duplicate != null) {
+                onCreated(duplicate)
+                return@launch
+            }
+
+            val now = System.currentTimeMillis()
+            val product = ProductEntity(
+                normalizedName = cleanName,
+                sector = cleanSector,
+                category = cleanCategory,
+                subcategory = cleanSubcategory.ifBlank { null },
+                unit = cleanUnit,
+                active = true,
+                createdAt = now,
+                updatedAt = now,
+            )
+
+            try {
+                val id = productRepository.save(product)
+                onCreated(product.copy(id = id))
+            } catch (error: Exception) {
+                onError(error.message ?: "Não foi possível criar o produto mestre.")
+            }
+        }
+    }
     fun clearMessage() {
         _saveState.value = ManualEntrySaveState()
     }
