@@ -2,6 +2,9 @@ package br.com.leitorcuponsfinancas.ui
 
 import android.Manifest
 import android.content.Intent
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.net.Uri
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -356,8 +359,33 @@ fun NfceScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Abrir consulta no navegador")
+                    Text("Abrir consulta do QR Code no navegador")
                 }
+            }
+
+            accessKey?.let { key ->
+                OutlinedButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                            as ClipboardManager
+                        clipboard.setPrimaryClip(
+                            ClipData.newPlainText("Chave de acesso NFC-e", key),
+                        )
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://www.dfe.ms.gov.br/nfce/consulta/"),
+                            ),
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Consultar pela chave de acesso")
+                }
+                Text(
+                    text = "Fallback oficial: a chave de 44 dígitos será copiada e a consulta por chave da SEFAZ-MS será aberta. O app não contorna validações adicionais do portal.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
 
