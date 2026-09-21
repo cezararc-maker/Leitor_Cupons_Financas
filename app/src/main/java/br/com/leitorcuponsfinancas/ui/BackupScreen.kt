@@ -57,7 +57,6 @@ fun BackupScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        BackArrowButton(onClick = onBack)
         Text("Backup e segurança", style = MaterialTheme.typography.headlineSmall)
         Text("O backup recupera toda a base do aplicativo em outro aparelho: produtos, vínculos aprendidos, NFC-e e itens, lançamentos manuais, correções, autoria, perfil local e configurações relevantes.")
         Text(
