@@ -170,18 +170,23 @@ object NfcePublicClient {
         // Alguns cupons imprimem ".../qrcode?p=..." e o servidor pode responder
         // com uma casca JavaScript em vez do DANFE. Canonicalizamos para
         // ".../qrcode/?p=..." sem alterar o payload assinado do QR Code.
-        val canonicalPath = "/nfce/qrcode/"
-        return runCatching {
-            URI(
-                uri.scheme,
-                uri.userInfo,
-                uri.host,
-                uri.port,
-                canonicalPath,
-                uri.rawQuery,
-                uri.rawFragment,
-            ).toASCIIString()
-        }.getOrNull()
+        val authority = buildString {
+            append(uri.host)
+            if (uri.port != -1) append(":${uri.port}")
+        }
+        return buildString {
+            append("https://")
+            append(authority)
+            append("/nfce/qrcode/")
+            uri.rawQuery?.let {
+                append('?')
+                append(it)
+            }
+            uri.rawFragment?.let {
+                append('#')
+                append(it)
+            }
+        }
     }
 
     internal fun resolveRedirect(
