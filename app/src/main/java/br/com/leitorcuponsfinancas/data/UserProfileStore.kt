@@ -52,5 +52,10 @@ class UserProfileStore private constructor(context: Context) {
             instance ?: synchronized(this) {
                 instance ?: UserProfileStore(context).also { instance = it }
             }
+
+        @Synchronized
+        fun resetAfterRestore() {
+            instance = null
+        }
     }
 }

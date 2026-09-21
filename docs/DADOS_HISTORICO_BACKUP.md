@@ -54,14 +54,20 @@ As consultas usam `receipts.issuedDate` no formato ISO `AAAA-MM-DD`, permitindo 
 
 ## Backup completo
 
-O backup completo terá finalidade de restauração do aplicativo. Deve preservar, no mínimo:
+O backup completo tem finalidade de restauração do aplicativo e preserva:
 
 - produtos;
 - vínculos aprendidos;
-- configurações relevantes;
-- opcionalmente o histórico de compras.
+- NFC-e, itens e lançamentos manuais;
+- correções e informações de autoria;
+- perfil local e configurações relevantes;
+- histórico de compras.
 
-Formato planejado: pacote versionado do aplicativo, independente do XLSX de relatório.
+Formato implementado: pacote `.lcfbackup` versionado, com banco SQLite, perfil local,
+manifesto e hashes SHA-256 para detectar arquivos incompletos ou corrompidos. A restauração
+valida o formato, a integridade do pacote, a versão e as tabelas obrigatórias antes de
+substituir a base atual. Durante a troca, o banco atual é mantido como cópia de retorno e
+só é descartado depois da conclusão bem-sucedida.
 
 A gravação e restauração devem usar o Storage Access Framework do Android, permitindo que o usuário escolha um provedor disponível no seletor do sistema, inclusive provedores de nuvem instalados no aparelho.
 

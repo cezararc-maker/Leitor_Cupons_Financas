@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ReceiptItemEntity::class,
         MerchantProductLinkEntity::class,
     ],
-    version = 5,
+    version = AppDatabase.VERSION,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,6 +24,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun merchantProductLinkDao(): MerchantProductLinkDao
 
     companion object {
+        const val VERSION = 5
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -163,5 +165,11 @@ abstract class AppDatabase : RoomDatabase() {
                     .build()
                     .also { instance = it }
             }
+
+        @Synchronized
+        fun closeForRestore() {
+            instance?.close()
+            instance = null
+        }
     }
 }

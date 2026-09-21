@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.leitorcuponsfinancas.ui.BackArrowButton
+import br.com.leitorcuponsfinancas.ui.BackupScreen
 import br.com.leitorcuponsfinancas.ui.HistoryScreen
 import br.com.leitorcuponsfinancas.ui.ManualEntryScreen
 import br.com.leitorcuponsfinancas.ui.ProfileScreen
@@ -52,6 +55,7 @@ private enum class AppScreen {
     HISTORY,
     MANUAL,
     PROFILE,
+    BACKUP,
 }
 
 @Composable
@@ -88,6 +92,7 @@ private fun LeitorCuponsApp(
                 onHistory = { screen = AppScreen.HISTORY },
                 onManual = { screen = AppScreen.MANUAL },
                 onProfile = { screen = AppScreen.PROFILE },
+                onBackup = { screen = AppScreen.BACKUP },
             )
 
             AppScreen.PRODUCTS -> Column(Modifier.fillMaxSize()) {
@@ -124,6 +129,11 @@ private fun LeitorCuponsApp(
                 onBack = { screen = AppScreen.HOME },
                 modifier = Modifier.fillMaxSize(),
             )
+
+            AppScreen.BACKUP -> BackupScreen(
+                onBack = { screen = AppScreen.HOME },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
@@ -136,10 +146,12 @@ private fun HomeScreen(
     onHistory: () -> Unit,
     onManual: () -> Unit,
     onProfile: () -> Unit,
+    onBackup: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -191,6 +203,13 @@ private fun HomeScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Perfil do usuário")
+        }
+
+        Button(
+            onClick = onBackup,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Backup e segurança")
         }
     }
 }
