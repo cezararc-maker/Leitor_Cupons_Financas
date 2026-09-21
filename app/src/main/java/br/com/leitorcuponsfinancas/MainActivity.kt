@@ -2,6 +2,7 @@ package br.com.leitorcuponsfinancas
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -66,6 +67,10 @@ private fun LeitorCuponsApp(
     val learnedLinks by productViewModel.learnedLinks.collectAsStateWithLifecycle()
     var screen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
 
+    BackHandler(enabled = screen != AppScreen.HOME) {
+        screen = AppScreen.HOME
+    }
+
     Column(Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -95,46 +100,61 @@ private fun LeitorCuponsApp(
                 onBackup = { screen = AppScreen.BACKUP },
             )
 
-            AppScreen.PRODUCTS -> Column(Modifier.fillMaxSize()) {
-                BackArrowButton(
-                    onClick = { screen = AppScreen.HOME },
-                    modifier = Modifier.padding(start = 8.dp, top = 4.dp),
-                )
+            else -> SecondaryScreenScaffold(
+                onBack = { screen = AppScreen.HOME },
+            ) {
+                when (screen) {
+                    AppScreen.PRODUCTS -> ProductScreen(
+                        products = products,
+                        learnedLinks = learnedLinks,
+                        onSave = productViewModel::save,
+                        onDeactivate = productViewModel::deactivate,
+                        modifier = Modifier.fillMaxSize(),
+                    )
 
-                ProductScreen(
-                    products = products,
-                    learnedLinks = learnedLinks,
-                    onSave = productViewModel::save,
-                    onDeactivate = productViewModel::deactivate,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                    AppScreen.NFCE -> NfceScreen(
+                        onBack = { screen = AppScreen.HOME },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    AppScreen.HISTORY -> HistoryScreen(
+                        onBack = { screen = AppScreen.HOME },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    AppScreen.MANUAL -> ManualEntryScreen(
+                        onBack = { screen = AppScreen.HOME },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    AppScreen.PROFILE -> ProfileScreen(
+                        onBack = { screen = AppScreen.HOME },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    AppScreen.BACKUP -> BackupScreen(
+                        onBack = { screen = AppScreen.HOME },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    AppScreen.HOME -> Unit
+                }
             }
-
-            AppScreen.NFCE -> NfceScreen(
-                onBack = { screen = AppScreen.HOME },
-                modifier = Modifier.fillMaxSize(),
-            )
-
-            AppScreen.HISTORY -> HistoryScreen(
-                onBack = { screen = AppScreen.HOME },
-                modifier = Modifier.fillMaxSize(),
-            )
-
-            AppScreen.MANUAL -> ManualEntryScreen(
-                onBack = { screen = AppScreen.HOME },
-                modifier = Modifier.fillMaxSize(),
-            )
-
-            AppScreen.PROFILE -> ProfileScreen(
-                onBack = { screen = AppScreen.HOME },
-                modifier = Modifier.fillMaxSize(),
-            )
-
-            AppScreen.BACKUP -> BackupScreen(
-                onBack = { screen = AppScreen.HOME },
-                modifier = Modifier.fillMaxSize(),
-            )
         }
+    }
+}
+
+@Composable
+private fun SecondaryScreenScaffold(
+    onBack: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Column(Modifier.fillMaxSize()) {
+        BackArrowButton(
+            onClick = onBack,
+            modifier = Modifier.padding(start = 8.dp, top = 4.dp),
+        )
+        content()
     }
 }
 
