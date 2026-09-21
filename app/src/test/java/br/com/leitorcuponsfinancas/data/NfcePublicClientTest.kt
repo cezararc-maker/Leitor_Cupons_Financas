@@ -19,6 +19,18 @@ class NfcePublicClientTest {
     }
 
     @Test
+    fun canonicalizesQrEndpointWithoutSlashBeforeQuery() {
+        val raw = "https://www.dfe.ms.gov.br/nfce/qrcode?p=abc|3|1"
+
+        val normalized = NfcePublicClient.normalizeOfficialUrl(raw)
+
+        assertEquals(
+            "https://www.dfe.ms.gov.br/nfce/qrcode/?p=abc%7C3%7C1",
+            normalized,
+        )
+    }
+
+    @Test
     fun upgradesOfficialHttpUrlToHttps() {
         val raw = "http://www.dfe.ms.gov.br/nfce/qrcode/?p=abc|2|1"
 
