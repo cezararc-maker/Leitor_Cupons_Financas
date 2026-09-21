@@ -40,7 +40,6 @@ fun ProfileScreen(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        BackArrowButton(onClick = onBack)
 
         Text("Perfil local", style = MaterialTheme.typography.headlineSmall)
         Text(
