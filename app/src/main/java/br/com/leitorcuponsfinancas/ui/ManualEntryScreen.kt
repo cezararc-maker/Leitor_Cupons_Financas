@@ -88,7 +88,6 @@ fun ManualEntryScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            BackArrowButton(onClick = onBack)
         }
 
         item {
