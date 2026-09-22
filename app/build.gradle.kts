@@ -66,6 +66,7 @@ dependencies {
 
     implementation("org.jsoup:jsoup:1.23.2")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
 
     val cameraXVersion = "1.6.2"
     implementation("androidx.camera:camera-core:$cameraXVersion")
