@@ -46,7 +46,7 @@ object ReceiptOcrParser {
                 moneyRegex.findAll(line).lastOrNull()?.value
             } else null
         }.orEmpty()
-        val items = lines.mapNotNull(::parseItemLine)
+        val items = buildList {\n            lines.forEachIndexed { index, line ->\n                parseItemLine(line)?.let { add(it); return@forEachIndexed }\n                val values = itemValuesRegex.matchEntire(line) ?: return@forEachIndexed\n                val previous = lines.getOrNull(index - 1).orEmpty()\n                    .replace(Regex("""^(SEM GTIN|\\d+)\\s+""", RegexOption.IGNORE_CASE), "")\n                    .trim()\n                if (previous.length < 4 || previous.contains("Qtde", true)) return@forEachIndexed\n                add(\n                    OcrItemDraft(\n                        description = previous,\n                        quantity = normalizeDecimal(values.groupValues[1]),\n                        unit = values.groupValues[2].uppercase(),\n                        unitPrice = normalizeMoney(values.groupValues[3]),\n                        total = normalizeMoney(values.groupValues[5].ifBlank { values.groupValues[4] }),\n                    )\n                )\n            }\n        }
 
         return OcrReceiptDraft(
             merchantName = merchant,
