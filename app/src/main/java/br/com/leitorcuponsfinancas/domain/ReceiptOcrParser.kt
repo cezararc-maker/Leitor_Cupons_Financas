@@ -23,7 +23,8 @@ data class OcrItemDraft(
 object ReceiptOcrParser {
     private val cnpjRegex = Regex("""CNPJ\s*:?\s*([0-9.\-/ ]{14,24})""", RegexOption.IGNORE_CASE)
     private val dateRegex = Regex("""(\d{2}/\d{2}/\d{4})(?:\s+(\d{2}:\d{2})(?::\d{2})?)?""")
-    private val noteRegex = Regex("""NFC-?e\s*(?:n[oº°.]*)?\s*(\d+)\s*(?:S[eé]rie\s*)?(\d+)?""", RegexOption.IGNORE_CASE)\n    private val explicitNoteRegex = Regex("""NFC-?e[^\\n]*?(\\d{5,})[^\\n]*?S[eé]rie\\s*(\\d{1,4})""", RegexOption.IGNORE_CASE)
+    private val noteRegex = Regex("""NFC-?e\s*(?:n[oº°.]*)?\s*(\d+)\s*(?:S[eé]rie\s*)?(\d+)?""", RegexOption.IGNORE_CASE)
+    private val explicitNoteRegex = Regex("""NFC-?e[^\\n]*?(\\d{5,})[^\\n]*?S[eé]rie\\s*(\\d{1,4})""", RegexOption.IGNORE_CASE)
     private val moneyRegex = Regex("""(\d{1,6}[.,]\d{2})""")
     private val itemLineRegex = Regex(
         """^\s*(?:\S+\s+)?(.{4,}?)\s+(\d+(?:[.,]\d+)?)\s+(UN|KG|G|LT|L|CX|PCT|PC|UND)\s+(\d+[.,]\d{2})\s+(\d+[.,]\d{2})(?:\s+[-0-9.,]+)?\s+(\d+[.,]\d{2})\s*$""",
