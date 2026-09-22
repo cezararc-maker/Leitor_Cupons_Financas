@@ -2,12 +2,18 @@ package br.com.leitorcuponsfinancas.ui
 
 import android.app.Application
 import android.net.Uri
+import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
 import br.com.leitorcuponsfinancas.data.NfcePublicClient
 import br.com.leitorcuponsfinancas.data.QrImageReadResult
 import br.com.leitorcuponsfinancas.data.QrImageReader
+import br.com.leitorcuponsfinancas.data.ReceiptOcrReader
+import br.com.leitorcuponsfinancas.data.ReceiptOcrReadResult
+import br.com.leitorcuponsfinancas.domain.OcrReceiptDraft
+import br.com.leitorcuponsfinancas.domain.ReceiptOcrParser
+import br.com.leitorcuponsfinancas.domain.NfceReceiptItem
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
 import br.com.leitorcuponsfinancas.data.UserProfileStore
 import br.com.leitorcuponsfinancas.domain.NfcePageParseResult
@@ -38,6 +44,12 @@ data class NfceImageState(
     val error: String? = null,
 )
 
+data class ReceiptOcrState(
+    val reading: Boolean = false,
+    val draft: OcrReceiptDraft? = null,
+    val error: String? = null,
+)
+
 data class NfceDuplicateState(
     val checking: Boolean = false,
     val alreadyImported: Boolean = false,
@@ -64,8 +76,98 @@ class NfceViewModel(application: Application) : AndroidViewModel(application) {
     private val _imageState = MutableStateFlow(NfceImageState())
     val imageState: StateFlow<NfceImageState> = _imageState.asStateFlow()
 
+    private val _ocrState = MutableStateFlow(ReceiptOcrState())
+    val ocrState: StateFlow<ReceiptOcrState> = _ocrState.asStateFlow()
+
     private val _duplicateState = MutableStateFlow(NfceDuplicateState())
     val duplicateState: StateFlow<NfceDuplicateState> = _duplicateState.asStateFlow()
+
+    fun readReceiptDocument(uri: Uri) {
+        if (_ocrState.value.reading) return
+        _ocrState.value = ReceiptOcrState(reading = true)
+        viewModelScope.launch {
+            when (val result = ReceiptOcrReader.read(getApplication(), uri)) {
+                is ReceiptOcrReadResult.Success -> _ocrState.value =
+                    ReceiptOcrState(draft = ReceiptOcrParser.parse(result.text))
+                is ReceiptOcrReadResult.Error -> _ocrState.value =
+                    ReceiptOcrState(error = result.message)
+            }
+        }
+    }
+
+    fun readReceiptPhoto(bitmap: Bitmap) {
+        if (_ocrState.value.reading) return
+        _ocrState.value = ReceiptOcrState(reading = true)
+        viewModelScope.launch {
+            when (val result = ReceiptOcrReader.read(bitmap)) {
+                is ReceiptOcrReadResult.Success -> _ocrState.value =
+                    ReceiptOcrState(draft = ReceiptOcrParser.parse(result.text))
+                is ReceiptOcrReadResult.Error -> _ocrState.value =
+                    ReceiptOcrState(error = result.message)
+            }
+        }
+    }
+
+    fun clearOcrState() {
+        _ocrState.value = ReceiptOcrState()
+        _saveState.value = NfceSaveState()
+    }
+
+    fun saveOcrDraft(draft: OcrReceiptDraft) {
+        if (_saveState.value.saving) return
+        if (draft.merchantName.isBlank()) {
+            _saveState.value = NfceSaveState(error = "Informe o estabelecimento antes de salvar.")
+            return
+        }
+        if (draft.issuedAt.isBlank()) {
+            _saveState.value = NfceSaveState(error = "Informe a data da compra antes de salvar.")
+            return
+        }
+        if (draft.items.isEmpty() || draft.items.any { it.description.isBlank() }) {
+            _saveState.value = NfceSaveState(error = "Revise os itens identificados antes de salvar.")
+            return
+        }
+
+        _saveState.value = NfceSaveState(saving = true)
+        viewModelScope.launch {
+            try {
+                val key = draft.accessKey.filter(Char::isDigit).takeIf { it.length == 44 }
+                    ?: "OCR:" + java.util.UUID.randomUUID().toString()
+                val receipt = NfceReceipt(
+                    sourceUrl = "ocr://document",
+                    merchantName = draft.merchantName.trim(),
+                    merchantCnpj = draft.merchantCnpj.filter(Char::isDigit).ifBlank { null },
+                    merchantAddress = null,
+                    number = draft.number.trim().ifBlank { null },
+                    series = draft.series.trim().ifBlank { null },
+                    issuedAt = draft.issuedAt.trim(),
+                    totalAmount = draft.totalAmount.toBigDecimalOrNull(),
+                    items = draft.items.map { item ->
+                        NfceReceiptItem(
+                            description = item.description.trim(),
+                            code = item.code.trim().ifBlank { null },
+                            quantity = item.quantity.toBigDecimalOrNull(),
+                            unit = item.unit.trim().ifBlank { null },
+                            unitPrice = item.unitPrice.toBigDecimalOrNull(),
+                            total = item.total.toBigDecimalOrNull(),
+                        )
+                    },
+                )
+                val result = receiptRepository.save(
+                    accessKey = key,
+                    receipt = receipt,
+                    actor = userProfileStore.profile.value,
+                )
+                _saveState.value = if (result.inserted) {
+                    NfceSaveState(message = "Comprovante revisado e salvo no histórico. Itens: ${result.totalItems}.")
+                } else {
+                    NfceSaveState(message = "Esta NFC-e já estava no histórico. Nenhum lançamento duplicado foi criado.")
+                }
+            } catch (error: Exception) {
+                _saveState.value = NfceSaveState(error = "Não foi possível salvar: ${error.message ?: error::class.java.simpleName}")
+            }
+        }
+    }
 
     fun checkDuplicate(accessKey: String) {
         _duplicateState.value = NfceDuplicateState(checking = true)
