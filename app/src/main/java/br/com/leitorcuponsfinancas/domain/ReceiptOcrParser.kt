@@ -1,7 +1,5 @@
 package br.com.leitorcuponsfinancas.domain
 
-import java.math.BigDecimal
-
 data class OcrReceiptDraft(
     val merchantName: String = "",
     val merchantCnpj: String = "",
@@ -27,11 +25,21 @@ object ReceiptOcrParser {
     private val dateRegex = Regex("""(\d{2}/\d{2}/\d{4})(?:\s+(\d{2}:\d{2})(?::\d{2})?)?""")
     private val noteRegex = Regex("""NFC-?e\s*(?:n[oº°.]*)?\s*(\d+)\s*(?:S[eé]rie)?\s*(\d+)?""", RegexOption.IGNORE_CASE)
     private val moneyRegex = Regex("""(\d{1,6}[.,]\d{2})""")
-    private val itemLineRegex = Regex("""^\s*(?:\S+\s+)?(.{4,}?)\s+(\d+(?:[.,]\d+)?)\s+(UN|KG|G|LT|L|CX|PCT|PC|UND)\s+(\d+[.,]\d{2})\s+(\d+[.,]\d{2})(?:\s+[-0-9.,]+)?\s+(\d+[.,]\d{2})\s*$""", RegexOption.IGNORE_CASE)
+    private val itemLineRegex = Regex(
+        """^\s*(?:\S+\s+)?(.{4,}?)\s+(\d+(?:[.,]\d+)?)\s+(UN|KG|G|LT|L|CX|PCT|PC|UND)\s+(\d+[.,]\d{2})\s+(\d+[.,]\d{2})(?:\s+[-0-9.,]+)?\s+(\d+[.,]\d{2})\s*$""",
+        RegexOption.IGNORE_CASE,
+    )
+    private val itemValuesRegex = Regex(
+        """^\s*(\d+(?:[.,]\d+)?)\s+(UN|KG|G|LT|L|CX|PCT|PC|UND)\s+(\d+[.,]\d{2})\s+(\d+[.,]\d{2})(?:\s+[-0-9.,]+)?(?:\s+(\d+[.,]\d{2}))?\s*$""",
+        RegexOption.IGNORE_CASE,
+    )
 
     fun parse(text: String): OcrReceiptDraft {
-        val lines = text.lines().map { it.replace(Regex("""\s+"""), " ").trim() }.filter { it.isNotBlank() }
-        val cnpj = cnpjRegex.find(text)?.groupValues?.get(1)?.filter(Char::isDigit).orEmpty().take(14)
+        val lines = text.lines()
+            .map { it.replace(Regex("""\s+"""), " ").trim() }
+            .filter { it.isNotBlank() }
+        val cnpj = cnpjRegex.find(text)?.groupValues?.get(1)
+            ?.filter(Char::isDigit).orEmpty().take(14)
         val accessKey = findAccessKey(text)
         val note = noteRegex.find(text)
         val date = dateRegex.find(text)
@@ -46,7 +54,40 @@ object ReceiptOcrParser {
                 moneyRegex.findAll(line).lastOrNull()?.value
             } else null
         }.orEmpty()
-        val items = buildList {\n            lines.forEachIndexed { index, line ->\n                parseItemLine(line)?.let { add(it); return@forEachIndexed }\n                val values = itemValuesRegex.matchEntire(line) ?: return@forEachIndexed\n                val previous = lines.getOrNull(index - 1).orEmpty()\n                    .replace(Regex("""^(SEM GTIN|\\d+)\\s+""", RegexOption.IGNORE_CASE), "")\n                    .trim()\n                if (previous.length < 4 || previous.contains("Qtde", true)) return@forEachIndexed\n                add(\n                    OcrItemDraft(\n                        description = previous,\n                        quantity = normalizeDecimal(values.groupValues[1]),\n                        unit = values.groupValues[2].uppercase(),\n                        unitPrice = normalizeMoney(values.groupValues[3]),\n                        total = normalizeMoney(values.groupValues[5].ifBlank { values.groupValues[4] }),\n                    )\n                )\n            }\n        }
+
+        val items = buildList<OcrItemDraft> {
+            lines.forEachIndexed { index, line ->
+                val sameLine = parseItemLine(line)
+                if (sameLine != null) {
+                    add(sameLine)
+                } else {
+                    val values = itemValuesRegex.matchEntire(line)
+                    if (values != null) {
+                        val previous = lines.getOrNull(index - 1).orEmpty()
+                            .replace(
+                                Regex("""^(SEM GTIN|\d+)\s+""", RegexOption.IGNORE_CASE),
+                                "",
+                            )
+                            .trim()
+                        if (previous.length >= 4 && !previous.contains("Qtde", true)) {
+                            add(
+                                OcrItemDraft(
+                                    description = previous,
+                                    quantity = normalizeDecimal(values.groupValues[1]),
+                                    unit = values.groupValues[2].uppercase(),
+                                    unitPrice = normalizeMoney(values.groupValues[3]),
+                                    total = normalizeMoney(
+                                        values.groupValues[5].ifBlank {
+                                            values.groupValues[4]
+                                        },
+                                    ),
+                                ),
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         return OcrReceiptDraft(
             merchantName = merchant,
@@ -54,7 +95,12 @@ object ReceiptOcrParser {
             accessKey = accessKey,
             number = note?.groupValues?.getOrNull(1).orEmpty(),
             series = note?.groupValues?.getOrNull(2).orEmpty(),
-            issuedAt = date?.let { m -> listOf(m.groupValues[1], m.groupValues.getOrNull(2).orEmpty()).filter { it.isNotBlank() }.joinToString(" ") }.orEmpty(),
+            issuedAt = date?.let { match ->
+                listOf(
+                    match.groupValues[1],
+                    match.groupValues.getOrNull(2).orEmpty(),
+                ).filter { it.isNotBlank() }.joinToString(" ")
+            }.orEmpty(),
             totalAmount = normalizeMoney(total),
             items = items,
         )
@@ -73,13 +119,24 @@ object ReceiptOcrParser {
 
     private fun findAccessKey(text: String): String {
         val candidates = Regex("""(?:\d[\s.]*){44}""").findAll(text)
-        return candidates.map { it.value.filter(Char::isDigit) }.firstOrNull { it.length == 44 }.orEmpty()
+        return candidates
+            .map { it.value.filter(Char::isDigit) }
+            .firstOrNull { it.length == 44 }
+            .orEmpty()
     }
 
     private fun normalizeMoney(value: String): String = normalizeDecimal(value)
+
     private fun normalizeDecimal(value: String): String {
         val cleaned = value.trim().replace(Regex("""[^0-9,.-]"""), "")
-        val normalized = if (cleaned.contains(',')) cleaned.replace(".", "").replace(",", ".") else cleaned
-        return normalized.toBigDecimalOrNull()?.stripTrailingZeros()?.toPlainString().orEmpty()
+        val normalized = if (cleaned.contains(',')) {
+            cleaned.replace(".", "").replace(",", ".")
+        } else {
+            cleaned
+        }
+        return normalized.toBigDecimalOrNull()
+            ?.stripTrailingZeros()
+            ?.toPlainString()
+            .orEmpty()
     }
 }
