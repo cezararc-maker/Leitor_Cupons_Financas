@@ -32,6 +32,7 @@ import br.com.leitorcuponsfinancas.ui.ManualEntryScreen
 import br.com.leitorcuponsfinancas.ui.ProfileScreen
 import br.com.leitorcuponsfinancas.ui.NfceScreen
 import br.com.leitorcuponsfinancas.ui.ProductScreen
+import br.com.leitorcuponsfinancas.ui.ReceiptOcrScreen
 import br.com.leitorcuponsfinancas.ui.ProductViewModel
 import br.com.leitorcuponsfinancas.ui.theme.LeitorCuponsTheme
 
@@ -53,6 +54,7 @@ private enum class AppScreen {
     HOME,
     PRODUCTS,
     NFCE,
+    OCR,
     HISTORY,
     MANUAL,
     PROFILE,
@@ -94,6 +96,7 @@ private fun LeitorCuponsApp(
                 productCount = products.size,
                 onProducts = { screen = AppScreen.PRODUCTS },
                 onNfce = { screen = AppScreen.NFCE },
+                onOcr = { screen = AppScreen.OCR },
                 onHistory = { screen = AppScreen.HISTORY },
                 onManual = { screen = AppScreen.MANUAL },
                 onProfile = { screen = AppScreen.PROFILE },
@@ -114,6 +117,10 @@ private fun LeitorCuponsApp(
 
                     AppScreen.NFCE -> NfceScreen(
                         onBack = { screen = AppScreen.HOME },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                    AppScreen.OCR -> ReceiptOcrScreen(
                         modifier = Modifier.fillMaxSize(),
                     )
 
@@ -163,6 +170,7 @@ private fun HomeScreen(
     productCount: Int,
     onProducts: () -> Unit,
     onNfce: () -> Unit,
+    onOcr: () -> Unit,
     onHistory: () -> Unit,
     onManual: () -> Unit,
     onProfile: () -> Unit,
@@ -202,6 +210,13 @@ private fun HomeScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Ler NFC-e por QR Code")
+        }
+
+        Button(
+            onClick = onOcr,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Ler cupom por foto, imagem ou PDF")
         }
 
         Button(
