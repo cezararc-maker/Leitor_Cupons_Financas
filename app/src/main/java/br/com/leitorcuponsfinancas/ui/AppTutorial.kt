@@ -48,7 +48,7 @@ fun AppTutorialDialog(
             ),
             TutorialPage(
                 title = "Ensine o aplicativo",
-                text = "Produtos mestres, categorias, setores e vínculos aprendidos ajudam o app a reconhecer melhor seus itens e evitam cadastros duplicados.",
+                text = "Produto Mestre é o produto raiz, sem marca. Assim, Renata e Liane podem apontar para Macarrão, enquanto Macarrão instantâneo continua separado. Categorias, setores e vínculos aprendidos evitam duplicidades.",
                 icon = Icons.Default.Inventory2,
             ),
             TutorialPage(
