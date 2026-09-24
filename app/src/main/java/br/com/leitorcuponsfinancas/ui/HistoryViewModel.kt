@@ -152,21 +152,38 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
     private val _searchMode = MutableStateFlow(HistorySearchMode.CONTAINS)
     val searchMode: StateFlow<HistorySearchMode> = _searchMode.asStateFlow()
 
+    private val _advancedFilter = MutableStateFlow(HistoryAdvancedFilter())
+    val advancedFilter: StateFlow<HistoryAdvancedFilter> = _advancedFilter.asStateFlow()
+
     val filteredItems: StateFlow<List<HistoryItemRow>> = combine(
         items,
         _searchQuery,
         _searchMode,
-    ) { currentItems, query, mode ->
-        HistorySearchFilter.filter(
+        _advancedFilter,
+    ) { currentItems, query, mode, filter ->
+        val searched = HistorySearchFilter.filter(
             items = currentItems,
             query = query,
             mode = mode,
+        )
+        HistoryAnalyticsBuilder.filter(
+            rows = searched,
+            filter = filter,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),
     )
+
+    val analytics: StateFlow<HistoryAnalytics> =
+        filteredItems
+            .map(HistoryAnalyticsBuilder::build)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = HistoryAnalytics(),
+            )
 
     val products: StateFlow<List<ProductEntity>> = productRepository.products.stateIn(
         scope = viewModelScope,
@@ -216,6 +233,14 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
 
     fun clearSearch() {
         _searchQuery.value = ""
+    }
+
+    fun updateAdvancedFilter(filter: HistoryAdvancedFilter) {
+        _advancedFilter.value = filter
+    }
+
+    fun clearAdvancedFilter() {
+        _advancedFilter.value = HistoryAdvancedFilter()
     }
 
     fun previousPeriod() {
