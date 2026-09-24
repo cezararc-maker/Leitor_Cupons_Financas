@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -30,7 +32,6 @@ import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,6 +42,19 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,7 +64,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -189,77 +207,101 @@ private fun LeitorCuponsApp(
                 AppHeader(onSettings = { navigate(AppScreen.SETTINGS) })
                 HorizontalDivider()
 
-                when (screen) {
-                    AppScreen.HOME -> HomeScreen(
-                        productCount = products.size,
-                        dashboard = dashboard,
-                        onHistory = { navigate(AppScreen.HISTORY) },
-                        onProducts = { navigate(AppScreen.PRODUCTS) },
-                        onBackup = { navigate(AppScreen.BACKUP) },
-                    )
+                AnimatedContent(
+                    targetState = screen,
+                    transitionSpec = {
+                        (
+                            slideInHorizontally(
+                                animationSpec = tween(260),
+                                initialOffsetX = { fullWidth -> fullWidth / 3 },
+                            ) +
+                                fadeIn(animationSpec = tween(220)) +
+                                scaleIn(
+                                    initialScale = 0.97f,
+                                    animationSpec = tween(220),
+                                )
+                            ).togetherWith(
+                            slideOutHorizontally(
+                                animationSpec = tween(210),
+                                targetOffsetX = { fullWidth -> -fullWidth / 7 },
+                            ) +
+                                fadeOut(animationSpec = tween(160)),
+                        )
+                    },
+                    label = "screenTransition",
+                ) { targetScreen ->
+                    when (targetScreen) {
+                        AppScreen.HOME -> HomeScreen(
+                            productCount = products.size,
+                            dashboard = dashboard,
+                            onHistory = { navigate(AppScreen.HISTORY) },
+                            onProducts = { navigate(AppScreen.PRODUCTS) },
+                            onBackup = { navigate(AppScreen.BACKUP) },
+                        )
 
-                    else -> SecondaryScreenScaffold(
-                        onBack = { screen = AppScreen.HOME },
-                    ) {
-                        when (screen) {
-                            AppScreen.PRODUCTS -> ProductScreen(
-                                products = products,
-                                learnedLinks = learnedLinks,
-                                onSave = productViewModel::save,
-                                onDeactivate = productViewModel::deactivate,
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                        else -> SecondaryScreenScaffold(
+                            onBack = { screen = AppScreen.HOME },
+                        ) {
+                            when (targetScreen) {
+                                AppScreen.PRODUCTS -> ProductScreen(
+                                    products = products,
+                                    learnedLinks = learnedLinks,
+                                    onSave = productViewModel::save,
+                                    onDeactivate = productViewModel::deactivate,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
-                            AppScreen.NFCE -> NfceScreen(
-                                onBack = { screen = AppScreen.HOME },
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                                AppScreen.NFCE -> NfceScreen(
+                                    onBack = { screen = AppScreen.HOME },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
-                            AppScreen.OCR -> ReceiptOcrScreen(
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                                AppScreen.OCR -> ReceiptOcrScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
-                            AppScreen.HISTORY -> HistoryScreen(
-                                onBack = { screen = AppScreen.HOME },
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                                AppScreen.HISTORY -> HistoryScreen(
+                                    onBack = { screen = AppScreen.HOME },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
-                            AppScreen.MANUAL -> ManualEntryScreen(
-                                onBack = { screen = AppScreen.HOME },
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                                AppScreen.MANUAL -> ManualEntryScreen(
+                                    onBack = { screen = AppScreen.HOME },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
-                            AppScreen.PROFILE -> ProfileScreen(
-                                onBack = { screen = AppScreen.HOME },
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                                AppScreen.PROFILE -> ProfileScreen(
+                                    onBack = { screen = AppScreen.HOME },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
-                            AppScreen.BACKUP -> BackupScreen(
-                                onBack = { screen = AppScreen.HOME },
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                                AppScreen.BACKUP -> BackupScreen(
+                                    onBack = { screen = AppScreen.HOME },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
-                            AppScreen.SETTINGS -> SettingsScreen(
-                                preferences = preferences,
-                                onFontScaleChange = preferencesStore::setFontScale,
-                                onShowTipsChange = preferencesStore::setShowContextualTips,
-                                onRestartTutorial = preferencesStore::restartOnboarding,
-                                onResetTips = preferencesStore::resetTips,
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                                AppScreen.SETTINGS -> SettingsScreen(
+                                    preferences = preferences,
+                                    onFontScaleChange = preferencesStore::setFontScale,
+                                    onShowTipsChange = preferencesStore::setShowContextualTips,
+                                    onRestartTutorial = preferencesStore::restartOnboarding,
+                                    onResetTips = preferencesStore::resetTips,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
-                            AppScreen.HOME -> Unit
+                                AppScreen.HOME -> Unit
+                            }
                         }
                     }
                 }
             }
 
-            if (addMenuOpen) {
-                QuickAddMenu(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 12.dp),
-                    onNfce = {
+            QuickAddMenu(
+                open = addMenuOpen,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 12.dp),
+                onNfce = {
                         navigate(
                             AppScreen.NFCE,
                             AppTip(
@@ -290,7 +332,6 @@ private fun LeitorCuponsApp(
                         )
                     },
                 )
-            }
         }
     }
 
@@ -360,6 +401,12 @@ private fun AppBottomBar(
     onProducts: () -> Unit,
     onProfile: () -> Unit,
 ) {
+    val addRotation by animateFloatAsState(
+        targetValue = if (addMenuOpen) 45f else 0f,
+        animationSpec = tween(180),
+        label = "addRotation",
+    )
+
     NavigationBar {
         NavigationBarItem(
             selected = current == AppScreen.HOME,
@@ -378,7 +425,11 @@ private fun AppBottomBar(
             onClick = onAdd,
             icon = {
                 FloatingActionButton(onClick = onAdd) {
-                    Icon(Icons.Default.Add, contentDescription = "Adicionar")
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Adicionar",
+                        modifier = Modifier.graphicsLayer(rotationZ = addRotation),
+                    )
                 }
             },
             label = { Text("Adicionar") },
@@ -400,31 +451,129 @@ private fun AppBottomBar(
 
 @Composable
 private fun QuickAddMenu(
+    open: Boolean,
     modifier: Modifier = Modifier,
     onNfce: () -> Unit,
     onOcr: () -> Unit,
     onManual: () -> Unit,
 ) {
+    val actions = listOf(
+        QuickAction(
+            label = "QR Code / chave NFC-e",
+            icon = Icons.Default.QrCodeScanner,
+            accent = MaterialTheme.colorScheme.primary,
+            delayMillis = 90,
+            onClick = onNfce,
+        ),
+        QuickAction(
+            label = "Foto, imagem ou PDF",
+            icon = Icons.Default.CameraAlt,
+            accent = MaterialTheme.colorScheme.secondary,
+            delayMillis = 45,
+            onClick = onOcr,
+        ),
+        QuickAction(
+            label = "Lançamento manual",
+            icon = Icons.Default.Keyboard,
+            accent = MaterialTheme.colorScheme.tertiary,
+            delayMillis = 0,
+            onClick = onManual,
+        ),
+    )
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp),
     ) {
-        ExtendedFloatingActionButton(
-            onClick = onNfce,
-            icon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null) },
-            text = { Text("QR Code / chave NFC-e") },
-        )
-        ExtendedFloatingActionButton(
-            onClick = onOcr,
-            icon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
-            text = { Text("Foto, imagem ou PDF") },
-        )
-        ExtendedFloatingActionButton(
-            onClick = onManual,
-            icon = { Icon(Icons.Default.Keyboard, contentDescription = null) },
-            text = { Text("Lançamento manual") },
-        )
+        actions.forEach { action ->
+            AnimatedVisibility(
+                visible = open,
+                enter =
+                    fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 150,
+                            delayMillis = action.delayMillis,
+                        ),
+                    ) +
+                        scaleIn(
+                            initialScale = 0.72f,
+                            transformOrigin = TransformOrigin(0.5f, 1f),
+                            animationSpec = tween(
+                                durationMillis = 190,
+                                delayMillis = action.delayMillis,
+                            ),
+                        ) +
+                        slideInVertically(
+                            animationSpec = tween(
+                                durationMillis = 190,
+                                delayMillis = action.delayMillis,
+                            ),
+                            initialOffsetY = { height -> height / 3 },
+                        ),
+                exit =
+                    fadeOut(animationSpec = tween(110)) +
+                        scaleOut(
+                            targetScale = 0.84f,
+                            transformOrigin = TransformOrigin(0.5f, 1f),
+                            animationSpec = tween(130),
+                        ) +
+                        slideOutVertically(
+                            animationSpec = tween(130),
+                            targetOffsetY = { height -> height / 4 },
+                        ),
+            ) {
+                QuickActionBubble(action)
+            }
+        }
+    }
+}
+
+private data class QuickAction(
+    val label: String,
+    val icon: ImageVector,
+    val accent: Color,
+    val delayMillis: Int,
+    val onClick: () -> Unit,
+)
+
+@Composable
+private fun QuickActionBubble(
+    action: QuickAction,
+) {
+    Surface(
+        onClick = action.onClick,
+        shape = RoundedCornerShape(28.dp),
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.widthIn(min = 250.dp, max = 330.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = action.accent.copy(alpha = 0.14f),
+                modifier = Modifier.size(40.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = action.icon,
+                        contentDescription = null,
+                        tint = action.accent,
+                    )
+                }
+            }
+            Text(
+                text = action.label,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
