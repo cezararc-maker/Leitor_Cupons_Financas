@@ -33,6 +33,11 @@ fun HistoryAdvancedFilterDialog(
     onClear: () -> Unit,
 ) {
     var productId by remember(current) { mutableStateOf(current.productId) }
+    var productText by remember(current, products) {
+        mutableStateOf(
+            products.firstOrNull { it.id == current.productId }?.normalizedName.orEmpty(),
+        )
+    }
     var category by remember(current) { mutableStateOf(current.category) }
     var merchant by remember(current) { mutableStateOf(current.merchant) }
     var sourceType by remember(current) { mutableStateOf(current.sourceType) }
@@ -64,25 +69,24 @@ fun HistoryAdvancedFilterDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    Text(
-                        text = "Produto Mestre",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = productId == null,
-                        onClick = { productId = null },
-                        label = { Text("Todos os produtos") },
-                    )
-                }
-                items(products.take(30), key = { it.id }) { product ->
-                    FilterChip(
-                        selected = productId == product.id,
-                        onClick = {
-                            productId = if (productId == product.id) null else product.id
+                    SuggestionTextField(
+                        value = productText,
+                        onValueChange = { typed ->
+                            productText = typed
+                            productId = products.firstOrNull {
+                                it.normalizedName.equals(typed.trim(), ignoreCase = true)
+                            }?.id
                         },
-                        label = { Text(product.normalizedName) },
+                        suggestions = products.map { it.normalizedName },
+                        label = { Text("Produto Mestre") },
+                        placeholder = { Text("Todos os produtos") },
+                        modifier = Modifier.fillMaxWidth(),
+                        onSuggestionSelected = { selected ->
+                            productText = selected
+                            productId = products.firstOrNull {
+                                it.normalizedName.equals(selected, ignoreCase = true)
+                            }?.id
+                        },
                     )
                 }
 
