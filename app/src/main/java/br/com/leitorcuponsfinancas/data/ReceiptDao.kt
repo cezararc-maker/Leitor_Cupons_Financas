@@ -31,6 +31,20 @@ interface ReceiptDao {
     @Query(
         """
         SELECT
+            TRIM(merchantName) AS name,
+            merchantCnpj AS cnpj
+        FROM receipts
+        WHERE merchantName IS NOT NULL
+          AND TRIM(merchantName) <> ''
+        GROUP BY UPPER(TRIM(merchantName)), COALESCE(merchantCnpj, '')
+        ORDER BY MAX(createdAt) DESC
+        """,
+    )
+    fun observeMerchantSuggestions(): Flow<List<MerchantSuggestion>>
+
+    @Query(
+        """
+        SELECT
             ri.id AS itemId,
             r.id AS receiptId,
             r.issuedDate AS issuedDate,
