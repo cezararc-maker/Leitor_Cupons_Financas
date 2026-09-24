@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
 import br.com.leitorcuponsfinancas.data.MerchantEntity
 import br.com.leitorcuponsfinancas.data.MerchantRepository
+import br.com.leitorcuponsfinancas.data.TaxonomyNodeEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,8 +23,11 @@ data class MerchantEditState(
 
 class MerchantViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = MerchantRepository(
-        AppDatabase.getInstance(application).merchantDao(),
+    private val database = AppDatabase.getInstance(application)
+    private val repository = MerchantRepository(database.merchantDao())
+    private val taxonomyRepository = TaxonomyRepository(
+        taxonomyDao = database.taxonomyDao(),
+        productDao = database.productDao(),
     )
 
     val merchants: StateFlow<List<MerchantEntity>> =
@@ -32,27 +37,48 @@ class MerchantViewModel(application: Application) : AndroidViewModel(application
             initialValue = emptyList(),
         )
 
+    val segments: StateFlow<List<TaxonomyNodeEntity>> =
+        taxonomyRepository.segments.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
     private val _editState = MutableStateFlow(MerchantEditState())
     val editState: StateFlow<MerchantEditState> = _editState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            taxonomyRepository.ensureBaseTaxonomy()
+        }
+    }
 
     fun clearMessage() {
         _editState.value = MerchantEditState()
     }
 
-    fun rename(
+    fun save(
         merchant: MerchantEntity,
         name: String,
+        segmentNodeId: Long?,
     ) {
         if (_editState.value.saving) return
         _editState.value = MerchantEditState(saving = true)
 
         viewModelScope.launch {
-            val error = repository.rename(merchant, name)
-            _editState.value = if (error == null) {
-                MerchantEditState(message = "Estabelecimento atualizado.")
-            } else {
-                MerchantEditState(error = error)
+            val renameError = repository.rename(merchant, name)
+            if (renameError != null) {
+                _editState.value = MerchantEditState(error = renameError)
+                return@launch
             }
+
+            val updated = merchant.copy(
+                displayName = name.trim(),
+                segmentNodeId = segmentNodeId,
+            )
+            repository.setSegment(updated, segmentNodeId)
+            _editState.value = MerchantEditState(
+                message = "Estabelecimento e segmento atualizados.",
+            )
         }
-    }
-}
+    }}
