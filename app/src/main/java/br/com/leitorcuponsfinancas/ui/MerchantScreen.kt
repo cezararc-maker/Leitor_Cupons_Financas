@@ -113,7 +113,21 @@ fun MerchantScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        text = "Segmento: ${segment?.name ?: "Não classificado"}",
+                        text = buildString {
+                            append("Segmento: ")
+                            append(segment?.name ?: "Não classificado")
+                            merchant.segmentSource?.let { source ->
+                                append(" • ")
+                                append(
+                                    when (source) {
+                                        "USER" -> "definido pelo usuário"
+                                        "TAXONOMY" -> "aprendido pela taxonomia"
+                                        "CNAE" -> "sugerido pelo CNAE"
+                                        else -> source
+                                    },
+                                )
+                            }
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (segment == null) {
                             MaterialTheme.colorScheme.tertiary
@@ -121,6 +135,13 @@ fun MerchantScreen(
                             MaterialTheme.colorScheme.primary
                         },
                     )
+                    merchant.cnaeMain?.let { cnae ->
+                        Text(
+                            text = "CNAE principal: $cnae",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
