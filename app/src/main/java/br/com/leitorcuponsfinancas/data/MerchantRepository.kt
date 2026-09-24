@@ -68,4 +68,16 @@ class MerchantRepository(
         )
         return null
     }
+
+    suspend fun setSegment(
+        merchant: MerchantEntity,
+        segmentNodeId: Long?,
+    ) {
+        merchantDao.update(
+            merchant.copy(
+                segmentNodeId = segmentNodeId,
+                updatedAt = System.currentTimeMillis(),
+            ),
+        )
+    }
 }
