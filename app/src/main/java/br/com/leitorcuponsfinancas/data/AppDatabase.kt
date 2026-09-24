@@ -14,6 +14,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ReceiptItemEntity::class,
         MerchantProductLinkEntity::class,
         MerchantEntity::class,
+        TaxonomyNodeEntity::class,
+        TaxonomyProductLinkEntity::class,
     ],
     version = AppDatabase.VERSION,
     exportSchema = true,
@@ -24,9 +26,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun receiptDao(): ReceiptDao
     abstract fun merchantProductLinkDao(): MerchantProductLinkDao
     abstract fun merchantDao(): MerchantDao
+    abstract fun taxonomyDao(): TaxonomyDao
 
     companion object {
-        const val VERSION = 6
+        const val VERSION = 7
 
         @Volatile
         private var instance: AppDatabase? = null
@@ -231,6 +234,62 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE merchants ADD COLUMN segmentNodeId INTEGER")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_merchants_segmentNodeId ON merchants(segmentNodeId)",
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS taxonomy_nodes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        stableKey TEXT NOT NULL,
+                        parentId INTEGER,
+                        level TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        searchKey TEXT NOT NULL,
+                        builtIn INTEGER NOT NULL,
+                        active INTEGER NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_taxonomy_nodes_stableKey ON taxonomy_nodes(stableKey)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_taxonomy_nodes_parentId ON taxonomy_nodes(parentId)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_taxonomy_nodes_level ON taxonomy_nodes(level)",
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS taxonomy_product_links (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        taxonomyNodeId INTEGER NOT NULL,
+                        productId INTEGER NOT NULL,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS
+                    index_taxonomy_product_links_taxonomyNodeId_productId
+                    ON taxonomy_product_links(taxonomyNodeId, productId)
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_taxonomy_product_links_productId ON taxonomy_product_links(productId)",
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -238,7 +297,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "leitor_cupons_financas.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .build()
                     .also { instance = it }
             }
