@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Inventory2
@@ -27,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +40,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import java.time.Instant
@@ -367,170 +372,222 @@ private fun ProductFormDialog(
         category.isNotBlank() &&
         unit.isNotBlank()
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(if (product == null) "Cadastrar Produto Mestre" else "Editar Produto Mestre")
-        },
-        text = {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+        ),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            tonalElevation = 6.dp,
+            shadowElevation = 12.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .fillMaxHeight(0.90f),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
             ) {
-                item {
-                    Card(Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "Use um nome genérico e estável, sem marca. Ex.: Macarrão. Macarrão instantâneo permanece um Produto Mestre separado porque representa outro tipo de item.",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(12.dp),
-                        )
-                    }
-                }
-                item {
-                    SuggestionTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        suggestions = nameSuggestions,
-                        label = { Text("Produto raiz *") },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    OutlinedTextField(
-                        value = fiscalDescription,
-                        onValueChange = { fiscalDescription = it },
-                        label = { Text("Descrição na NFC-e (opcional)") },
-                        placeholder = { Text("Ex.: MAC RENATA ESPAGUETE 500G") },
-                        supportingText = { Text("Aqui pode ficar uma descrição fiscal real, inclusive com marca. Ela ajuda no reconhecimento, mas não altera o nome raiz do Produto Mestre.") },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    SuggestionTextField(
-                        value = sector,
-                        onValueChange = { sector = it },
-                        suggestions = sectorSuggestions,
-                        label = { Text("Setor *") },
-                        placeholder = { Text("Ex.: Alimentação") },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    SuggestionTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        suggestions = categorySuggestions,
-                        label = { Text("Categoria *") },
-                        placeholder = { Text("Ex.: Mercado") },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    SuggestionTextField(
-                        value = subcategory,
-                        onValueChange = { subcategory = it },
-                        suggestions = subcategorySuggestions,
-                        label = { Text("Subcategoria") },
-                        placeholder = { Text("Ex.: Mercearia") },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    OutlinedButton(
-                        onClick = { showUnitPicker = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        val selected = ManualUnitType.entries.firstOrNull {
-                            it != ManualUnitType.OTHER && it.code == unit.uppercase()
-                        }
-                        Text(
-                            text = selected?.let { "Unidade: ${it.label} (${it.code})" }
-                                ?: "Unidade: ${unit.ifBlank { "Escolher" }}",
-                        )
-                    }
-                }
+                ScreenHero(
+                    title = if (product == null) {
+                        "Novo Produto Mestre"
+                    } else {
+                        "Editar Produto Mestre"
+                    },
+                    subtitle = "Produto raiz, sem marca. Classifique uma vez e reutilize em todas as compras.",
+                    icon = Icons.Default.Inventory2,
+                    modifier = Modifier.padding(14.dp),
+                )
 
-                if (customUnitMode) {
-                    item {
-                        OutlinedTextField(
-                            value = unit,
-                            onValueChange = { unit = it.uppercase() },
-                            label = { Text("Unidade personalizada *") },
-                            placeholder = { Text("Ex.: CX, DZ, BDJ") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-
-                saveError?.let { error ->
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(
+                        start = 18.dp,
+                        end = 18.dp,
+                        bottom = 18.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     item {
                         Card(Modifier.fillMaxWidth()) {
                             Text(
-                                text = error,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Exemplo: Renata, Liane e Galo podem ser reconhecidos como Macarrão. Macarrão instantâneo continua separado porque representa outro tipo de produto.",
+                                style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.padding(12.dp),
                             )
                         }
                     }
+
+                    item {
+                        SuggestionTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            suggestions = nameSuggestions,
+                            label = { Text("Produto raiz *") },
+                            placeholder = { Text("Ex.: Macarrão") },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = fiscalDescription,
+                            onValueChange = { fiscalDescription = it },
+                            label = { Text("Descrição fiscal conhecida (opcional)") },
+                            placeholder = { Text("Ex.: MAC RENATA ESPAGUETE 500G") },
+                            supportingText = {
+                                Text("Pode conter marca. Serve apenas para ajudar no reconhecimento fiscal.")
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    item {
+                        FlowSectionCard(
+                            title = "Classificação",
+                            subtitle = "Reutilize setores, categorias e subcategorias já cadastrados.",
+                            icon = Icons.Default.Inventory2,
+                        ) {
+                            SuggestionTextField(
+                                value = sector,
+                                onValueChange = { sector = it },
+                                suggestions = sectorSuggestions,
+                                label = { Text("Setor *") },
+                                placeholder = { Text("Ex.: Alimentação") },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            SuggestionTextField(
+                                value = category,
+                                onValueChange = { category = it },
+                                suggestions = categorySuggestions,
+                                label = { Text("Categoria *") },
+                                placeholder = { Text("Ex.: Mercado") },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            SuggestionTextField(
+                                value = subcategory,
+                                onValueChange = { subcategory = it },
+                                suggestions = subcategorySuggestions,
+                                label = { Text("Subcategoria") },
+                                placeholder = { Text("Ex.: Massas") },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+
+                    item {
+                        OutlinedButton(
+                            onClick = { showUnitPicker = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            val selected = ManualUnitType.entries.firstOrNull {
+                                it != ManualUnitType.OTHER && it.code == unit.uppercase()
+                            }
+                            Text(
+                                text = selected?.let { "Unidade: ${it.label} (${it.code})" }
+                                    ?: "Unidade: ${unit.ifBlank { "Escolher" }}",
+                            )
+                        }
+                    }
+
+                    if (customUnitMode) {
+                        item {
+                            OutlinedTextField(
+                                value = unit,
+                                onValueChange = { unit = it.uppercase() },
+                                label = { Text("Unidade personalizada *") },
+                                placeholder = { Text("Ex.: CX, DZ, BDJ") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+
+                    saveError?.let { error ->
+                        item {
+                            AnimatedInfoCard(
+                                visible = true,
+                                title = "Não foi possível salvar",
+                                message = error,
+                                accent = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+
+                    if (product != null) {
+                        item {
+                            OutlinedButton(
+                                onClick = { showLearnedLinks = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Vínculos e aliases aprendidos (${learnedLinks.size})")
+                            }
+                        }
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = notes,
+                            onValueChange = { notes = it },
+                            label = { Text("Observações") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2,
+                        )
+                    }
+
+                    if (onDeactivate != null) {
+                        item {
+                            OutlinedButton(
+                                onClick = onDeactivate,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Desativar Produto Mestre")
+                            }
+                        }
+                    }
                 }
 
-                if (product != null) {
-                    item {
-                        OutlinedButton(
-                            onClick = { showLearnedLinks = true },
-                            modifier = Modifier.fillMaxWidth(),
+                Surface(
+                    tonalElevation = 3.dp,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        TextButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f),
                         ) {
-                            Text("Vínculos e aliases aprendidos (${learnedLinks.size})")
+                            Text("Cancelar")
+                        }
+                        Button(
+                            enabled = valid,
+                            onClick = {
+                                onSave(
+                                    name,
+                                    fiscalDescription,
+                                    sector,
+                                    category,
+                                    subcategory,
+                                    unit,
+                                    notes,
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Salvar")
                         }
                     }
                 }
-                item {
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text("Observações") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2,
-                    )
-                }
-                if (onDeactivate != null) {
-                    item {
-                        Spacer(Modifier.height(4.dp))
-                        OutlinedButton(
-                            onClick = onDeactivate,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Desativar produto")
-                        }
-                    }
-                }
             }
-        },
-        confirmButton = {
-            Button(
-                enabled = valid,
-                onClick = {
-                    onSave(
-                        name,
-                        fiscalDescription,
-                        sector,
-                        category,
-                        subcategory,
-                        unit,
-                        notes,
-                    )
-                },
-            ) {
-                Text("Salvar")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
-        },
-    )
+        }
+    }
     if (showUnitPicker) {
         AlertDialog(
             onDismissRequest = { showUnitPicker = false },
