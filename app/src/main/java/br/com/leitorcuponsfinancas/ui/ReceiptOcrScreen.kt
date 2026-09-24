@@ -86,9 +86,16 @@ fun ReceiptOcrScreen(
             number = draft.number
             series = draft.series
             issuedAt = draft.issuedAt
-            total = draft.totalAmount
+            total = CurrencyInputFormatter.fromStoredDecimal(draft.totalAmount)
             items.clear()
-            items.addAll(draft.items)
+            items.addAll(
+                draft.items.map { item ->
+                    item.copy(
+                        unitPrice = CurrencyInputFormatter.fromStoredDecimal(item.unitPrice),
+                        total = CurrencyInputFormatter.fromStoredDecimal(item.total),
+                    )
+                },
+            )
         }
     }
 
@@ -203,10 +210,15 @@ fun ReceiptOcrScreen(
                             issuedAt = it
                             confirmed = false
                         }
-                        EditField("Total da compra", total) {
-                            total = it
-                            confirmed = false
-                        }
+                        CurrencyTextField(
+                            value = total,
+                            onValueChange = {
+                                total = it
+                                confirmed = false
+                            },
+                            label = { Text("Total da compra") },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
 
                     FlowSectionCard(
@@ -260,7 +272,7 @@ fun ReceiptOcrScreen(
                                         )
                                     }
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        OutlinedTextField(
+                                        CurrencyTextField(
                                             value = item.unitPrice,
                                             onValueChange = {
                                                 items[index] = item.copy(unitPrice = it)
@@ -269,7 +281,7 @@ fun ReceiptOcrScreen(
                                             label = { Text("Valor unit.") },
                                             modifier = Modifier.weight(1f),
                                         )
-                                        OutlinedTextField(
+                                        CurrencyTextField(
                                             value = item.total,
                                             onValueChange = {
                                                 items[index] = item.copy(total = it)
