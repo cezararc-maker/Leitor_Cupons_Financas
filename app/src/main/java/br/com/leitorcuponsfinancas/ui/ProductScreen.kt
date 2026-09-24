@@ -114,6 +114,7 @@ fun ProductScreen(
     if (showForm) {
         ProductFormDialog(
             product = editing,
+            allProducts = products,
             learnedLinks = editing?.let { learnedLinks[it.id] }.orEmpty(),
             saveError = saveError,
             onDismiss = {
@@ -197,6 +198,7 @@ private fun ProductCard(
 @Composable
 private fun ProductFormDialog(
     product: ProductEntity?,
+    allProducts: List<ProductEntity>,
     learnedLinks: List<MerchantProductLinkEntity>,
     saveError: String?,
     onDismiss: () -> Unit,
@@ -234,6 +236,25 @@ private fun ProductFormDialog(
     var showLearnedLinks by remember(product?.id) { mutableStateOf(false) }
     var notes by remember(product?.id) { mutableStateOf(product?.notes.orEmpty()) }
 
+    val otherProducts = remember(allProducts, product?.id) {
+        allProducts.filter { it.id != product?.id }
+    }
+    val nameSuggestions = remember(otherProducts) {
+        otherProducts.map { it.normalizedName }
+    }
+    val sectorSuggestions = remember(otherProducts) {
+        otherProducts.map { it.sector }
+    }
+    val categorySuggestions = remember(otherProducts, sector) {
+        val sameSector = otherProducts.filter { it.sector.equals(sector, ignoreCase = true) }
+        (if (sameSector.isNotEmpty()) sameSector else otherProducts).map { it.category }
+    }
+    val subcategorySuggestions = remember(otherProducts, category) {
+        val sameCategory = otherProducts.filter { it.category.equals(category, ignoreCase = true) }
+        (if (sameCategory.isNotEmpty()) sameCategory else otherProducts)
+            .mapNotNull { it.subcategory }
+    }
+
     val valid = name.isNotBlank() &&
         sector.isNotBlank() &&
         category.isNotBlank() &&
@@ -249,11 +270,11 @@ private fun ProductFormDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 item {
-                    OutlinedTextField(
+                    SuggestionTextField(
                         value = name,
                         onValueChange = { name = it },
+                        suggestions = nameSuggestions,
                         label = { Text("Nome do produto *") },
-                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -268,32 +289,32 @@ private fun ProductFormDialog(
                     )
                 }
                 item {
-                    OutlinedTextField(
+                    SuggestionTextField(
                         value = sector,
                         onValueChange = { sector = it },
+                        suggestions = sectorSuggestions,
                         label = { Text("Setor *") },
                         placeholder = { Text("Ex.: Alimentação") },
-                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
                 item {
-                    OutlinedTextField(
+                    SuggestionTextField(
                         value = category,
                         onValueChange = { category = it },
+                        suggestions = categorySuggestions,
                         label = { Text("Categoria *") },
                         placeholder = { Text("Ex.: Mercado") },
-                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
                 item {
-                    OutlinedTextField(
+                    SuggestionTextField(
                         value = subcategory,
                         onValueChange = { subcategory = it },
+                        suggestions = subcategorySuggestions,
                         label = { Text("Subcategoria") },
                         placeholder = { Text("Ex.: Mercearia") },
-                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
