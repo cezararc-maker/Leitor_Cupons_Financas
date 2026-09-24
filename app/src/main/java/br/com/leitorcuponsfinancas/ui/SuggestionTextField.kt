@@ -37,7 +37,7 @@ fun SuggestionTextField(
             .asSequence()
             .map(String::trim)
             .filter(String::isNotBlank)
-            .distinctBy(String::lowercase)
+            .distinctBy { it.lowercase() }
             .filter { candidate ->
                 query.isBlank() || candidate.contains(query, ignoreCase = true)
             }
