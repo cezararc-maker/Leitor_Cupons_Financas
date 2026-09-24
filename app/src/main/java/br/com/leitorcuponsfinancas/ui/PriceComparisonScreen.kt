@@ -14,6 +14,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +35,7 @@ fun PriceComparisonScreen(
     val products by priceComparisonViewModel.products.collectAsStateWithLifecycle()
     val selectedProductId by priceComparisonViewModel.selectedProductId.collectAsStateWithLifecycle()
     val comparison by priceComparisonViewModel.comparison.collectAsStateWithLifecycle()
+    var productQuery by remember { mutableStateOf("") }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -49,10 +52,11 @@ fun PriceComparisonScreen(
 
         item {
             SuggestionTextField(
-                value = products.firstOrNull { it.id == selectedProductId }?.normalizedName.orEmpty(),
+                value = productQuery,
                 onValueChange = { typed ->
+                    productQuery = typed
                     val exact = products.firstOrNull {
-                        it.normalizedName.equals(typed, ignoreCase = true)
+                        it.normalizedName.equals(typed.trim(), ignoreCase = true)
                     }
                     priceComparisonViewModel.selectProduct(exact?.id)
                 },
@@ -60,6 +64,7 @@ fun PriceComparisonScreen(
                 label = { Text("Produto Mestre") },
                 modifier = Modifier.fillMaxWidth(),
                 onSuggestionSelected = { selected ->
+                    productQuery = selected
                     priceComparisonViewModel.selectProduct(
                         products.firstOrNull {
                             it.normalizedName.equals(selected, ignoreCase = true)
