@@ -56,6 +56,11 @@ fun AppTutorialDialog(
                 text = "O dashboard mensal mostra gastos, frequência de compras, estabelecimentos que mais pesaram no bolso e produtos mais comprados ou mais caros.",
                 icon = Icons.Default.BarChart,
             ),
+            TutorialPage(
+                title = "Navegue do seu jeito",
+                text = "Nas áreas principais, você pode tocar na barra inferior ou arrastar a tela para os lados. Em Configurações, também pode escolher modo claro, escuro ou do sistema e trocar a paleta do aplicativo.",
+                icon = Icons.Default.BarChart,
+            ),
         )
     }
 
