@@ -74,7 +74,7 @@ fun AppTutorialDialog(
             ) {
                 Text(page.text)
                 Text(
-                    text = "\${pageIndex + 1} de \${pages.size}",
+                    text = "${pageIndex + 1} de ${pages.size}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
