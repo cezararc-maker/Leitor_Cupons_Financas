@@ -323,17 +323,14 @@ fun ManualEntryScreen(
                             singleLine = true,
                         )
 
-                        OutlinedTextField(
+                        CurrencyTextField(
                             value = unitPrice,
                             onValueChange = {
                                 unitPrice = it
                                 viewModel.clearMessage()
                             },
                             label = { RequiredFieldLabel(priceLabel) },
-                            placeholder = { Text("5,90") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.weight(1f),
-                            singleLine = true,
                         )
                     }
 
