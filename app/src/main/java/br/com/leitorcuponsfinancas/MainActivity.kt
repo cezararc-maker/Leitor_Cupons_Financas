@@ -299,6 +299,7 @@ private fun LeitorCuponsApp(
                                     dashboard = dashboard,
                                     onHistory = { openTab(MainTab.HISTORY) },
                                     onProducts = { openTab(MainTab.PRODUCTS) },
+                                    onRead = { addMenuOpen = true },
                                     onBackup = { openTask(AppScreen.BACKUP) },
                                 )
 
@@ -694,6 +695,7 @@ private fun HomeScreen(
     dashboard: HomeDashboardState,
     onHistory: () -> Unit,
     onProducts: () -> Unit,
+    onRead: () -> Unit,
     onBackup: () -> Unit,
 ) {
     val analytics = dashboard.analytics
@@ -721,6 +723,7 @@ private fun HomeScreen(
                     value = formatCurrency(analytics.totalSpent),
                     icon = Icons.Default.TrendingUp,
                     accent = MaterialTheme.colorScheme.primary,
+                    onClick = onHistory,
                     modifier = Modifier.weight(1f),
                 )
                 DashboardMetric(
@@ -728,6 +731,7 @@ private fun HomeScreen(
                     value = analytics.purchaseCount.toString(),
                     icon = Icons.Default.ShoppingCart,
                     accent = MaterialTheme.colorScheme.secondary,
+                    onClick = onHistory,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -743,6 +747,7 @@ private fun HomeScreen(
                     value = productCount.toString(),
                     icon = Icons.Default.Inventory2,
                     accent = MaterialTheme.colorScheme.tertiary,
+                    onClick = onProducts,
                     modifier = Modifier.weight(1f),
                 )
                 DashboardMetric(
@@ -750,6 +755,7 @@ private fun HomeScreen(
                     value = "QR + OCR",
                     icon = Icons.Default.ReceiptLong,
                     accent = MaterialTheme.colorScheme.primary,
+                    onClick = onRead,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -868,9 +874,13 @@ private fun DashboardMetric(
     value: String,
     icon: ImageVector,
     accent: Color,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier) {
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
