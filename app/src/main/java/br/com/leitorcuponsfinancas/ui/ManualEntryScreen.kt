@@ -582,135 +582,178 @@ private fun ManualProductLinkDialog(
     description: String,
     effectiveUnit: String,
     products: List<ProductEntity>,
+    taxonomyNodes: List<TaxonomyNodeEntity>,
+    taxonomyProductLinks: List<TaxonomyProductLinkEntity>,
+    segmentLockedTo: Long?,
     suggestion: SmartProductSuggestion?,
     currentProduct: ProductEntity?,
+    currentTaxonomyNodeId: Long?,
     error: String?,
     onDismiss: () -> Unit,
-    onSelect: (ProductEntity) -> Unit,
-    onCreate: (String, String, String, String, String) -> Unit,
+    onSelect: (ProductEntity, Long) -> Unit,
+    onCreate: (String, Long, String) -> Unit,
 ) {
+    var selectedNodeId by remember(
+        currentTaxonomyNodeId,
+        segmentLockedTo,
+        taxonomyNodes.size,
+    ) {
+        mutableStateOf(
+            currentTaxonomyNodeId
+                ?: segmentLockedTo,
+        )
+    }
     var creatingNew by remember { mutableStateOf(false) }
-    var name by remember(description) { mutableStateOf(description) }
-    var sector by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
-    var subcategory by remember { mutableStateOf("") }
-    var unit by remember(effectiveUnit) { mutableStateOf(effectiveUnit.ifBlank { "UN" }) }
+    var name by remember(description) {
+        mutableStateOf(
+            (suggestion as? SmartProductSuggestion.NewProduct)?.name
+                ?.takeIf { it.isNotBlank() }
+                ?: description,
+        )
+    }
+    var unit by remember(effectiveUnit) {
+        mutableStateOf(effectiveUnit.ifBlank { "UN" })
+    }
+    var query by remember { mutableStateOf("") }
 
-    val sectorSuggestions = remember(products) {
-        products.map { it.sector }
+    val selectedNode = taxonomyNodes.firstOrNull { it.id == selectedNodeId }
+    val selectedPath = remember(selectedNodeId, taxonomyNodes) {
+        selectedNodeId
+            ?.let { manualTaxonomyPath(taxonomyNodes, it) }
+            .orEmpty()
     }
-    val categorySuggestions = remember(products, sector) {
-        val sameSector = products.filter { it.sector.equals(sector, ignoreCase = true) }
-        (if (sameSector.isNotEmpty()) sameSector else products).map { it.category }
+    val hasDepartment = selectedPath.any {
+        it.level == TaxonomyLevel.DEPARTMENT.code
     }
-    val subcategorySuggestions = remember(products, category) {
-        val sameCategory = products.filter { it.category.equals(category, ignoreCase = true) }
-        (if (sameCategory.isNotEmpty()) sameCategory else products)
-            .mapNotNull { it.subcategory }
+    val hasCategory = selectedPath.any {
+        it.level == TaxonomyLevel.CATEGORY.code
+    }
+    val classificationReady = hasDepartment && hasCategory
+
+    val linkedProductIds = remember(selectedNodeId, taxonomyProductLinks) {
+        selectedNodeId
+            ?.let { nodeId ->
+                taxonomyProductLinks
+                    .filter { it.taxonomyNodeId == nodeId }
+                    .map { it.productId }
+                    .toSet()
+            }
+            .orEmpty()
     }
 
-    fun useNewSuggestion(newSuggestion: SmartProductSuggestion.NewProduct) {
-        name = newSuggestion.name
-        sector = newSuggestion.sector
-        category = newSuggestion.category
-        subcategory = newSuggestion.subcategory.orEmpty()
-        unit = newSuggestion.unit
-        creatingNew = true
+    val scopedProducts = remember(
+        selectedNodeId,
+        selectedNode,
+        products,
+        linkedProductIds,
+    ) {
+        if (selectedNode == null || !classificationReady) {
+            emptyList()
+        } else {
+            products
+                .filter { product ->
+                    product.id in linkedProductIds ||
+                        when (selectedNode.level) {
+                            TaxonomyLevel.DEPARTMENT.code ->
+                                ProductNormalizer.searchKey(product.sector) ==
+                                    ProductNormalizer.searchKey(selectedNode.name)
+
+                            TaxonomyLevel.CATEGORY.code ->
+                                ProductNormalizer.searchKey(product.category) ==
+                                    ProductNormalizer.searchKey(selectedNode.name)
+
+                            TaxonomyLevel.SUBCATEGORY.code ->
+                                ProductNormalizer.searchKey(product.subcategory.orEmpty()) ==
+                                    ProductNormalizer.searchKey(selectedNode.name)
+
+                            else -> false
+                        }
+                }
+                .distinctBy { it.id }
+                .sortedBy { it.normalizedName.lowercase() }
+        }
     }
+
+    val filteredScopedProducts = remember(query, scopedProducts) {
+        val clean = ProductNormalizer.searchKey(query)
+        if (clean.isBlank()) {
+            scopedProducts
+        } else {
+            scopedProducts.filter {
+                ProductNormalizer.searchKey(it.normalizedName).contains(clean)
+            }
+        }
+    }
+
+    val suggestedExisting = suggestion as? SmartProductSuggestion.ExistingProduct
+    val suggestedAllowed = suggestedExisting?.product?.let { suggestedProduct ->
+        scopedProducts.any { it.id == suggestedProduct.id }
+    } == true
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (creatingNew) "Criar Produto Mestre" else "Vincular Produto Mestre")
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Vincular Produto Mestre")
+                Text(
+                    text = description.ifBlank { "Lançamento manual" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         },
         text = {
-            if (creatingNew) {
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 460.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 500.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                item {
+                    TaxonomyPathSelector(
+                        nodes = taxonomyNodes,
+                        selectedNodeId = selectedNodeId,
+                        onSelected = {
+                            selectedNodeId = it
+                            creatingNew = false
+                            query = ""
+                        },
+                        segmentLockedTo = segmentLockedTo,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                if (
+                    segmentLockedTo != null &&
+                    selectedPath.firstOrNull()?.id == segmentLockedTo
                 ) {
                     item {
                         Text(
-                            text = "Crie o Produto Mestre pelo nome raiz, sem marca. Ele será vinculado automaticamente ao lançamento e as variações comerciais poderão ser aprendidas como aliases.",
+                            text = "O segmento foi reconhecido pelo estabelecimento e permanece fixo nesta vinculação.",
                             style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
                         )
-                    }
-                    item {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { RequiredFieldLabel("Produto raiz") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                        )
-                    }
-                    item {
-                        SuggestionTextField(
-                            value = sector,
-                            onValueChange = { sector = it },
-                            suggestions = sectorSuggestions,
-                            label = { RequiredFieldLabel("Setor") },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    item {
-                        SuggestionTextField(
-                            value = category,
-                            onValueChange = { category = it },
-                            suggestions = categorySuggestions,
-                            label = { RequiredFieldLabel("Categoria") },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    item {
-                        SuggestionTextField(
-                            value = subcategory,
-                            onValueChange = { subcategory = it },
-                            suggestions = subcategorySuggestions,
-                            label = { Text("Subcategoria (opcional)") },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    item {
-                        OutlinedTextField(
-                            value = unit,
-                            onValueChange = { unit = it.uppercase() },
-                            label = { RequiredFieldLabel("Unidade") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                        )
-                    }
-                    error?.let { message ->
-                        item {
-                            Text(
-                                text = message,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 460.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (description.isBlank()) {
+
+                if (classificationReady) {
+                    if (suggestedAllowed && suggestedExisting != null) {
                         item {
-                            Text(
-                                text = "Digite primeiro o nome do item para receber uma sugestão inteligente.",
-                                style = MaterialTheme.typography.bodyMedium,
+                            AnimatedInfoCard(
+                                visible = true,
+                                title = "Sugestão dentro desta classificação",
+                                message = "${suggestedExisting.product.normalizedName} • ${suggestedExisting.confidence}% de compatibilidade",
                             )
                         }
-                    }
-
-                    suggestion?.let { smart ->
                         item {
-                            ManualSmartSuggestionCard(
-                                suggestion = smart,
-                                onUseExisting = onSelect,
-                                onCreateNew = ::useNewSuggestion,
-                            )
+                            Button(
+                                onClick = {
+                                    selectedNodeId?.let { nodeId ->
+                                        onSelect(suggestedExisting.product, nodeId)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Usar ${suggestedExisting.product.normalizedName}")
+                            }
                         }
                     }
 
@@ -725,24 +768,32 @@ private fun ManualProductLinkDialog(
                     }
 
                     item {
-                        OutlinedButton(
-                            onClick = { creatingNew = true },
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            label = { Text("Buscar nesta classificação") },
+                            placeholder = { Text("Ex.: Banana") },
+                            singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Criar novo produto mestre")
-                        }
+                        )
                     }
 
-                    if (products.isNotEmpty()) {
+                    if (filteredScopedProducts.isEmpty()) {
                         item {
                             Text(
-                                text = "Produtos mestres existentes:",
+                                text = "Nenhum Produto Mestre encontrado neste ramo.",
                                 style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        items(products, key = { it.id }) { product ->
+                    } else {
+                        items(filteredScopedProducts, key = { it.id }) { product ->
                             OutlinedButton(
-                                onClick = { onSelect(product) },
+                                onClick = {
+                                    selectedNodeId?.let { nodeId ->
+                                        onSelect(product, nodeId)
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Column(Modifier.fillMaxWidth()) {
@@ -765,36 +816,159 @@ private fun ManualProductLinkDialog(
                             }
                         }
                     }
-                }
-            }
-        },
-        confirmButton = {
-            if (creatingNew) {
-                Button(
-                    enabled = name.isNotBlank() &&
-                        sector.isNotBlank() &&
-                        category.isNotBlank() &&
-                        unit.isNotBlank(),
-                    onClick = { onCreate(name, sector, category, subcategory, unit) },
-                ) {
-                    Text("Criar e vincular")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = {
-                    if (creatingNew) {
-                        creatingNew = false
-                    } else {
-                        onDismiss()
+
+                    item {
+                        TextButton(
+                            onClick = { creatingNew = !creatingNew },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                if (creatingNew) {
+                                    "Cancelar novo Produto Mestre"
+                                } else {
+                                    "Criar Produto Mestre neste ramo"
+                                },
+                            )
+                        }
                     }
-                },
-            ) {
-                Text(if (creatingNew) "Voltar" else "Cancelar")
+
+                    if (creatingNew) {
+                        item {
+                            OutlinedTextField(
+                                value = name,
+                                onValueChange = { name = it },
+                                label = { RequiredFieldLabel("Produto raiz") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                            )
+                        }
+                        item {
+                            OutlinedTextField(
+                                value = unit,
+                                onValueChange = { unit = it.uppercase() },
+                                label = { RequiredFieldLabel("Unidade") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                            )
+                        }
+                        item {
+                            Button(
+                                enabled = name.isNotBlank() &&
+                                    unit.isNotBlank() &&
+                                    selectedNodeId != null,
+                                onClick = {
+                                    selectedNodeId?.let { nodeId ->
+                                        onCreate(name, nodeId, unit)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Criar e vincular")
+                            }
+                        }
+                    }
+                } else if (selectedNode != null) {
+                    item {
+                        Text(
+                            text = "Continue afunilando a classificação até chegar pelo menos à Categoria.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
+                }
+
+                error?.let { message ->
+                    item {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
             }
         },
     )
+}
+
+private fun inferManualTaxonomyNodeId(
+    product: ProductEntity,
+    nodes: List<TaxonomyNodeEntity>,
+    links: List<TaxonomyProductLinkEntity>,
+): Long? {
+    links.firstOrNull { it.productId == product.id }?.let {
+        return it.taxonomyNodeId
+    }
+
+    fun key(value: String?): String = ProductNormalizer.searchKey(value.orEmpty())
+
+    product.subcategory?.let { subcategory ->
+        nodes.firstOrNull { node ->
+            node.level == TaxonomyLevel.SUBCATEGORY.code &&
+                key(node.name) == key(subcategory) &&
+                manualTaxonomyPath(nodes, node.id).let { path ->
+                    path.any {
+                        it.level == TaxonomyLevel.DEPARTMENT.code &&
+                            key(it.name) == key(product.sector)
+                    } &&
+                        path.any {
+                            it.level == TaxonomyLevel.CATEGORY.code &&
+                                key(it.name) == key(product.category)
+                        }
+                }
+        }?.let { return it.id }
+    }
+
+    nodes.firstOrNull { node ->
+        node.level == TaxonomyLevel.CATEGORY.code &&
+            key(node.name) == key(product.category) &&
+            manualTaxonomyPath(nodes, node.id).any {
+                it.level == TaxonomyLevel.DEPARTMENT.code &&
+                    key(it.name) == key(product.sector)
+            }
+    }?.let { return it.id }
+
+    return null
+}
+
+private fun findManualMerchant(
+    merchants: List<MerchantEntity>,
+    merchantName: String,
+    merchantCnpj: String,
+): MerchantEntity? {
+    val cnpjDigits = merchantCnpj.filter(Char::isDigit)
+    if (cnpjDigits.length == 14) {
+        merchants.firstOrNull { it.cnpjDigits == cnpjDigits }?.let { return it }
+    }
+
+    val nameKey = ProductNormalizer.searchKey(merchantName)
+    if (nameKey.isBlank()) return null
+
+    return merchants.firstOrNull {
+        ProductNormalizer.searchKey(it.displayName) == nameKey
+    }
+}
+
+private fun manualTaxonomyPath(
+    nodes: List<TaxonomyNodeEntity>,
+    nodeId: Long,
+): List<TaxonomyNodeEntity> {
+    val byId = nodes.associateBy { it.id }
+    val result = mutableListOf<TaxonomyNodeEntity>()
+    var current = byId[nodeId]
+
+    while (current != null) {
+        result += current
+        current = current.parentId?.let(byId::get)
+    }
+
+    return result.reversed()
 }
 
 @Composable
