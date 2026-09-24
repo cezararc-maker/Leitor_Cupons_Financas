@@ -141,15 +141,15 @@ class NfceViewModel(application: Application) : AndroidViewModel(application) {
                     number = draft.number.trim().ifBlank { null },
                     series = draft.series.trim().ifBlank { null },
                     issuedAt = draft.issuedAt.trim(),
-                    totalAmount = draft.totalAmount.toBigDecimalOrNull(),
+                    totalAmount = CurrencyInputFormatter.parse(draft.totalAmount),
                     items = draft.items.map { item ->
                         NfceReceiptItem(
                             description = item.description.trim(),
                             code = item.code.trim().ifBlank { null },
                             quantity = item.quantity.toBigDecimalOrNull(),
                             unit = item.unit.trim().ifBlank { null },
-                            unitPrice = item.unitPrice.toBigDecimalOrNull(),
-                            total = item.total.toBigDecimalOrNull(),
+                            unitPrice = CurrencyInputFormatter.parse(item.unitPrice),
+                            total = CurrencyInputFormatter.parse(item.total),
                         )
                     },
                 )
