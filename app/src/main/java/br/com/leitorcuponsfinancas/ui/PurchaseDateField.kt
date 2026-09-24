@@ -34,9 +34,10 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.time.format.ResolverStyle
 
 internal object PurchaseDateFormatter {
-    private val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    private val formatter = DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT)
 
     fun fromTyping(value: String): String {
         val digits = value.filter(Char::isDigit).take(8)
