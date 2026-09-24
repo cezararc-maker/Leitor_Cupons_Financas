@@ -1,0 +1,61 @@
+LCF TAXONOMIA - LAYOUT DE IMPORTACAO v1
+===========================================
+
+Formato
+-------
+Arquivo texto UTF-8, separado por ponto e virgula (;).
+Extensao recomendada: .txt
+
+Cabecalho obrigatorio:
+LCF_TAXONOMIA;1
+
+Cabecalho de colunas recomendado:
+TIPO;CHAVE;PAI;NOME;UNIDADE
+
+Tipos aceitos
+--------------
+SEGMENTO
+DEPARTAMENTO
+CATEGORIA
+SUBCATEGORIA
+PRODUTO
+
+Regras
+------
+1. A importacao e sempre incremental.
+2. Nenhum cadastro existente e apagado.
+3. Nenhum cadastro existente e sobrescrito automaticamente.
+4. CHAVE deve ser unica e estavel.
+5. PAI recebe a CHAVE do nivel imediatamente anterior.
+6. SEGMENTO nao possui PAI.
+7. As linhas devem vir do nivel mais abrangente para o mais especifico:
+   SEGMENTO -> DEPARTAMENTO -> CATEGORIA -> SUBCATEGORIA -> PRODUTO.
+8. UNIDADE e utilizada apenas em PRODUTO. Se vazia, o app assume UN.
+9. Se um Produto Mestre com o mesmo nome ja existir, ele e reutilizado e
+   apenas recebe o novo vinculo na taxonomia.
+10. Uma mesma classificacao/produto pode ser exportada e importada em outro
+    aparelho sem apagar a taxonomia que ja existe nele.
+
+Exemplo
+-------
+LCF_TAXONOMIA;1
+TIPO;CHAVE;PAI;NOME;UNIDADE
+SEGMENTO;segment.market;;Mercado;
+DEPARTAMENTO;market.food;segment.market;Alimentos;
+CATEGORIA;market.food.produce;market.food;Hortifruti;
+SUBCATEGORIA;market.food.produce.fruit;market.food.produce;Frutas;
+PRODUTO;product.banana;market.food.produce.fruit;Banana;KG
+
+Exemplo Farmacia
+----------------
+SEGMENTO;segment.pharmacy;;Farmacia;
+DEPARTAMENTO;pharmacy.health;segment.pharmacy;Saude e medicamentos;
+CATEGORIA;pharmacy.health.first_aid;pharmacy.health;Curativos e primeiros socorros;
+SUBCATEGORIA;pharmacy.health.first_aid.dressings;pharmacy.health.first_aid;Curativos;
+PRODUTO;product.curativo_adesivo;pharmacy.health.first_aid.dressings;Curativo adesivo;UN
+
+Observacao
+----------
+O arquivo pode ser editado no Bloco de Notas, VS Code ou em uma planilha
+salva como texto separado por ponto e virgula. O app tambem consegue exportar
+um modelo pronto pela tela Configuracoes > Taxonomia.
