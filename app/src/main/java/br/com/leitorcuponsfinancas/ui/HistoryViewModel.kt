@@ -473,6 +473,97 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun createProductAndLinkTaxonomy(
+        item: HistoryItemRow,
+        name: String,
+        taxonomyNodeId: Long,
+        unit: String,
+    ) {
+        if (_linkState.value.saving) return
+        _linkState.value = HistoryLinkState(saving = true)
+
+        viewModelScope.launch {
+            val ancestry = taxonomyRepository.ancestry(taxonomyNodeId)
+            val department = ancestry
+                .firstOrNull { it.level == TaxonomyLevel.DEPARTMENT.code }
+                ?.name
+                ?: "Outros"
+            val category = ancestry
+                .firstOrNull { it.level == TaxonomyLevel.CATEGORY.code }
+                ?.name
+                ?: ancestry.lastOrNull()?.name
+                ?: "Outros"
+            val subcategory = ancestry
+                .firstOrNull { it.level == TaxonomyLevel.SUBCATEGORY.code }
+                ?.name
+
+            val cleanName = ProductNormalizer.displayName(name)
+            if (cleanName.isBlank()) {
+                _linkState.value = HistoryLinkState(
+                    error = "Informe o nome do Produto Mestre.",
+                )
+                return@launch
+            }
+
+            val duplicate = productRepository.findDuplicateName(cleanName)
+            val product = if (duplicate != null) {
+                duplicate
+            } else {
+                val now = System.currentTimeMillis()
+                val candidate = ProductEntity(
+                    fiscalDescription = item.fiscalDescription.takeIf {
+                        item.sourceType != "MANUAL"
+                    },
+                    normalizedName = cleanName,
+                    sector = department,
+                    category = category,
+                    subcategory = subcategory,
+                    unit = unit.trim().uppercase().ifBlank { item.displayUnit ?: "UN" },
+                    active = true,
+                    createdAt = now,
+                    updatedAt = now,
+                )
+
+                try {
+                    val id = productRepository.save(candidate)
+                    candidate.copy(id = id)
+                } catch (error: Exception) {
+                    _linkState.value = HistoryLinkState(
+                        error = error.message ?: "Não foi possível criar o Produto Mestre.",
+                    )
+                    return@launch
+                }
+            }
+
+            applyTaxonomy(
+                item = item,
+                productId = product.id,
+                taxonomyNodeId = taxonomyNodeId,
+            )
+
+            when (
+                val result = receiptRepository.linkHistoryItem(
+                    item = item,
+                    productId = product.id,
+                )
+            ) {
+                is ProductLinkResult.Success -> {
+                    _linkState.value = HistoryLinkState(
+                        message = if (duplicate != null) {
+                            "O Produto Mestre existente foi reutilizado e classificado na taxonomia."
+                        } else {
+                            "Produto Mestre criado, classificado e vinculado."
+                        },
+                    )
+                }
+
+                is ProductLinkResult.Error -> {
+                    _linkState.value = HistoryLinkState(error = result.message)
+                }
+            }
+        }
+    }
+
     fun deleteManualItem(item: HistoryItemRow) {
         if (_deleteState.value.deleting) return
 
