@@ -42,6 +42,7 @@ fun SettingsScreen(
     onThemeModeChange: (AppThemeMode) -> Unit,
     onColorPaletteChange: (AppColorPalette) -> Unit,
     onGradientEnabledChange: (Boolean) -> Unit,
+    onTaxonomy: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -207,6 +208,31 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+        }
+
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = "Taxonomia",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = "Gerencie segmentos, departamentos, categorias e subcategorias. Importe, exporte e compartilhe tabelas hierárquicas.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = onTaxonomy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Configurar taxonomia")
+                    }
                 }
             }
         }
