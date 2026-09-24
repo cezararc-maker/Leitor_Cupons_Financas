@@ -47,12 +47,11 @@ fun TaxonomyProductLinkDialog(
     val segmentIds = remember(nodes) {
         nodes.filter { it.level == TaxonomyLevel.SEGMENT.code }.map { it.id }.toSet()
     }
+    val lockedSegmentId = item.merchantSegmentNodeId
+        ?.takeIf { it in segmentIds }
 
-    var selectedNodeId by remember(item.itemId, item.merchantSegmentNodeId, nodes.size) {
-        mutableStateOf(
-            item.merchantSegmentNodeId
-                ?.takeIf { it in segmentIds },
-        )
+    var selectedNodeId by remember(item.itemId, lockedSegmentId, nodes.size) {
+        mutableStateOf(lockedSegmentId)
     }
     var query by remember(item.itemId) { mutableStateOf("") }
     var creating by remember(item.itemId) { mutableStateOf(false) }
@@ -65,11 +64,16 @@ fun TaxonomyProductLinkDialog(
     val path = remember(selectedNodeId, nodes) {
         selectedNodeId?.let { taxonomyPath(nodes, it) }.orEmpty()
     }
-    val options = remember(selectedNodeId, nodes) {
-        if (selectedNodeId == null) {
-            nodes.filter { it.level == TaxonomyLevel.SEGMENT.code && it.active }
-        } else {
-            nodes.filter { it.parentId == selectedNodeId && it.active }
+    val options = remember(selectedNodeId, lockedSegmentId, nodes) {
+        when {
+            selectedNodeId == null && lockedSegmentId != null ->
+                nodes.filter { it.id == lockedSegmentId && it.active }
+
+            selectedNodeId == null ->
+                nodes.filter { it.level == TaxonomyLevel.SEGMENT.code && it.active }
+
+            else ->
+                nodes.filter { it.parentId == selectedNodeId && it.active }
         }.sortedBy { it.name.lowercase() }
     }
 
@@ -148,18 +152,29 @@ fun TaxonomyProductLinkDialog(
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
-                                TextButton(
-                                    onClick = {
-                                        selectedNodeId = currentNode?.parentId
-                                        creating = false
-                                    },
+                                if (
+                                    currentNode?.parentId != null ||
+                                    lockedSegmentId == null
                                 ) {
-                                    Text(
-                                        if (currentNode?.parentId == null) {
-                                            "Trocar segmento"
-                                        } else {
-                                            "Voltar um nível"
+                                    TextButton(
+                                        onClick = {
+                                            selectedNodeId = currentNode?.parentId
+                                            creating = false
                                         },
+                                    ) {
+                                        Text(
+                                            if (currentNode?.parentId == null) {
+                                                "Trocar segmento"
+                                            } else {
+                                                "Voltar um nível"
+                                            },
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = "Segmento fixado pelo estabelecimento. Para trocar, edite o estabelecimento.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
