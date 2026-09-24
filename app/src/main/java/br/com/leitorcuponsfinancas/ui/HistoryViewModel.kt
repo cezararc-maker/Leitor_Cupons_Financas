@@ -8,10 +8,15 @@ import br.com.leitorcuponsfinancas.data.HistoryItemRow
 import br.com.leitorcuponsfinancas.data.ItemCorrectionResult
 import br.com.leitorcuponsfinancas.data.ManualDeleteResult
 import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
+import br.com.leitorcuponsfinancas.data.MerchantRepository
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductLinkResult
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
+import br.com.leitorcuponsfinancas.data.TaxonomyLevel
+import br.com.leitorcuponsfinancas.data.TaxonomyNodeEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyProductLinkEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyRepository
 import br.com.leitorcuponsfinancas.data.UserProfileStore
 import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import java.time.DayOfWeek
@@ -76,6 +81,11 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         merchantDao = database.merchantDao(),
     )
     private val productRepository = ProductRepository(database.productDao())
+    private val taxonomyRepository = TaxonomyRepository(
+        taxonomyDao = database.taxonomyDao(),
+        productDao = database.productDao(),
+    )
+    private val merchantRepository = MerchantRepository(database.merchantDao())
 
     private val _periodType = MutableStateFlow(HistoryPeriodType.MONTHLY)
     val periodType: StateFlow<HistoryPeriodType> = _periodType.asStateFlow()
@@ -191,6 +201,20 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         initialValue = emptyList(),
     )
 
+    val taxonomyNodes: StateFlow<List<TaxonomyNodeEntity>> =
+        taxonomyRepository.nodes.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
+    val taxonomyProductLinks: StateFlow<List<TaxonomyProductLinkEntity>> =
+        taxonomyRepository.productLinks.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
     val learnedLinks: StateFlow<List<MerchantProductLinkEntity>> =
         database.merchantProductLinkDao()
             .observeAll()
@@ -208,6 +232,12 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
 
     private val _deleteState = MutableStateFlow(HistoryDeleteState())
     val deleteState: StateFlow<HistoryDeleteState> = _deleteState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            taxonomyRepository.ensureBaseTaxonomy()
+        }
+    }
 
     fun selectPeriod(type: HistoryPeriodType) {
         _periodType.value = type
@@ -345,6 +375,7 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
         category: String,
         subcategory: String,
         unit: String,
+        taxonomyNodeId: Long? = null,
     ) {
         val cleanName = ProductNormalizer.displayName(name)
         val cleanSector = ProductNormalizer.displayName(sector)
@@ -364,6 +395,11 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
             val duplicate = productRepository.findDuplicateName(cleanName)
 
             if (duplicate != null) {
+                applyTaxonomy(
+                    item = item,
+                    productId = duplicate.id,
+                    taxonomyNodeId = taxonomyNodeId,
+                )
                 when (
                     val result = receiptRepository.linkHistoryItem(
                         item = item,
@@ -404,6 +440,11 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val newId = productRepository.save(product)
                 val created = product.copy(id = newId)
+                applyTaxonomy(
+                    item = item,
+                    productId = newId,
+                    taxonomyNodeId = taxonomyNodeId,
+                )
 
                 when (
                     val result = receiptRepository.linkHistoryItem(
@@ -461,12 +502,19 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
     fun linkItem(
         item: HistoryItemRow,
         product: ProductEntity,
+        taxonomyNodeId: Long? = null,
     ) {
         if (_linkState.value.saving) return
 
         _linkState.value = HistoryLinkState(saving = true)
 
         viewModelScope.launch {
+            applyTaxonomy(
+                item = item,
+                productId = product.id,
+                taxonomyNodeId = taxonomyNodeId,
+            )
+
             when (
                 val result = receiptRepository.linkHistoryItem(
                     item = item,
@@ -476,8 +524,13 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                 is ProductLinkResult.Success -> {
                     _linkState.value = HistoryLinkState(
                         message = buildString {
-                            append("\"${item.fiscalDescription}\" vinculado a \"${product.normalizedName}\".")
-                            append(" Itens atualizados no histórico: ${result.updatedItems}.")
+                            append(""")
+                            append(item.fiscalDescription)
+                            append("" vinculado a "")
+                            append(product.normalizedName)
+                            append("". Itens atualizados no histórico: ")
+                            append(result.updatedItems)
+                            append(".")
                         },
                     )
                 }
@@ -488,6 +541,33 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                     )
                 }
             }
+        }
+    }
+
+    private suspend fun applyTaxonomy(
+        item: HistoryItemRow,
+        productId: Long,
+        taxonomyNodeId: Long?,
+    ) {
+        val nodeId = taxonomyNodeId ?: return
+
+        taxonomyRepository.linkProduct(
+            taxonomyNodeId = nodeId,
+            productId = productId,
+        )
+
+        val segment = taxonomyRepository.ancestry(nodeId)
+            .firstOrNull { it.level == TaxonomyLevel.SEGMENT.code }
+            ?: return
+
+        val merchantId = item.merchantId ?: return
+        val merchant = database.merchantDao().findById(merchantId) ?: return
+
+        if (merchant.segmentNodeId != segment.id) {
+            merchantRepository.setSegment(
+                merchant = merchant,
+                segmentNodeId = segment.id,
+            )
         }
     }
 
