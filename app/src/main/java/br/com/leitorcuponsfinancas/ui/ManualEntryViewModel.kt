@@ -191,6 +191,7 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
                             merchantRepository.setSegment(
                                 merchant = merchant,
                                 segmentNodeId = segment.id,
+                                source = "TAXONOMY",
                             )
                         }
                     }
