@@ -111,8 +111,6 @@ fun ReviewCenterScreen(
                         unit = item.displayUnit,
                         products = products,
                         learnedLinks = learnedLinks,
-                        merchantCnpj = item.merchantCnpj,
-                        itemCode = item.itemCode,
                     )
                 }
 
@@ -326,8 +324,6 @@ private fun ReviewCreateProductDialog(
             unit = item.displayUnit,
             products = products,
             learnedLinks = emptyList(),
-            merchantCnpj = item.merchantCnpj,
-            itemCode = item.itemCode,
         )
     }
 
