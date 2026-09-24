@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
@@ -56,6 +59,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,7 +94,9 @@ import br.com.leitorcuponsfinancas.ui.ProfileScreen
 import br.com.leitorcuponsfinancas.ui.ReceiptOcrScreen
 import br.com.leitorcuponsfinancas.ui.SettingsScreen
 import br.com.leitorcuponsfinancas.ui.theme.LeitorCuponsTheme
+import br.com.leitorcuponsfinancas.ui.theme.LocalAppVisuals
 import java.text.NumberFormat
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -102,7 +108,12 @@ class MainActivity : ComponentActivity() {
             }
             val preferences by preferencesStore.state.collectAsStateWithLifecycle()
 
-            LeitorCuponsTheme(fontScale = preferences.fontScale) {
+            LeitorCuponsTheme(
+                themeMode = preferences.themeMode,
+                colorPalette = preferences.colorPalette,
+                gradientEnabled = preferences.gradientEnabled,
+                fontScale = preferences.fontScale,
+            ) {
                 Surface(Modifier.fillMaxSize()) {
                     LeitorCuponsApp(
                         preferences = preferences,
@@ -115,15 +126,18 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class AppScreen {
-    HOME,
-    PRODUCTS,
     NFCE,
     OCR,
-    HISTORY,
     MANUAL,
-    PROFILE,
     BACKUP,
     SETTINGS,
+}
+
+private enum class MainTab(val page: Int) {
+    HOME(0),
+    HISTORY(1),
+    PRODUCTS(2),
+    PROFILE(3),
 }
 
 private data class AppTip(
@@ -143,13 +157,17 @@ private fun LeitorCuponsApp(
     val learnedLinks by productViewModel.learnedLinks.collectAsStateWithLifecycle()
     val dashboard by homeViewModel.dashboard.collectAsStateWithLifecycle()
 
-    var screen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
+    val pagerState = rememberPagerState(
+        initialPage = MainTab.HOME.page,
+        pageCount = { MainTab.entries.size },
+    )
+    val scope = rememberCoroutineScope()
+
+    var taskScreen by rememberSaveable { mutableStateOf<AppScreen?>(null) }
     var addMenuOpen by rememberSaveable { mutableStateOf(false) }
     var pendingTip by remember { mutableStateOf<AppTip?>(null) }
 
-    fun navigate(target: AppScreen, tip: AppTip? = null) {
-        addMenuOpen = false
-        screen = target
+    fun showTip(tip: AppTip?) {
         if (
             tip != null &&
             preferences.showContextualTips &&
@@ -159,23 +177,42 @@ private fun LeitorCuponsApp(
         }
     }
 
-    BackHandler(enabled = addMenuOpen || screen != AppScreen.HOME) {
-        if (addMenuOpen) {
-            addMenuOpen = false
-        } else {
-            screen = AppScreen.HOME
+    fun openTask(target: AppScreen, tip: AppTip? = null) {
+        addMenuOpen = false
+        taskScreen = target
+        showTip(tip)
+    }
+
+    fun openTab(tab: MainTab, tip: AppTip? = null) {
+        addMenuOpen = false
+        taskScreen = null
+        showTip(tip)
+        scope.launch {
+            pagerState.animateScrollToPage(tab.page)
+        }
+    }
+
+    BackHandler(
+        enabled = addMenuOpen || taskScreen != null || pagerState.currentPage != MainTab.HOME.page,
+    ) {
+        when {
+            addMenuOpen -> addMenuOpen = false
+            taskScreen != null -> taskScreen = null
+            else -> scope.launch {
+                pagerState.animateScrollToPage(MainTab.HOME.page)
+            }
         }
     }
 
     Scaffold(
         bottomBar = {
             AppBottomBar(
-                current = screen,
+                currentPage = pagerState.currentPage,
                 addMenuOpen = addMenuOpen,
-                onHome = { navigate(AppScreen.HOME) },
+                onHome = { openTab(MainTab.HOME) },
                 onHistory = {
-                    navigate(
-                        AppScreen.HISTORY,
+                    openTab(
+                        MainTab.HISTORY,
                         AppTip(
                             key = "history",
                             title = "Histórico e gastos",
@@ -185,8 +222,8 @@ private fun LeitorCuponsApp(
                 },
                 onAdd = { addMenuOpen = !addMenuOpen },
                 onProducts = {
-                    navigate(
-                        AppScreen.PRODUCTS,
+                    openTab(
+                        MainTab.PRODUCTS,
                         AppTip(
                             key = "products",
                             title = "Produtos mestres",
@@ -194,7 +231,7 @@ private fun LeitorCuponsApp(
                         ),
                     )
                 },
-                onProfile = { navigate(AppScreen.PROFILE) },
+                onProfile = { openTab(MainTab.PROFILE) },
             )
         },
     ) { innerPadding ->
@@ -204,11 +241,12 @@ private fun LeitorCuponsApp(
                 .padding(innerPadding),
         ) {
             Column(Modifier.fillMaxSize()) {
-                AppHeader(onSettings = { navigate(AppScreen.SETTINGS) })
-                HorizontalDivider()
+                AppHeader(
+                    onSettings = { openTask(AppScreen.SETTINGS) },
+                )
 
                 AnimatedContent(
-                    targetState = screen,
+                    targetState = taskScreen,
                     transitionSpec = {
                         (
                             slideInHorizontally(
@@ -228,22 +266,30 @@ private fun LeitorCuponsApp(
                                 fadeOut(animationSpec = tween(160)),
                         )
                     },
-                    label = "screenTransition",
-                ) { targetScreen ->
-                    when (targetScreen) {
-                        AppScreen.HOME -> HomeScreen(
-                            productCount = products.size,
-                            dashboard = dashboard,
-                            onHistory = { navigate(AppScreen.HISTORY) },
-                            onProducts = { navigate(AppScreen.PRODUCTS) },
-                            onBackup = { navigate(AppScreen.BACKUP) },
-                        )
+                    label = "taskTransition",
+                ) { targetTask ->
+                    if (targetTask == null) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            beyondViewportPageCount = 1,
+                            key = { it },
+                        ) { page ->
+                            when (page) {
+                                MainTab.HOME.page -> HomeScreen(
+                                    productCount = products.size,
+                                    dashboard = dashboard,
+                                    onHistory = { openTab(MainTab.HISTORY) },
+                                    onProducts = { openTab(MainTab.PRODUCTS) },
+                                    onBackup = { openTask(AppScreen.BACKUP) },
+                                )
 
-                        else -> SecondaryScreenScaffold(
-                            onBack = { screen = AppScreen.HOME },
-                        ) {
-                            when (targetScreen) {
-                                AppScreen.PRODUCTS -> ProductScreen(
+                                MainTab.HISTORY.page -> HistoryScreen(
+                                    onBack = { openTab(MainTab.HOME) },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+
+                                MainTab.PRODUCTS.page -> ProductScreen(
                                     products = products,
                                     learnedLinks = learnedLinks,
                                     onSave = productViewModel::save,
@@ -251,8 +297,19 @@ private fun LeitorCuponsApp(
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
+                                MainTab.PROFILE.page -> ProfileScreen(
+                                    onBack = { openTab(MainTab.HOME) },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        }
+                    } else {
+                        SecondaryScreenScaffold(
+                            onBack = { taskScreen = null },
+                        ) {
+                            when (targetTask) {
                                 AppScreen.NFCE -> NfceScreen(
-                                    onBack = { screen = AppScreen.HOME },
+                                    onBack = { taskScreen = null },
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
@@ -260,23 +317,13 @@ private fun LeitorCuponsApp(
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
-                                AppScreen.HISTORY -> HistoryScreen(
-                                    onBack = { screen = AppScreen.HOME },
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-
                                 AppScreen.MANUAL -> ManualEntryScreen(
-                                    onBack = { screen = AppScreen.HOME },
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-
-                                AppScreen.PROFILE -> ProfileScreen(
-                                    onBack = { screen = AppScreen.HOME },
+                                    onBack = { taskScreen = null },
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
                                 AppScreen.BACKUP -> BackupScreen(
-                                    onBack = { screen = AppScreen.HOME },
+                                    onBack = { taskScreen = null },
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
@@ -286,10 +333,11 @@ private fun LeitorCuponsApp(
                                     onShowTipsChange = preferencesStore::setShowContextualTips,
                                     onRestartTutorial = preferencesStore::restartOnboarding,
                                     onResetTips = preferencesStore::resetTips,
+                                    onThemeModeChange = preferencesStore::setThemeMode,
+                                    onColorPaletteChange = preferencesStore::setColorPalette,
+                                    onGradientEnabledChange = preferencesStore::setGradientEnabled,
                                     modifier = Modifier.fillMaxSize(),
                                 )
-
-                                AppScreen.HOME -> Unit
                             }
                         }
                     }
@@ -302,36 +350,36 @@ private fun LeitorCuponsApp(
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 12.dp),
                 onNfce = {
-                        navigate(
-                            AppScreen.NFCE,
-                            AppTip(
-                                key = "nfce",
-                                title = "QR Code ou chave NFC-e",
-                                text = "Use esta opção quando você tiver o QR Code ou a chave de acesso da NFC-e.",
-                            ),
-                        )
-                    },
-                    onOcr = {
-                        navigate(
-                            AppScreen.OCR,
-                            AppTip(
-                                key = "ocr",
-                                title = "Foto, imagem ou PDF",
-                                text = "O aplicativo identifica os dados do cupom e sempre apresenta uma etapa de revisão antes de salvar.",
-                            ),
-                        )
-                    },
-                    onManual = {
-                        navigate(
-                            AppScreen.MANUAL,
-                            AppTip(
-                                key = "manual",
-                                title = "Lançamento manual",
-                                text = "Use as sugestões de produtos e estabelecimentos já conhecidos para preencher mais rápido e evitar duplicidades.",
-                            ),
-                        )
-                    },
-                )
+                    openTask(
+                        AppScreen.NFCE,
+                        AppTip(
+                            key = "nfce",
+                            title = "QR Code ou chave NFC-e",
+                            text = "Use esta opção quando você tiver o QR Code ou a chave de acesso da NFC-e.",
+                        ),
+                    )
+                },
+                onOcr = {
+                    openTask(
+                        AppScreen.OCR,
+                        AppTip(
+                            key = "ocr",
+                            title = "Foto, imagem ou PDF",
+                            text = "O aplicativo identifica os dados do cupom e sempre apresenta uma etapa de revisão antes de salvar.",
+                        ),
+                    )
+                },
+                onManual = {
+                    openTask(
+                        AppScreen.MANUAL,
+                        AppTip(
+                            key = "manual",
+                            title = "Lançamento manual",
+                            text = "Use as sugestões de produtos e estabelecimentos já conhecidos para preencher mais rápido e evitar duplicidades.",
+                        ),
+                    )
+                },
+            )
         }
     }
 
@@ -362,10 +410,13 @@ private fun LeitorCuponsApp(
 private fun AppHeader(
     onSettings: () -> Unit,
 ) {
+    val visuals = LocalAppVisuals.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            .background(visuals.heroBrush)
+            .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -373,11 +424,12 @@ private fun AppHeader(
                 text = "Leitor Cupons Finanças",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
+                color = visuals.onGradient,
             )
             Text(
                 text = "Organize compras. Entenda seus gastos.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = visuals.onGradient.copy(alpha = 0.88f),
             )
         }
 
@@ -385,7 +437,7 @@ private fun AppHeader(
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Configurações",
-                tint = MaterialTheme.colorScheme.primary,
+                tint = visuals.onGradient,
             )
         }
     }
@@ -393,7 +445,7 @@ private fun AppHeader(
 
 @Composable
 private fun AppBottomBar(
-    current: AppScreen,
+    currentPage: Int,
     addMenuOpen: Boolean,
     onHome: () -> Unit,
     onHistory: () -> Unit,
@@ -409,13 +461,13 @@ private fun AppBottomBar(
 
     NavigationBar {
         NavigationBarItem(
-            selected = current == AppScreen.HOME,
+            selected = currentPage == MainTab.HOME.page,
             onClick = onHome,
             icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
             label = { Text("Início") },
         )
         NavigationBarItem(
-            selected = current == AppScreen.HISTORY,
+            selected = currentPage == MainTab.HISTORY.page,
             onClick = onHistory,
             icon = { Icon(Icons.Default.History, contentDescription = "Histórico") },
             label = { Text("Histórico") },
@@ -424,24 +476,38 @@ private fun AppBottomBar(
             selected = addMenuOpen,
             onClick = onAdd,
             icon = {
-                FloatingActionButton(onClick = onAdd) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "Adicionar",
-                        modifier = Modifier.graphicsLayer(rotationZ = addRotation),
-                    )
+                val visuals = LocalAppVisuals.current
+                Surface(
+                    onClick = onAdd,
+                    shape = CircleShape,
+                    color = Color.Transparent,
+                    shadowElevation = 8.dp,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(visuals.accentBrush),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Adicionar",
+                            tint = visuals.onGradient,
+                            modifier = Modifier.graphicsLayer(rotationZ = addRotation),
+                        )
+                    }
                 }
             },
             label = { Text("Adicionar") },
         )
         NavigationBarItem(
-            selected = current == AppScreen.PRODUCTS,
+            selected = currentPage == MainTab.PRODUCTS.page,
             onClick = onProducts,
             icon = { Icon(Icons.Default.Inventory2, contentDescription = "Produtos") },
             label = { Text("Produtos") },
         )
         NavigationBarItem(
-            selected = current == AppScreen.PROFILE,
+            selected = currentPage == MainTab.PROFILE.page,
             onClick = onProfile,
             icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Perfil") },
             label = { Text("Perfil") },
