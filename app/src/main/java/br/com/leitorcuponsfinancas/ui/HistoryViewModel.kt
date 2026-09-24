@@ -661,6 +661,7 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
             merchantRepository.setSegment(
                 merchant = merchant,
                 segmentNodeId = segment.id,
+                source = "TAXONOMY",
             )
         }
     }
