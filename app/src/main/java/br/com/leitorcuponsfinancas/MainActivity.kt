@@ -174,6 +174,8 @@ private fun LeitorCuponsApp(
 ) {
     val products by productViewModel.products.collectAsStateWithLifecycle()
     val learnedLinks by productViewModel.learnedLinks.collectAsStateWithLifecycle()
+    val taxonomyNodes by productViewModel.taxonomyNodes.collectAsStateWithLifecycle()
+    val taxonomyProductLinks by productViewModel.taxonomyProductLinks.collectAsStateWithLifecycle()
     val dashboard by homeViewModel.dashboard.collectAsStateWithLifecycle()
 
     val pagerState = rememberPagerState(
@@ -413,7 +415,9 @@ private fun LeitorCuponsApp(
                                 MainTab.PRODUCTS.page -> ProductScreen(
                                     products = products,
                                     learnedLinks = learnedLinks,
-                                    onSave = productViewModel::save,
+                                    taxonomyNodes = taxonomyNodes,
+                                    taxonomyProductLinks = taxonomyProductLinks,
+                                    onSaveTaxonomy = productViewModel::saveTaxonomy,
                                     onDeactivate = productViewModel::deactivate,
                                     modifier = Modifier.fillMaxSize(),
                                 )
