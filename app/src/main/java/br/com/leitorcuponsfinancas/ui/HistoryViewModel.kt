@@ -615,7 +615,7 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                 is ProductLinkResult.Success -> {
                     _linkState.value = HistoryLinkState(
                         message = buildString {
-                            append(""")
+                            append('"')
                             append(item.fiscalDescription)
                             append("" vinculado a "")
                             append(product.normalizedName)
