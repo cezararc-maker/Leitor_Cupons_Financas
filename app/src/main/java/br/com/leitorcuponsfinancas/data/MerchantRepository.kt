@@ -72,10 +72,14 @@ class MerchantRepository(
     suspend fun setSegment(
         merchant: MerchantEntity,
         segmentNodeId: Long?,
+        source: String = "USER",
+        cnaeMain: String? = merchant.cnaeMain,
     ) {
         merchantDao.update(
             merchant.copy(
                 segmentNodeId = segmentNodeId,
+                cnaeMain = cnaeMain,
+                segmentSource = source,
                 updatedAt = System.currentTimeMillis(),
             ),
         )
