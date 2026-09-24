@@ -322,7 +322,7 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
         val merchantId = item.merchantId ?: return
         val merchant = database.merchantDao().findById(merchantId) ?: return
 
-        if (merchant.segmentNodeId != segment.id) {
+        if (merchant.segmentNodeId == null) {
             merchantRepository.setSegment(
                 merchant = merchant,
                 segmentNodeId = segment.id,
