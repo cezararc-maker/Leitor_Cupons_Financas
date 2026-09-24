@@ -20,6 +20,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +61,26 @@ fun ManualEntryScreen(
     var showProducts by remember { mutableStateOf(false) }
     var showUnits by remember { mutableStateOf(false) }
     var productDialogError by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(saveState.message) {
+        saveState.message?.let { message ->
+            merchantName = ""
+            merchantCnpj = ""
+            dateText = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+            description = ""
+            quantity = "1"
+            unitType = ManualUnitType.UNIT
+            customUnit = ""
+            unitPrice = ""
+            selectedProduct = null
+            showProducts = false
+            showUnits = false
+            productDialogError = null
+            successMessage = message
+            viewModel.clearMessage()
+        }
+    }
 
     val calculatedTotal = remember(quantity, unitPrice) {
         ManualEntryCalculator.calculateTotal(
@@ -318,20 +339,6 @@ fun ManualEntryScreen(
             )
         }
 
-        saveState.message?.let { message ->
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp)) {
-                        Text(
-                            text = "Lançamento salvo",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(message)
-                    }
-                }
-            }
-        }
-
         saveState.error?.let { error ->
             item {
                 Card(Modifier.fillMaxWidth()) {
@@ -372,6 +379,19 @@ fun ManualEntryScreen(
                 )
             }
         }
+    }
+
+    successMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Lançamento salvo") },
+            text = { Text(message) },
+            confirmButton = {
+                Button(onClick = { successMessage = null }) {
+                    Text("OK")
+                }
+            },
+        )
     }
 
     if (showUnits) {
