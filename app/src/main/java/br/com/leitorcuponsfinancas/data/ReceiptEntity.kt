@@ -8,6 +8,7 @@ import androidx.room.PrimaryKey
     tableName = "receipts",
     indices = [
         Index(value = ["accessKey"], unique = true),
+        Index(value = ["merchantId"]),
     ],
 )
 data class ReceiptEntity(
@@ -18,6 +19,7 @@ data class ReceiptEntity(
     val merchantName: String? = null,
     val merchantCnpj: String? = null,
     val merchantAddress: String? = null,
+    val merchantId: Long? = null,
     val number: String? = null,
     val series: String? = null,
     val issuedAt: String? = null,
