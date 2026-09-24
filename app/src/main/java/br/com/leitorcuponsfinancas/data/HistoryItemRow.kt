@@ -6,7 +6,7 @@ data class HistoryItemRow(
     val issuedDate: String?,
     val issuedAt: String?,
     val merchantName: String?,
-    val merchantMasterName: String?,
+    val merchantMasterName: String? = null,
     val merchantCnpj: String?,
     val receiptNumber: String?,
     val receiptSeries: String?,
