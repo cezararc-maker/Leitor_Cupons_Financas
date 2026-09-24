@@ -93,6 +93,7 @@ import br.com.leitorcuponsfinancas.ui.ProductViewModel
 import br.com.leitorcuponsfinancas.ui.ProfileScreen
 import br.com.leitorcuponsfinancas.ui.ReceiptOcrScreen
 import br.com.leitorcuponsfinancas.ui.SettingsScreen
+import br.com.leitorcuponsfinancas.ui.ScreenHero
 import br.com.leitorcuponsfinancas.ui.theme.LeitorCuponsTheme
 import br.com.leitorcuponsfinancas.ui.theme.LocalAppVisuals
 import java.text.NumberFormat
@@ -248,23 +249,39 @@ private fun LeitorCuponsApp(
                 AnimatedContent(
                     targetState = taskScreen,
                     transitionSpec = {
-                        (
-                            slideInHorizontally(
-                                animationSpec = tween(260),
-                                initialOffsetX = { fullWidth -> fullWidth / 3 },
-                            ) +
-                                fadeIn(animationSpec = tween(220)) +
-                                scaleIn(
-                                    initialScale = 0.97f,
+                        if (targetState == null) {
+                            (
+                                slideInHorizontally(
+                                    animationSpec = tween(240),
+                                    initialOffsetX = { fullWidth -> -fullWidth / 4 },
+                                ) +
+                                    fadeIn(animationSpec = tween(200))
+                                ).togetherWith(
+                                slideOutHorizontally(
                                     animationSpec = tween(220),
-                                )
-                            ).togetherWith(
-                            slideOutHorizontally(
-                                animationSpec = tween(210),
-                                targetOffsetX = { fullWidth -> -fullWidth / 7 },
-                            ) +
-                                fadeOut(animationSpec = tween(160)),
-                        )
+                                    targetOffsetX = { fullWidth -> fullWidth / 3 },
+                                ) +
+                                    fadeOut(animationSpec = tween(160)),
+                            )
+                        } else {
+                            (
+                                slideInHorizontally(
+                                    animationSpec = tween(260),
+                                    initialOffsetX = { fullWidth -> fullWidth / 3 },
+                                ) +
+                                    fadeIn(animationSpec = tween(220)) +
+                                    scaleIn(
+                                        initialScale = 0.97f,
+                                        animationSpec = tween(220),
+                                    )
+                                ).togetherWith(
+                                slideOutHorizontally(
+                                    animationSpec = tween(210),
+                                    targetOffsetX = { fullWidth -> -fullWidth / 7 },
+                                ) +
+                                    fadeOut(animationSpec = tween(160)),
+                            )
+                        }
                     },
                     label = "taskTransition",
                 ) { targetTask ->
@@ -673,15 +690,10 @@ private fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Text(
-                text = "Visão geral",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = dashboard.periodLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+            ScreenHero(
+                title = "Visão geral",
+                subtitle = dashboard.periodLabel,
+                icon = Icons.Default.TrendingUp,
             )
         }
 
