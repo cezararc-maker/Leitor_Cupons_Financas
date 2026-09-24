@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -55,8 +56,16 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
             )
 
     val merchantSuggestions: StateFlow<List<MerchantSuggestion>> =
-        database.receiptDao()
-            .observeMerchantSuggestions()
+        database.merchantDao()
+            .observeActive()
+            .map { merchants ->
+                merchants.map { merchant ->
+                    MerchantSuggestion(
+                        name = merchant.displayName,
+                        cnpj = merchant.cnpjDigits,
+                    )
+                }
+            }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
