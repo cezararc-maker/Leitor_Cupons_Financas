@@ -179,14 +179,19 @@ fun TaxonomyProductLinkDialog(
                     }
                 }
 
-                smartSuggestion?.let { suggestion ->
-                    item {
-                        SmartSuggestionCompact(
-                            suggestion = suggestion,
-                            onUse = { product ->
-                                onSelect(product, selectedNodeId)
-                            },
-                        )
+                if (
+                    currentNode != null &&
+                    currentNode.level != TaxonomyLevel.SEGMENT.code
+                ) {
+                    smartSuggestion?.let { suggestion ->
+                        item {
+                            SmartSuggestionCompact(
+                                suggestion = suggestion,
+                                onUse = { product ->
+                                    onSelect(product, currentNode.id)
+                                },
+                            )
+                        }
                     }
                 }
 
