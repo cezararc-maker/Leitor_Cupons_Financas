@@ -18,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -161,28 +162,51 @@ fun SettingsScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
-                        text = "Tamanho dos textos",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-
-                    listOf(
-                        0.9f to "Compacto",
-                        1.0f to "Padrão",
-                        1.15f to "Grande",
-                        1.3f to "Muito grande",
-                    ).forEach { (scale, label) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = kotlin.math.abs(preferences.fontScale - scale) < 0.01f,
-                                onClick = { onFontScaleChange(scale) },
-                            )
-                            Text(label)
-                        }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Fonte",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            text = "${(preferences.fontScale * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            text = "A",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+
+                        Slider(
+                            value = preferences.fontScale,
+                            onValueChange = onFontScaleChange,
+                            valueRange = 0.9f..1.3f,
+                            steps = 7,
+                            modifier = Modifier.weight(1f),
+                        )
+
+                        Text(
+                            text = "A",
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    }
+
+                    Text(
+                        text = "Arraste a bolinha para aumentar ou diminuir os textos do aplicativo.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
