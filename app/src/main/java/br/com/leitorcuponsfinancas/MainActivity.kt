@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CompareArrows
+import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory2
@@ -95,6 +97,9 @@ import br.com.leitorcuponsfinancas.ui.HistoryScreen
 import br.com.leitorcuponsfinancas.ui.HomeDashboardState
 import br.com.leitorcuponsfinancas.ui.HomeViewModel
 import br.com.leitorcuponsfinancas.ui.ManualEntryScreen
+import br.com.leitorcuponsfinancas.ui.MerchantScreen
+import br.com.leitorcuponsfinancas.ui.PriceComparisonScreen
+import br.com.leitorcuponsfinancas.ui.ReviewCenterScreen
 import br.com.leitorcuponsfinancas.ui.NfceScreen
 import br.com.leitorcuponsfinancas.ui.ProductScreen
 import br.com.leitorcuponsfinancas.ui.ProductViewModel
@@ -138,6 +143,9 @@ private enum class AppScreen {
     NFCE,
     OCR,
     MANUAL,
+    REVIEW,
+    MERCHANTS,
+    PRICE_COMPARE,
     BACKUP,
     SETTINGS,
 }
@@ -389,6 +397,9 @@ private fun LeitorCuponsApp(
                                     onHistory = { openTab(MainTab.HISTORY) },
                                     onProducts = { openTab(MainTab.PRODUCTS) },
                                     onRead = { addMenuOpen = true },
+                                    onReview = { openTask(AppScreen.REVIEW) },
+                                    onMerchants = { openTask(AppScreen.MERCHANTS) },
+                                    onPriceCompare = { openTask(AppScreen.PRICE_COMPARE) },
                                     onBackup = { openTask(AppScreen.BACKUP) },
                                 )
 
@@ -427,6 +438,18 @@ private fun LeitorCuponsApp(
 
                                 AppScreen.MANUAL -> ManualEntryScreen(
                                     onBack = { taskScreen = null },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+
+                                AppScreen.REVIEW -> ReviewCenterScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+
+                                AppScreen.MERCHANTS -> MerchantScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+
+                                AppScreen.PRICE_COMPARE -> PriceComparisonScreen(
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
@@ -814,6 +837,9 @@ private fun HomeScreen(
     onHistory: () -> Unit,
     onProducts: () -> Unit,
     onRead: () -> Unit,
+    onReview: () -> Unit,
+    onMerchants: () -> Unit,
+    onPriceCompare: () -> Unit,
     onBackup: () -> Unit,
 ) {
     val analytics = dashboard.analytics
@@ -880,6 +906,69 @@ private fun HomeScreen(
                     modifier = Modifier.weight(1f),
                 )
             }
+        }
+
+        item {
+            val percent = dashboard.comparison.spendingPercent
+            val comparisonText = when {
+                percent == null && analytics.totalSpent == 0.0 ->
+                    "Ainda não há gastos suficientes para comparar."
+                percent == null ->
+                    "Sem base no mês anterior. Gasto atual: ${formatCurrency(analytics.totalSpent)}."
+                percent > 0 ->
+                    "Você gastou ${String.format(Locale("pt", "BR"), "%.1f", percent)}% a mais que no mês anterior."
+                percent < 0 ->
+                    "Você gastou ${String.format(Locale("pt", "BR"), "%.1f", kotlin.math.abs(percent))}% a menos que no mês anterior."
+                else ->
+                    "Seu gasto ficou no mesmo nível do mês anterior."
+            }
+
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Text(
+                        text = "Comparação mensal",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(comparisonText)
+                    Text(
+                        text = "Mês anterior: ${formatCurrency(dashboard.comparison.previousTotal)} • ${dashboard.comparison.previousPurchaseCount} compra(s)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+            }
+        }
+
+        if (dashboard.reviewCount > 0) {
+            item {
+                DashboardActionCard(
+                    icon = Icons.Default.FactCheck,
+                    title = "Itens para revisar",
+                    subtitle = "${dashboard.reviewCount} item(ns) ainda precisam de Produto Mestre.",
+                    onClick = onReview,
+                )
+            }
+        }
+
+        item {
+            DashboardRankingCard(
+                title = "Categorias que mais pesaram",
+                subtitle = "Distribuição por gasto no mês",
+                icon = Icons.Default.TrendingUp,
+                accent = MaterialTheme.colorScheme.primary,
+                rows = analytics.categoriesBySpend.take(3).map {
+                    it.name to formatCurrency(it.totalSpent)
+                },
+            )
         }
 
         item {
@@ -952,6 +1041,34 @@ private fun HomeScreen(
                 title = "Produtos mestres",
                 subtitle = "Organize categorias, vínculos e aprendizado.",
                 onClick = onProducts,
+            )
+        }
+        item {
+            DashboardActionCard(
+                icon = Icons.Default.Storefront,
+                title = "Estabelecimentos",
+                subtitle = "Consolide nomes e CNPJs para evitar rankings duplicados.",
+                onClick = onMerchants,
+            )
+        }
+        item {
+            DashboardActionCard(
+                icon = Icons.Default.CompareArrows,
+                title = "Comparar preços",
+                subtitle = "Compare o mesmo Produto Mestre entre estabelecimentos.",
+                onClick = onPriceCompare,
+            )
+        }
+        item {
+            DashboardActionCard(
+                icon = Icons.Default.FactCheck,
+                title = "Central de revisão",
+                subtitle = if (dashboard.reviewCount == 0) {
+                    "Nenhum item pendente de classificação."
+                } else {
+                    "${dashboard.reviewCount} item(ns) aguardando classificação."
+                },
+                onClick = onReview,
             )
         }
         item {
