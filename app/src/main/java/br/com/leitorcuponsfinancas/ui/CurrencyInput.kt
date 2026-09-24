@@ -37,6 +37,9 @@ internal object CurrencyInputFormatter {
         return format(decimal)
     }
 
+    fun displayValue(value: String): String =
+        value.ifBlank { "0,00" }
+
     fun parse(value: String?): BigDecimal? {
         val trimmed = value?.trim().orEmpty()
         if (trimmed.isBlank()) return null
@@ -85,20 +88,26 @@ internal fun CurrencyTextField(
     enabled: Boolean = true,
     singleLine: Boolean = true,
 ) {
+    val displayedValue = CurrencyInputFormatter.displayValue(value)
+
     var fieldValue by remember {
         mutableStateOf(
             TextFieldValue(
-                text = value,
-                selection = TextRange(value.length),
+                text = displayedValue,
+                selection = TextRange(displayedValue.length),
             ),
         )
     }
 
-    LaunchedEffect(value) {
-        if (fieldValue.text != value) {
+    LaunchedEffect(displayedValue) {
+        if (fieldValue.text != displayedValue) {
             fieldValue = TextFieldValue(
-                text = value,
-                selection = TextRange(value.length),
+                text = displayedValue,
+                selection = TextRange(displayedValue.length),
+            )
+        } else if (fieldValue.selection.end != displayedValue.length) {
+            fieldValue = fieldValue.copy(
+                selection = TextRange(displayedValue.length),
             )
         }
     }
@@ -106,20 +115,26 @@ internal fun CurrencyTextField(
     OutlinedTextField(
         value = fieldValue,
         onValueChange = { typed ->
-            val formatted = CurrencyInputFormatter.fromTyping(typed.text)
+            if (typed.text == fieldValue.text) {
+                fieldValue = typed.copy(
+                    selection = TextRange(typed.text.length),
+                )
+            } else {
+                val formatted = CurrencyInputFormatter.fromTyping(typed.text)
+                val nextDisplay = CurrencyInputFormatter.displayValue(formatted)
 
-            fieldValue = TextFieldValue(
-                text = formatted,
-                selection = TextRange(formatted.length),
-            )
+                fieldValue = TextFieldValue(
+                    text = nextDisplay,
+                    selection = TextRange(nextDisplay.length),
+                )
 
-            if (formatted != value) {
-                onValueChange(formatted)
+                if (formatted != value) {
+                    onValueChange(formatted)
+                }
             }
         },
         label = label,
         prefix = { Text("R$") },
-        placeholder = { Text("0,00") },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
         ),
