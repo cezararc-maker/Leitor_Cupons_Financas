@@ -17,6 +17,11 @@ data class ProductAnalytics(
     val highestUnitPrice: Double,
 )
 
+data class CategoryAnalytics(
+    val name: String,
+    val totalSpent: Double,
+)
+
 data class HomeAnalytics(
     val totalSpent: Double = 0.0,
     val purchaseCount: Int = 0,
@@ -24,6 +29,7 @@ data class HomeAnalytics(
     val merchantsByFrequency: List<MerchantAnalytics> = emptyList(),
     val productsMostPurchased: List<ProductAnalytics> = emptyList(),
     val productsMostExpensive: List<ProductAnalytics> = emptyList(),
+    val categoriesBySpend: List<CategoryAnalytics> = emptyList(),
 )
 
 object HomeAnalyticsBuilder {
@@ -35,11 +41,11 @@ object HomeAnalyticsBuilder {
         val purchaseCount = rows.map { it.receiptId }.distinct().size
 
         val merchants = rows
-            .filter { !it.merchantName.isNullOrBlank() }
-            .groupBy { it.merchantName!!.trim().lowercase() }
+            .filter { !it.displayMerchantName.isNullOrBlank() }
+            .groupBy { it.displayMerchantName!!.trim().lowercase() }
             .map { (_, merchantRows) ->
                 MerchantAnalytics(
-                    name = merchantRows.first().merchantName!!.trim(),
+                    name = merchantRows.first().displayMerchantName!!.trim(),
                     totalSpent = merchantRows.sumOf {
                         parseNumber(it.displayTotalAmount) ?: 0.0
                     },
@@ -53,6 +59,18 @@ object HomeAnalyticsBuilder {
                 .ifBlank { "Produto não identificado" }
                 .lowercase()
         }
+
+        val categories = rows
+            .filter { !it.category.isNullOrBlank() }
+            .groupBy { it.category!!.trim().lowercase() }
+            .map { (_, categoryRows) ->
+                CategoryAnalytics(
+                    name = categoryRows.first().category!!.trim(),
+                    totalSpent = categoryRows.sumOf {
+                        parseNumber(it.displayTotalAmount) ?: 0.0
+                    },
+                )
+            }
 
         val products = productGroups.map { (_, productRows) ->
             ProductAnalytics(
@@ -99,6 +117,9 @@ object HomeAnalyticsBuilder {
                     compareByDescending<ProductAnalytics> { it.highestUnitPrice }
                         .thenByDescending { it.totalSpent },
                 )
+                .take(5),
+            categoriesBySpend = categories
+                .sortedByDescending { it.totalSpent }
                 .take(5),
         )
     }
