@@ -6,6 +6,7 @@ data class HistoryItemRow(
     val issuedDate: String?,
     val issuedAt: String?,
     val merchantName: String?,
+    val merchantMasterName: String?,
     val merchantCnpj: String?,
     val receiptNumber: String?,
     val receiptSeries: String?,
@@ -44,6 +45,9 @@ data class HistoryItemRow(
 
     val displayTotalAmount: String?
         get() = correctedTotalAmount ?: totalAmount
+
+    val displayMerchantName: String?
+        get() = merchantMasterName ?: merchantName
 
     val manuallyEdited: Boolean
         get() = correctedAt != null
