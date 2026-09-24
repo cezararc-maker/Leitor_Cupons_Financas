@@ -4,8 +4,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -78,10 +85,37 @@ internal fun CurrencyTextField(
     enabled: Boolean = true,
     singleLine: Boolean = true,
 ) {
+    var fieldValue by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = value,
+                selection = TextRange(value.length),
+            ),
+        )
+    }
+
+    LaunchedEffect(value) {
+        if (fieldValue.text != value) {
+            fieldValue = TextFieldValue(
+                text = value,
+                selection = TextRange(value.length),
+            )
+        }
+    }
+
     OutlinedTextField(
-        value = value,
+        value = fieldValue,
         onValueChange = { typed ->
-            onValueChange(CurrencyInputFormatter.fromTyping(typed))
+            val formatted = CurrencyInputFormatter.fromTyping(typed.text)
+
+            fieldValue = TextFieldValue(
+                text = formatted,
+                selection = TextRange(formatted.length),
+            )
+
+            if (formatted != value) {
+                onValueChange(formatted)
+            }
         },
         label = label,
         prefix = { Text("R$") },
