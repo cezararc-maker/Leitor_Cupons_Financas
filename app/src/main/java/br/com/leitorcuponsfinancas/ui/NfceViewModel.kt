@@ -65,6 +65,7 @@ class NfceViewModel(application: Application) : AndroidViewModel(application) {
         receiptDao = database.receiptDao(),
         productDao = database.productDao(),
         linkDao = database.merchantProductLinkDao(),
+        merchantDao = database.merchantDao(),
     )
 
     private val _lookupState = MutableStateFlow(NfceLookupState())
