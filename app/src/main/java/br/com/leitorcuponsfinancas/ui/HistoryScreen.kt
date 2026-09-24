@@ -70,6 +70,8 @@ fun HistoryScreen(
     val filteredItems by historyViewModel.filteredItems.collectAsStateWithLifecycle()
     val searchQuery by historyViewModel.searchQuery.collectAsStateWithLifecycle()
     val searchMode by historyViewModel.searchMode.collectAsStateWithLifecycle()
+    val advancedFilter by historyViewModel.advancedFilter.collectAsStateWithLifecycle()
+    val analytics by historyViewModel.analytics.collectAsStateWithLifecycle()
     val products by historyViewModel.products.collectAsStateWithLifecycle()
     val learnedLinks by historyViewModel.learnedLinks.collectAsStateWithLifecycle()
     val linkState by historyViewModel.linkState.collectAsStateWithLifecycle()
@@ -83,6 +85,7 @@ fun HistoryScreen(
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var sortMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var sortMode by rememberSaveable { mutableStateOf(HistorySortMode.DEFAULT) }
+    var filterDialogOpen by rememberSaveable { mutableStateOf(false) }
 
     val sortedItems = remember(filteredItems, sortMode) {
         sortHistoryItems(filteredItems, sortMode)
@@ -256,8 +259,20 @@ fun HistoryScreen(
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             ) {
+                OutlinedButton(
+                    onClick = { filterDialogOpen = true },
+                ) {
+                    Text(
+                        if (advancedFilter.activeCount == 0) {
+                            "Filtros"
+                        } else {
+                            "Filtros (${advancedFilter.activeCount})"
+                        },
+                    )
+                }
+
                 Box {
                     OutlinedButton(
                         onClick = { sortMenuExpanded = true },
@@ -287,20 +302,34 @@ fun HistoryScreen(
             Card(Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        text = "Resumo do período",
+                        text = "Resumo analítico",
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    if (searchQuery.isBlank()) {
-                        Text("Itens: ${historyItems.size}")
-                    } else {
-                        Text("Resultados: ${filteredItems.size} de ${historyItems.size} itens")
-                    }
-                    Text("Total exibido: R$ ${formatHistoryMoney(total)}")
                     Text(
-                        text = "Não vinculados exibidos: ${unrecognizedItems.size}",
+                        text = "Total: R$ ${formatHistoryMoney(BigDecimal.valueOf(analytics.totalSpent))}",
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Text("Compras: ${analytics.purchaseCount} • Itens: ${analytics.itemCount}")
+                    Text(
+                        "Média por compra: R$ ${formatHistoryMoney(BigDecimal.valueOf(analytics.averagePurchase))}",
+                    )
+                    analytics.topProduct?.let { Text("Produto com maior gasto: $it") }
+                    analytics.topCategory?.let { Text("Categoria com maior gasto: $it") }
+                    analytics.topMerchant?.let { Text("Estabelecimento com maior gasto: $it") }
+
+                    if (searchQuery.isNotBlank() || advancedFilter.activeCount > 0) {
+                        Text(
+                            text = "Exibindo ${filteredItems.size} de ${historyItems.size} itens do período.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    Text(
+                        text = "Sem Produto Mestre: ${unrecognizedItems.size}",
                         style = MaterialTheme.typography.bodyMedium,
                     )
 
@@ -415,6 +444,23 @@ fun HistoryScreen(
                 },
             )
         }
+    }
+
+    if (filterDialogOpen) {
+        HistoryAdvancedFilterDialog(
+            current = advancedFilter,
+            rows = historyItems,
+            products = products,
+            onDismiss = { filterDialogOpen = false },
+            onApply = { filter ->
+                historyViewModel.updateAdvancedFilter(filter)
+                filterDialogOpen = false
+            },
+            onClear = {
+                historyViewModel.clearAdvancedFilter()
+                filterDialogOpen = false
+            },
+        )
     }
 
     linkingItem?.let { item ->
