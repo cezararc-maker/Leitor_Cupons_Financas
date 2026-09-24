@@ -7,6 +7,7 @@ class ReceiptRepository(
     private val receiptDao: ReceiptDao,
     private val productDao: ProductDao,
     private val linkDao: MerchantProductLinkDao,
+    private val merchantDao: MerchantDao? = null,
 ) {
 
     suspend fun save(
@@ -16,6 +17,12 @@ class ReceiptRepository(
     ): ReceiptSaveResult {
         val products = productDao.listActiveOnce()
         val merchantCnpj = normalizeCnpj(receipt.merchantCnpj)
+        val merchantMaster = merchantDao?.let {
+            MerchantRepository(it).resolveOrCreate(
+                name = receipt.merchantName,
+                cnpj = receipt.merchantCnpj,
+            )
+        }
 
         val receiptEntity = ReceiptEntity(
             accessKey = accessKey,
@@ -23,6 +30,7 @@ class ReceiptRepository(
             merchantName = receipt.merchantName,
             merchantCnpj = receipt.merchantCnpj,
             merchantAddress = receipt.merchantAddress,
+            merchantId = merchantMaster?.id,
             number = receipt.number,
             series = receipt.series,
             issuedAt = receipt.issuedAt,
@@ -116,12 +124,19 @@ class ReceiptRepository(
 
         val manualId = java.util.UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
+        val merchantMaster = merchantDao?.let {
+            MerchantRepository(it).resolveOrCreate(
+                name = normalizedMerchant,
+                cnpj = normalizedCnpj.ifBlank { null },
+            )
+        }
 
         val receipt = ReceiptEntity(
             accessKey = "MANUAL:$manualId",
             sourceUrl = "manual://purchase/$manualId",
             merchantName = normalizedMerchant,
             merchantCnpj = normalizedCnpj.ifBlank { null },
+            merchantId = merchantMaster?.id,
             issuedAt = issuedDate,
             issuedDate = parseIsoDate(issuedDate),
             totalAmount = normalizedTotal,
