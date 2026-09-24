@@ -73,6 +73,8 @@ fun HistoryScreen(
     val advancedFilter by historyViewModel.advancedFilter.collectAsStateWithLifecycle()
     val analytics by historyViewModel.analytics.collectAsStateWithLifecycle()
     val products by historyViewModel.products.collectAsStateWithLifecycle()
+    val taxonomyNodes by historyViewModel.taxonomyNodes.collectAsStateWithLifecycle()
+    val taxonomyProductLinks by historyViewModel.taxonomyProductLinks.collectAsStateWithLifecycle()
     val learnedLinks by historyViewModel.learnedLinks.collectAsStateWithLifecycle()
     val linkState by historyViewModel.linkState.collectAsStateWithLifecycle()
     val editState by historyViewModel.editState.collectAsStateWithLifecycle()
@@ -473,23 +475,27 @@ fun HistoryScreen(
             )
         }
 
-        ProductLinkDialog(
+        TaxonomyProductLinkDialog(
             item = item,
             products = products,
+            nodes = taxonomyNodes,
+            productLinks = taxonomyProductLinks,
             smartSuggestion = smartSuggestion,
             saving = linkState.saving,
             onDismiss = { linkingItem = null },
-            onSelect = { product ->
-                historyViewModel.linkItem(item, product)
+            onSelect = { product, taxonomyNodeId ->
+                historyViewModel.linkItem(
+                    item = item,
+                    product = product,
+                    taxonomyNodeId = taxonomyNodeId,
+                )
                 linkingItem = null
             },
-            onCreateProduct = { name, sector, category, subcategory, unit ->
-                historyViewModel.createProductAndLink(
+            onCreate = { name, taxonomyNodeId, unit ->
+                historyViewModel.createProductAndLinkTaxonomy(
                     item = item,
                     name = name,
-                    sector = sector,
-                    category = category,
-                    subcategory = subcategory,
+                    taxonomyNodeId = taxonomyNodeId,
                     unit = unit,
                 )
                 linkingItem = null
