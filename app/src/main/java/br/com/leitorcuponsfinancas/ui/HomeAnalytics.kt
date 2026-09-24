@@ -41,7 +41,10 @@ object HomeAnalyticsBuilder {
         val purchaseCount = rows.map { it.receiptId }.distinct().size
 
         val merchants = rows
-            .filter { !it.displayMerchantName.isNullOrBlank() }
+            .filter {
+                !it.displayMerchantName.isNullOrBlank() &&
+                    !it.displayMerchantName.equals("Compra manual", ignoreCase = true)
+            }
             .groupBy { it.displayMerchantName!!.trim().lowercase() }
             .map { (_, merchantRows) ->
                 MerchantAnalytics(
