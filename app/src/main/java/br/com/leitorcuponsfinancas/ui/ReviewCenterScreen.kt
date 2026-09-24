@@ -42,11 +42,12 @@ fun ReviewCenterScreen(
 ) {
     val reviewItems by reviewViewModel.items.collectAsStateWithLifecycle()
     val products by reviewViewModel.products.collectAsStateWithLifecycle()
+    val taxonomyNodes by reviewViewModel.taxonomyNodes.collectAsStateWithLifecycle()
+    val taxonomyProductLinks by reviewViewModel.taxonomyProductLinks.collectAsStateWithLifecycle()
     val learnedLinks by reviewViewModel.learnedLinks.collectAsStateWithLifecycle()
     val actionState by reviewViewModel.actionState.collectAsStateWithLifecycle()
 
-    var chooseFor by remember { mutableStateOf<HistoryItemRow?>(null) }
-    var createFor by remember { mutableStateOf<HistoryItemRow?>(null) }
+    var linkingItem by remember { mutableStateOf<HistoryItemRow?>(null) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -118,53 +119,61 @@ fun ReviewCenterScreen(
                     item = item,
                     suggestion = suggestion,
                     saving = actionState.saving,
-                    onAcceptSuggestion = { product ->
+                    onAcceptSuggestion = {
                         reviewViewModel.clearMessage()
-                        reviewViewModel.link(item, product)
+                        linkingItem = item
                     },
                     onChoose = {
                         reviewViewModel.clearMessage()
-                        chooseFor = item
+                        linkingItem = item
                     },
                     onCreate = {
                         reviewViewModel.clearMessage()
-                        createFor = item
+                        linkingItem = item
                     },
                 )
             }
         }
     }
 
-    chooseFor?.let { item ->
-        ProductChooserDialog(
-            products = products,
+    linkingItem?.let { item ->
+        val suggestion = remember(item.itemId, products, learnedLinks) {
+            ProductSuggestionEngine.suggest(
+                description = item.displayDescription,
+                unit = item.displayUnit,
+                products = products,
+                learnedLinks = learnedLinks,
+            )
+        }
+
+        TaxonomyProductLinkDialog(
             item = item,
-            onDismiss = { chooseFor = null },
-            onSelect = { product ->
-                chooseFor = null
-                reviewViewModel.link(item, product)
+            products = products,
+            nodes = taxonomyNodes,
+            productLinks = taxonomyProductLinks,
+            smartSuggestion = suggestion,
+            saving = actionState.saving,
+            onDismiss = { linkingItem = null },
+            onSelect = { product, taxonomyNodeId ->
+                reviewViewModel.link(
+                    item = item,
+                    product = product,
+                    taxonomyNodeId = taxonomyNodeId,
+                )
+                linkingItem = null
+            },
+            onCreate = { name, taxonomyNodeId, unit ->
+                reviewViewModel.createAndLinkTaxonomy(
+                    item = item,
+                    name = name,
+                    taxonomyNodeId = taxonomyNodeId,
+                    unit = unit,
+                )
+                linkingItem = null
             },
         )
     }
 
-    createFor?.let { item ->
-        ReviewCreateProductDialog(
-            item = item,
-            products = products,
-            onDismiss = { createFor = null },
-            onCreate = { name, sector, category, subcategory, unit ->
-                createFor = null
-                reviewViewModel.createAndLink(
-                    item = item,
-                    name = name,
-                    sector = sector,
-                    category = category,
-                    subcategory = subcategory,
-                    unit = unit,
-                )
-            },
-        )
-    }
 }
 
 @Composable
