@@ -45,6 +45,7 @@ fun ManualEntryScreen(
 ) {
     val products by viewModel.products.collectAsStateWithLifecycle()
     val learnedLinks by viewModel.learnedLinks.collectAsStateWithLifecycle()
+    val merchantSuggestions by viewModel.merchantSuggestions.collectAsStateWithLifecycle()
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
 
     var merchantName by remember { mutableStateOf("") }
@@ -294,16 +295,26 @@ fun ManualEntryScreen(
         }
 
         item {
-            OutlinedTextField(
+            SuggestionTextField(
                 value = merchantName,
                 onValueChange = {
                     merchantName = it
                     viewModel.clearMessage()
                 },
+                suggestions = merchantSuggestions.map { it.name },
                 label = { Text("Nome do estabelecimento / empresa (opcional)") },
                 placeholder = { Text("Ex.: Padaria Pão de Queijo") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                onSuggestionSelected = { selected ->
+                    merchantName = selected
+                    merchantSuggestions
+                        .firstOrNull { it.name.equals(selected, ignoreCase = true) }
+                        ?.cnpj
+                        ?.filter(Char::isDigit)
+                        ?.takeIf { it.length == 14 }
+                        ?.let { merchantCnpj = it }
+                    viewModel.clearMessage()
+                },
             )
         }
 
