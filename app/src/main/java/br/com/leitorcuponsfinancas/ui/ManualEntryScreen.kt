@@ -522,7 +522,7 @@ private fun ManualProductLinkDialog(
                 ) {
                     item {
                         Text(
-                            text = "O produto será criado e vinculado automaticamente ao lançamento.",
+                            text = "Crie o Produto Mestre pelo nome raiz, sem marca. Ele será vinculado automaticamente ao lançamento e as variações comerciais poderão ser aprendidas como aliases.",
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -530,7 +530,7 @@ private fun ManualProductLinkDialog(
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
-                            label = { RequiredFieldLabel("Nome do produto") },
+                            label = { RequiredFieldLabel("Produto raiz") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                         )
