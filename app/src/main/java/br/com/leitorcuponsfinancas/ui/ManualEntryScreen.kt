@@ -487,6 +487,19 @@ private fun ManualProductLinkDialog(
     var subcategory by remember { mutableStateOf("") }
     var unit by remember(effectiveUnit) { mutableStateOf(effectiveUnit.ifBlank { "UN" }) }
 
+    val sectorSuggestions = remember(products) {
+        products.map { it.sector }
+    }
+    val categorySuggestions = remember(products, sector) {
+        val sameSector = products.filter { it.sector.equals(sector, ignoreCase = true) }
+        (if (sameSector.isNotEmpty()) sameSector else products).map { it.category }
+    }
+    val subcategorySuggestions = remember(products, category) {
+        val sameCategory = products.filter { it.category.equals(category, ignoreCase = true) }
+        (if (sameCategory.isNotEmpty()) sameCategory else products)
+            .mapNotNull { it.subcategory }
+    }
+
     fun useNewSuggestion(newSuggestion: SmartProductSuggestion.NewProduct) {
         name = newSuggestion.name
         sector = newSuggestion.sector
@@ -523,30 +536,30 @@ private fun ManualProductLinkDialog(
                         )
                     }
                     item {
-                        OutlinedTextField(
+                        SuggestionTextField(
                             value = sector,
                             onValueChange = { sector = it },
+                            suggestions = sectorSuggestions,
                             label = { RequiredFieldLabel("Setor") },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
                         )
                     }
                     item {
-                        OutlinedTextField(
+                        SuggestionTextField(
                             value = category,
                             onValueChange = { category = it },
+                            suggestions = categorySuggestions,
                             label = { RequiredFieldLabel("Categoria") },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
                         )
                     }
                     item {
-                        OutlinedTextField(
+                        SuggestionTextField(
                             value = subcategory,
                             onValueChange = { subcategory = it },
+                            suggestions = subcategorySuggestions,
                             label = { Text("Subcategoria (opcional)") },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
                         )
                     }
                     item {
