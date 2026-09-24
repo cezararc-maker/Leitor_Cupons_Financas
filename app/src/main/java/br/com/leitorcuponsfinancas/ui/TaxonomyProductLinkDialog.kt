@@ -108,6 +108,16 @@ fun TaxonomyProductLinkDialog(
         }
     }
 
+    val compatibleSuggestion = remember(
+        smartSuggestion,
+        classifiedProducts,
+    ) {
+        (smartSuggestion as? SmartProductSuggestion.ExistingProduct)
+            ?.takeIf { suggestion ->
+                classifiedProducts.any { it.id == suggestion.product.id }
+            }
+    }
+
     val searchedProducts = remember(query, products) {
         val clean = ProductNormalizer.searchKey(query)
         if (clean.isBlank()) emptyList()
@@ -199,7 +209,7 @@ fun TaxonomyProductLinkDialog(
                     currentNode != null &&
                     currentNode.level != TaxonomyLevel.SEGMENT.code
                 ) {
-                    smartSuggestion?.let { suggestion ->
+                    compatibleSuggestion?.let { suggestion ->
                         item {
                             SmartSuggestionCompact(
                                 suggestion = suggestion,
