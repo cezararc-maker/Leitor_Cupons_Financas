@@ -4,11 +4,17 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
+import br.com.leitorcuponsfinancas.data.MerchantEntity
 import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
+import br.com.leitorcuponsfinancas.data.MerchantRepository
 import br.com.leitorcuponsfinancas.data.MerchantSuggestion
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
+import br.com.leitorcuponsfinancas.data.TaxonomyLevel
+import br.com.leitorcuponsfinancas.data.TaxonomyNodeEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyProductLinkEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyRepository
 import br.com.leitorcuponsfinancas.data.UserProfileStore
 import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import java.time.LocalDate
@@ -33,6 +39,11 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
     private val database = AppDatabase.getInstance(application)
     private val profileStore = UserProfileStore.getInstance(application)
     private val productRepository = ProductRepository(database.productDao())
+    private val merchantRepository = MerchantRepository(database.merchantDao())
+    private val taxonomyRepository = TaxonomyRepository(
+        taxonomyDao = database.taxonomyDao(),
+        productDao = database.productDao(),
+    )
     private val receiptRepository = ReceiptRepository(
         receiptDao = database.receiptDao(),
         productDao = database.productDao(),
@@ -45,6 +56,29 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = emptyList(),
     )
+
+    val taxonomyNodes: StateFlow<List<TaxonomyNodeEntity>> =
+        taxonomyRepository.nodes.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
+    val taxonomyProductLinks: StateFlow<List<TaxonomyProductLinkEntity>> =
+        taxonomyRepository.productLinks.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
+    val merchants: StateFlow<List<MerchantEntity>> =
+        database.merchantDao()
+            .observeActive()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList(),
+            )
 
     val learnedLinks: StateFlow<List<MerchantProductLinkEntity>> =
         database.merchantProductLinkDao()
@@ -75,6 +109,12 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
     private val _saveState = MutableStateFlow(ManualEntrySaveState())
     val saveState: StateFlow<ManualEntrySaveState> = _saveState.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            taxonomyRepository.ensureBaseTaxonomy()
+        }
+    }
+
     fun save(
         merchantName: String,
         merchantCnpj: String,
@@ -84,6 +124,7 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
         unit: String,
         unitPrice: String,
         productId: Long?,
+        taxonomyNodeId: Long? = null,
     ) {
         if (_saveState.value.saving) return
 
@@ -135,6 +176,26 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
                     actor = profileStore.profile.value,
                 )
 
+                taxonomyNodeId?.let { nodeId ->
+                    taxonomyRepository.linkProduct(
+                        taxonomyNodeId = nodeId,
+                        productId = productId,
+                    )
+                    val segment = taxonomyRepository.ancestry(nodeId)
+                        .firstOrNull { it.level == TaxonomyLevel.SEGMENT.code }
+                    if (segment != null && (merchantName.isNotBlank() || merchantCnpj.isNotBlank())) {
+                        merchantRepository.resolveOrCreate(
+                            name = merchantName.ifBlank { null },
+                            cnpj = merchantCnpj.ifBlank { null },
+                        )?.let { merchant ->
+                            merchantRepository.setSegment(
+                                merchant = merchant,
+                                segmentNodeId = segment.id,
+                            )
+                        }
+                    }
+                }
+
                 _saveState.value = ManualEntrySaveState(
                     message = "Lançamento manual salvo. Total: R$ ${
                         ManualEntryCalculator.formatMoney(calculatedTotal)
@@ -145,6 +206,80 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
                     error = error.message ?: "Não foi possível salvar o lançamento manual.",
                 )
             }
+        }
+    }
+
+    fun createProductMasterTaxonomy(
+        name: String,
+        taxonomyNodeId: Long,
+        unit: String,
+        onCreated: (ProductEntity) -> Unit,
+        onError: (String) -> Unit,
+    ) {
+        val cleanName = ProductNormalizer.displayName(name)
+        if (cleanName.isBlank()) {
+            onError("Informe o nome do Produto Mestre.")
+            return
+        }
+
+        viewModelScope.launch {
+            val ancestry = taxonomyRepository.ancestry(taxonomyNodeId)
+            val department = ancestry
+                .firstOrNull { it.level == TaxonomyLevel.DEPARTMENT.code }
+                ?.name
+            val category = ancestry
+                .firstOrNull { it.level == TaxonomyLevel.CATEGORY.code }
+                ?.name
+            val subcategory = ancestry
+                .firstOrNull { it.level == TaxonomyLevel.SUBCATEGORY.code }
+                ?.name
+
+            if (department == null || category == null) {
+                onError("Selecione pelo menos Departamento e Categoria.")
+                return@launch
+            }
+
+            val duplicate = productRepository.findDuplicateName(cleanName)
+            val product = if (duplicate != null) {
+                duplicate
+            } else {
+                val now = System.currentTimeMillis()
+                val candidate = ProductEntity(
+                    normalizedName = cleanName,
+                    sector = department,
+                    category = category,
+                    subcategory = subcategory,
+                    unit = unit.trim().uppercase().ifBlank { "UN" },
+                    active = true,
+                    createdAt = now,
+                    updatedAt = now,
+                )
+                try {
+                    val id = productRepository.save(candidate)
+                    candidate.copy(id = id)
+                } catch (error: Exception) {
+                    onError(error.message ?: "Não foi possível criar o Produto Mestre.")
+                    return@launch
+                }
+            }
+
+            taxonomyRepository.linkProduct(
+                taxonomyNodeId = taxonomyNodeId,
+                productId = product.id,
+            )
+            onCreated(product)
+        }
+    }
+
+    fun linkProductTaxonomy(
+        productId: Long,
+        taxonomyNodeId: Long,
+    ) {
+        viewModelScope.launch {
+            taxonomyRepository.linkProduct(
+                taxonomyNodeId = taxonomyNodeId,
+                productId = productId,
+            )
         }
     }
 
