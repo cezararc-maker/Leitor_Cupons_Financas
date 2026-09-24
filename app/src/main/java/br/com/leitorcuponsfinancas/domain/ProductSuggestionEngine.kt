@@ -36,6 +36,7 @@ object ProductSuggestionEngine {
     private val rules = listOf(
         CatalogRule(setOf("BATATA"), "Batata", "Alimentação", "Hortifruti", "Legumes"),
         CatalogRule(setOf("NISSIN", "MIOJO", "LAMEN", "LÁMEN", "MACARRAO INSTANTANEO", "MACARRÃO INSTANTÂNEO"), "Macarrão instantâneo", "Alimentação", "Mercado", "Massas"),
+        CatalogRule(setOf("MACARRAO", "MACARRÃO"), "Macarrão", "Alimentação", "Mercado", "Massas"),
         CatalogRule(setOf("CHOCOLATE", "BOMBOM"), "Chocolate", "Alimentação", "Mercado", "Doces"),
         CatalogRule(setOf("ARROZ"), "Arroz", "Alimentação", "Mercado", "Mercearia"),
         CatalogRule(setOf("FEIJAO", "FEIJÃO"), "Feijão", "Alimentação", "Mercado", "Mercearia"),
