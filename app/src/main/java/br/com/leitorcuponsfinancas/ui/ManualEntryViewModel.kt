@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
 import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
+import br.com.leitorcuponsfinancas.data.MerchantSuggestion
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ProductRepository
 import br.com.leitorcuponsfinancas.data.ReceiptRepository
@@ -46,6 +47,15 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
     val learnedLinks: StateFlow<List<MerchantProductLinkEntity>> =
         database.merchantProductLinkDao()
             .observeAll()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList(),
+            )
+
+    val merchantSuggestions: StateFlow<List<MerchantSuggestion>> =
+        database.receiptDao()
+            .observeMerchantSuggestions()
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
