@@ -45,7 +45,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
 import br.com.leitorcuponsfinancas.data.ProductEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyLevel
+import br.com.leitorcuponsfinancas.data.TaxonomyNodeEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyProductLinkEntity
 import br.com.leitorcuponsfinancas.domain.ProductDuplicateDetector
+import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -54,13 +58,13 @@ import java.time.format.DateTimeFormatter
 fun ProductScreen(
     products: List<ProductEntity>,
     learnedLinks: Map<Long, List<MerchantProductLinkEntity>>,
-    onSave: (
+    taxonomyNodes: List<TaxonomyNodeEntity>,
+    taxonomyProductLinks: List<TaxonomyProductLinkEntity>,
+    onSaveTaxonomy: (
         ProductEntity?,
         String,
         String,
-        String,
-        String,
-        String,
+        Long,
         String,
         String,
     ) -> String?,
@@ -230,6 +234,8 @@ fun ProductScreen(
             product = editing,
             allProducts = products,
             learnedLinks = editing?.let { learnedLinks[it.id] }.orEmpty(),
+            taxonomyNodes = taxonomyNodes,
+            taxonomyProductLinks = taxonomyProductLinks,
             saveError = saveError,
             onDismiss = {
                 showForm = false
@@ -241,14 +247,12 @@ fun ProductScreen(
                 saveError = null
                 showForm = true
             },
-            onSave = { name, fiscalDescription, sector, category, subcategory, unit, notes ->
-                val error = onSave(
+            onSave = { name, fiscalDescription, taxonomyNodeId, unit, notes ->
+                val error = onSaveTaxonomy(
                     editing,
                     name,
                     fiscalDescription,
-                    sector,
-                    category,
-                    subcategory,
+                    taxonomyNodeId,
                     unit,
                     notes,
                 )
@@ -319,15 +323,15 @@ private fun ProductFormDialog(
     product: ProductEntity?,
     allProducts: List<ProductEntity>,
     learnedLinks: List<MerchantProductLinkEntity>,
+    taxonomyNodes: List<TaxonomyNodeEntity>,
+    taxonomyProductLinks: List<TaxonomyProductLinkEntity>,
     saveError: String?,
     onDismiss: () -> Unit,
     onUseExisting: (ProductEntity) -> Unit,
     onSave: (
         String,
         String,
-        String,
-        String,
-        String,
+        Long,
         String,
         String,
     ) -> Unit,
@@ -337,9 +341,18 @@ private fun ProductFormDialog(
     var fiscalDescription by remember(product?.id) {
         mutableStateOf(product?.fiscalDescription.orEmpty())
     }
-    var sector by remember(product?.id) { mutableStateOf(product?.sector.orEmpty()) }
-    var category by remember(product?.id) { mutableStateOf(product?.category.orEmpty()) }
-    var subcategory by remember(product?.id) { mutableStateOf(product?.subcategory.orEmpty()) }
+    val initialTaxonomyNodeId = remember(product?.id, taxonomyNodes, taxonomyProductLinks) {
+        product?.let {
+            inferTaxonomyNodeId(
+                product = it,
+                nodes = taxonomyNodes,
+                links = taxonomyProductLinks,
+            )
+        }
+    }
+    var selectedTaxonomyNodeId by remember(product?.id, initialTaxonomyNodeId) {
+        mutableStateOf(initialTaxonomyNodeId)
+    }
     var unit by remember(product?.id) { mutableStateOf(product?.unit ?: "UN") }
     var customUnitMode by remember(product?.id) {
         mutableStateOf(
@@ -362,19 +375,6 @@ private fun ProductFormDialog(
     val nameSuggestions = remember(otherProducts) {
         otherProducts.map { it.normalizedName }
     }
-    val sectorSuggestions = remember(otherProducts) {
-        otherProducts.map { it.sector }
-    }
-    val categorySuggestions = remember(otherProducts, sector) {
-        val sameSector = otherProducts.filter { it.sector.equals(sector, ignoreCase = true) }
-        (if (sameSector.isNotEmpty()) sameSector else otherProducts).map { it.category }
-    }
-    val subcategorySuggestions = remember(otherProducts, category) {
-        val sameCategory = otherProducts.filter { it.category.equals(category, ignoreCase = true) }
-        (if (sameCategory.isNotEmpty()) sameCategory else otherProducts)
-            .mapNotNull { it.subcategory }
-    }
-
     val duplicateCandidates = remember(name, otherProducts) {
         ProductDuplicateDetector.findCandidates(
             input = name,
@@ -382,10 +382,18 @@ private fun ProductFormDialog(
         )
     }
 
+    val selectedTaxonomyNode = taxonomyNodes.firstOrNull {
+        it.id == selectedTaxonomyNodeId
+    }
+    val selectedPath = selectedTaxonomyNodeId?.let {
+        taxonomyPathForProductForm(taxonomyNodes, it)
+    }.orEmpty()
+
     val valid = name.isNotBlank() &&
-        sector.isNotBlank() &&
-        category.isNotBlank() &&
-        unit.isNotBlank()
+        unit.isNotBlank() &&
+        selectedTaxonomyNode != null &&
+        selectedPath.any { it.level == TaxonomyLevel.DEPARTMENT.code } &&
+        selectedPath.any { it.level == TaxonomyLevel.CATEGORY.code }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -486,36 +494,27 @@ private fun ProductFormDialog(
 
                     item {
                         FlowSectionCard(
-                            title = "Classificação",
-                            subtitle = "Reutilize setores, categorias e subcategorias já cadastrados.",
+                            title = "Classificação hierárquica",
+                            subtitle = "Escolha do mais abrangente ao mais específico. As opções seguintes dependem da escolha anterior.",
                             icon = Icons.Default.Inventory2,
                         ) {
-                            SuggestionTextField(
-                                value = sector,
-                                onValueChange = { sector = it },
-                                suggestions = sectorSuggestions,
-                                label = { Text("Setor *") },
-                                placeholder = { Text("Ex.: Alimentação") },
+                            TaxonomyPathSelector(
+                                nodes = taxonomyNodes,
+                                selectedNodeId = selectedTaxonomyNodeId,
+                                onSelected = { selectedTaxonomyNodeId = it },
                                 modifier = Modifier.fillMaxWidth(),
                             )
 
-                            SuggestionTextField(
-                                value = category,
-                                onValueChange = { category = it },
-                                suggestions = categorySuggestions,
-                                label = { Text("Categoria *") },
-                                placeholder = { Text("Ex.: Mercado") },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-
-                            SuggestionTextField(
-                                value = subcategory,
-                                onValueChange = { subcategory = it },
-                                suggestions = subcategorySuggestions,
-                                label = { Text("Subcategoria") },
-                                placeholder = { Text("Ex.: Massas") },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                            if (
+                                selectedTaxonomyNode != null &&
+                                selectedPath.none { it.level == TaxonomyLevel.CATEGORY.code }
+                            ) {
+                                Text(
+                                    text = "Continue até selecionar pelo menos uma Categoria.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                )
+                            }
                         }
                     }
 
@@ -608,15 +607,15 @@ private fun ProductFormDialog(
                         Button(
                             enabled = valid,
                             onClick = {
-                                onSave(
-                                    name,
-                                    fiscalDescription,
-                                    sector,
-                                    category,
-                                    subcategory,
-                                    unit,
-                                    notes,
-                                )
+                                selectedTaxonomyNodeId?.let { taxonomyNodeId ->
+                                    onSave(
+                                        name,
+                                        fiscalDescription,
+                                        taxonomyNodeId,
+                                        unit,
+                                        notes,
+                                    )
+                                }
                             },
                             modifier = Modifier.weight(1f),
                         ) {
@@ -752,3 +751,65 @@ private fun formatLearnedDateTime(timestamp: Long): String =
                 .ofEpochMilli(timestamp)
                 .atZone(ZoneId.systemDefault()),
         )
+
+private fun inferTaxonomyNodeId(
+    product: ProductEntity,
+    nodes: List<TaxonomyNodeEntity>,
+    links: List<TaxonomyProductLinkEntity>,
+): Long? {
+    links.firstOrNull { it.productId == product.id }?.let {
+        return it.taxonomyNodeId
+    }
+
+    fun key(value: String?): String = ProductNormalizer.searchKey(value.orEmpty())
+
+    val matchingSubcategory = product.subcategory?.let { subcategory ->
+        nodes.firstOrNull { node ->
+            node.level == TaxonomyLevel.SUBCATEGORY.code &&
+                key(node.name) == key(subcategory) &&
+                taxonomyPathForProductForm(nodes, node.id).let { path ->
+                    path.any {
+                        it.level == TaxonomyLevel.DEPARTMENT.code &&
+                            key(it.name) == key(product.sector)
+                    } &&
+                        path.any {
+                            it.level == TaxonomyLevel.CATEGORY.code &&
+                                key(it.name) == key(product.category)
+                        }
+                }
+        }
+    }
+    if (matchingSubcategory != null) return matchingSubcategory.id
+
+    val matchingCategory = nodes.firstOrNull { node ->
+        node.level == TaxonomyLevel.CATEGORY.code &&
+            key(node.name) == key(product.category) &&
+            taxonomyPathForProductForm(nodes, node.id).any {
+                it.level == TaxonomyLevel.DEPARTMENT.code &&
+                    key(it.name) == key(product.sector)
+            }
+    }
+    if (matchingCategory != null) return matchingCategory.id
+
+    return nodes.firstOrNull {
+        it.level == TaxonomyLevel.DEPARTMENT.code &&
+            key(it.name) == key(product.sector)
+    }?.id
+}
+
+private fun taxonomyPathForProductForm(
+    nodes: List<TaxonomyNodeEntity>,
+    nodeId: Long,
+): List<TaxonomyNodeEntity> {
+    val byId = nodes.associateBy { it.id }
+    val result = mutableListOf<TaxonomyNodeEntity>()
+    var current = byId[nodeId]
+
+    while (current != null) {
+        result += current
+        current = current.parentId?.let(byId::get)
+    }
+
+    return result.reversed()
+}
+
