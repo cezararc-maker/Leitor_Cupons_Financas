@@ -59,4 +59,24 @@ class CurrencyInputFormatterTest {
         )
         assertNull(CurrencyInputFormatter.parse(""))
     }
+
+    @Test
+    fun showsZeroValueBeforeFirstDigitWithoutPersistingIt() {
+        assertEquals("0,00", CurrencyInputFormatter.displayValue(""))
+        assertEquals("75,23", CurrencyInputFormatter.displayValue("75,23"))
+    }
+
+    @Test
+    fun growsValueFromVisibleZeroBaseline() {
+        var displayed = CurrencyInputFormatter.displayValue("")
+        assertEquals("0,00", displayed)
+
+        var value = CurrencyInputFormatter.fromTyping(displayed + "2")
+        assertEquals("0,02", value)
+
+        displayed = CurrencyInputFormatter.displayValue(value)
+        value = CurrencyInputFormatter.fromTyping(displayed + "3")
+        assertEquals("0,23", value)
+    }
+
 }
