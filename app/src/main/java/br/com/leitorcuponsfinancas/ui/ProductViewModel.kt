@@ -63,13 +63,26 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         }
 
         val now = System.currentTimeMillis()
+        val canonicalSector = canonicalClassification(
+            typed = sector,
+            existingValues = products.value.map { it.sector },
+        )
+        val canonicalCategory = canonicalClassification(
+            typed = category,
+            existingValues = products.value.map { it.category },
+        )
+        val canonicalSubcategory = canonicalClassification(
+            typed = subcategory,
+            existingValues = products.value.mapNotNull { it.subcategory },
+        ).ifBlank { null }
+
         val product = ProductEntity(
             id = existing?.id ?: 0,
             fiscalDescription = fiscalDescription.trim().ifBlank { null },
             normalizedName = cleanName,
-            sector = ProductNormalizer.displayName(sector),
-            category = ProductNormalizer.displayName(category),
-            subcategory = ProductNormalizer.displayName(subcategory).ifBlank { null },
+            sector = canonicalSector,
+            category = canonicalCategory,
+            subcategory = canonicalSubcategory,
             unit = unit.trim().uppercase().ifBlank { "UN" },
             notes = notes.trim().ifBlank { null },
             active = existing?.active ?: true,
@@ -88,5 +101,18 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             repository.deactivate(product.id)
         }
+    }
+
+    private fun canonicalClassification(
+        typed: String,
+        existingValues: List<String>,
+    ): String {
+        val clean = ProductNormalizer.displayName(typed)
+        if (clean.isBlank()) return ""
+
+        val key = ProductNormalizer.searchKey(clean)
+        return existingValues.firstOrNull {
+            ProductNormalizer.searchKey(it) == key
+        } ?: clean
     }
 }
