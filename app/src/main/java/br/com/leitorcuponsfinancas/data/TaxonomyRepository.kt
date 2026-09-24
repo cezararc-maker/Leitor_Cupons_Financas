@@ -88,6 +88,23 @@ class TaxonomyRepository(
             return Result.failure(IllegalArgumentException("Selecione o nível anterior."))
         }
 
+        val expectedParentLevel = when (level) {
+            TaxonomyLevel.SEGMENT -> null
+            TaxonomyLevel.DEPARTMENT -> TaxonomyLevel.SEGMENT
+            TaxonomyLevel.CATEGORY -> TaxonomyLevel.DEPARTMENT
+            TaxonomyLevel.SUBCATEGORY -> TaxonomyLevel.CATEGORY
+        }
+        if (
+            expectedParentLevel != null &&
+            parent?.level != expectedParentLevel.code
+        ) {
+            return Result.failure(
+                IllegalArgumentException(
+                    "${level.label} deve ficar dentro de ${expectedParentLevel.label}.",
+                ),
+            )
+        }
+
         val sibling = taxonomyDao.listChildren(parentId).firstOrNull {
             it.level == level.code &&
                 ProductNormalizer.searchKey(it.name) == ProductNormalizer.searchKey(cleanName)
