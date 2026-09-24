@@ -85,6 +85,7 @@ internal fun CurrencyTextField(
         },
         label = label,
         prefix = { Text("R$") },
+        placeholder = { Text("0,00") },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
         ),
