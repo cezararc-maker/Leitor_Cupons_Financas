@@ -45,6 +45,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import br.com.leitorcuponsfinancas.data.MerchantProductLinkEntity
 import br.com.leitorcuponsfinancas.data.ProductEntity
+import br.com.leitorcuponsfinancas.domain.ProductDuplicateDetector
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -235,6 +236,11 @@ fun ProductScreen(
                 editing = null
                 saveError = null
             },
+            onUseExisting = { existing ->
+                editing = existing
+                saveError = null
+                showForm = true
+            },
             onSave = { name, fiscalDescription, sector, category, subcategory, unit, notes ->
                 val error = onSave(
                     editing,
@@ -315,6 +321,7 @@ private fun ProductFormDialog(
     learnedLinks: List<MerchantProductLinkEntity>,
     saveError: String?,
     onDismiss: () -> Unit,
+    onUseExisting: (ProductEntity) -> Unit,
     onSave: (
         String,
         String,
@@ -366,6 +373,13 @@ private fun ProductFormDialog(
         val sameCategory = otherProducts.filter { it.category.equals(category, ignoreCase = true) }
         (if (sameCategory.isNotEmpty()) sameCategory else otherProducts)
             .mapNotNull { it.subcategory }
+    }
+
+    val duplicateCandidates = remember(name, otherProducts) {
+        ProductDuplicateDetector.findCandidates(
+            input = name,
+            products = otherProducts,
+        )
     }
 
     val valid = name.isNotBlank() &&
@@ -431,6 +445,30 @@ private fun ProductFormDialog(
                             placeholder = { Text("Ex.: Macarrão") },
                             modifier = Modifier.fillMaxWidth(),
                         )
+                    }
+
+                    if (duplicateCandidates.isNotEmpty()) {
+                        item {
+                            FlowSectionCard(
+                                title = "Verifique antes de criar",
+                                subtitle = "Encontramos Produtos Mestres parecidos. Reutilizar um cadastro evita dividir suas análises.",
+                                icon = Icons.Default.Search,
+                                accent = MaterialTheme.colorScheme.tertiary,
+                            ) {
+                                duplicateCandidates.forEach { candidate ->
+                                    OutlinedButton(
+                                        onClick = {
+                                            onUseExisting(candidate.product)
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text(
+                                            "${candidate.product.normalizedName} • ${candidate.similarity}% semelhante",
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     item {
