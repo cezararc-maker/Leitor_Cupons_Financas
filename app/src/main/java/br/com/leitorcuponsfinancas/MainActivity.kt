@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -359,6 +360,19 @@ private fun LeitorCuponsApp(
                         }
                     }
                 }
+            }
+
+            AnimatedVisibility(
+                visible = addMenuOpen,
+                enter = fadeIn(animationSpec = tween(140)),
+                exit = fadeOut(animationSpec = tween(120)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.18f))
+                        .clickable { addMenuOpen = false },
+                )
             }
 
             QuickAddMenu(
