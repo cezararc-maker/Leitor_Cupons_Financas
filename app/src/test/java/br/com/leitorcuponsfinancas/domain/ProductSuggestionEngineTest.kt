@@ -97,4 +97,65 @@ class ProductSuggestionEngineTest {
         assertEquals("Chocolate", newProduct.name)
         assertEquals("Doces", newProduct.subcategory)
     }
+
+    @Test
+    fun mapsBrandVariationsToRootPastaProduct() {
+        val macarrao = ProductEntity(
+            id = 20,
+            normalizedName = "Macarrão",
+            sector = "Alimentação",
+            category = "Mercado",
+            subcategory = "Massas",
+        )
+
+        listOf(
+            "MACARRAO RENATA ESPAGUETE 500G",
+            "MACARRÃO LIANE PARAFUSO 500G",
+            "MACARRAO GALO PENNE 500G",
+        ).forEach { description ->
+            val result = ProductSuggestionEngine.suggest(
+                description = description,
+                unit = "UN",
+                products = listOf(macarrao),
+                learnedLinks = emptyList(),
+            )
+
+            assertTrue(result is SmartProductSuggestion.ExistingProduct)
+            assertEquals(
+                20L,
+                (result as SmartProductSuggestion.ExistingProduct).product.id,
+            )
+        }
+    }
+
+    @Test
+    fun keepsInstantNoodlesSeparateFromRootPasta() {
+        val macarrao = ProductEntity(
+            id = 20,
+            normalizedName = "Macarrão",
+            sector = "Alimentação",
+            category = "Mercado",
+            subcategory = "Massas",
+        )
+        val instantaneo = ProductEntity(
+            id = 21,
+            normalizedName = "Macarrão instantâneo",
+            sector = "Alimentação",
+            category = "Mercado",
+            subcategory = "Massas",
+        )
+
+        val result = ProductSuggestionEngine.suggest(
+            description = "NISSIN MIOJO LAMEN GALINHA 85G",
+            unit = "UN",
+            products = listOf(macarrao, instantaneo),
+            learnedLinks = emptyList(),
+        )
+
+        assertTrue(result is SmartProductSuggestion.ExistingProduct)
+        assertEquals(
+            21L,
+            (result as SmartProductSuggestion.ExistingProduct).product.id,
+        )
+    }
 }
