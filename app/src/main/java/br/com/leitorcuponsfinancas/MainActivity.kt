@@ -60,8 +60,11 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -80,10 +83,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.leitorcuponsfinancas.data.AppPreferences
 import br.com.leitorcuponsfinancas.data.AppPreferencesStore
-import br.com.leitorcuponsfinancas.ui.AppTutorialDialog
 import br.com.leitorcuponsfinancas.ui.BackArrowButton
 import br.com.leitorcuponsfinancas.ui.BackupScreen
 import br.com.leitorcuponsfinancas.ui.ContextualTipDialog
+import br.com.leitorcuponsfinancas.ui.GuidedTutorialOverlay
+import br.com.leitorcuponsfinancas.ui.GuidedTutorialStep
+import br.com.leitorcuponsfinancas.ui.LocalTutorialTargetRegistry
+import br.com.leitorcuponsfinancas.ui.TutorialTargetRegistry
+import br.com.leitorcuponsfinancas.ui.tutorialTarget
 import br.com.leitorcuponsfinancas.ui.HistoryScreen
 import br.com.leitorcuponsfinancas.ui.HomeDashboardState
 import br.com.leitorcuponsfinancas.ui.HomeViewModel
@@ -169,6 +176,43 @@ private fun LeitorCuponsApp(
     var addMenuOpen by rememberSaveable { mutableStateOf(false) }
     var pendingTip by remember { mutableStateOf<AppTip?>(null) }
 
+    val tutorialRegistry = remember { TutorialTargetRegistry() }
+    var tutorialStep by rememberSaveable { mutableIntStateOf(0) }
+    val tutorialSteps = remember {
+        listOf(
+            GuidedTutorialStep(
+                targetKey = "home.hero",
+                title = "Bem-vindo ao Leitor Cupons Finanças",
+                text = "Este é o seu painel principal. Durante o tutorial, a própria tela continua visível e vamos destacar exatamente o que está sendo explicado.",
+            ),
+            GuidedTutorialStep(
+                targetKey = "home.metrics",
+                title = "Seu resumo financeiro",
+                text = "Estes cartões mostram gasto do mês, compras, Produtos Mestres e atalhos de leitura. Eles também são clicáveis.",
+            ),
+            GuidedTutorialStep(
+                targetKey = "bottom.add",
+                title = "Adicionar uma compra",
+                text = "O botão + abre as formas de entrada: QR/chave NFC-e, foto ou PDF e lançamento manual.",
+            ),
+            GuidedTutorialStep(
+                targetKey = "products.hero",
+                title = "Produtos Mestres",
+                text = "Produto Mestre é o produto raiz, sem marca. O tutorial muda para esta tela para você enxergar a função enquanto ela é explicada.",
+            ),
+            GuidedTutorialStep(
+                targetKey = "header.settings",
+                title = "Configurações",
+                text = "A engrenagem reúne a personalização do aplicativo, inclusive tema, paleta e fonte.",
+            ),
+            GuidedTutorialStep(
+                targetKey = "settings.appearance",
+                title = "Personalize o aplicativo",
+                text = "Escolha claro, escuro ou sistema, sua paleta preferida, degradê e ajuste a fonte arrastando o controle.",
+            ),
+        )
+    }
+
     fun showTip(tip: AppTip?) {
         if (
             tip != null &&
@@ -194,6 +238,39 @@ private fun LeitorCuponsApp(
         }
     }
 
+    LaunchedEffect(preferences.onboardingCompleted) {
+        if (!preferences.onboardingCompleted) {
+            tutorialStep = 0
+        }
+    }
+
+    LaunchedEffect(preferences.onboardingCompleted, tutorialStep) {
+        if (!preferences.onboardingCompleted) {
+            addMenuOpen = false
+
+            when (tutorialStep) {
+                0, 1, 2 -> {
+                    taskScreen = null
+                    pagerState.animateScrollToPage(MainTab.HOME.page)
+                }
+
+                3 -> {
+                    taskScreen = null
+                    pagerState.animateScrollToPage(MainTab.PRODUCTS.page)
+                }
+
+                4 -> {
+                    taskScreen = null
+                    pagerState.animateScrollToPage(MainTab.HOME.page)
+                }
+
+                5 -> {
+                    taskScreen = AppScreen.SETTINGS
+                }
+            }
+        }
+    }
+
     BackHandler(
         enabled = addMenuOpen || taskScreen != null || pagerState.currentPage != MainTab.HOME.page,
     ) {
@@ -206,7 +283,19 @@ private fun LeitorCuponsApp(
         }
     }
 
-    Scaffold(
+    BackHandler(enabled = !preferences.onboardingCompleted) {
+        if (tutorialStep > 0) {
+            tutorialStep -= 1
+        } else {
+            preferencesStore.completeOnboarding()
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalTutorialTargetRegistry provides tutorialRegistry,
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Scaffold(
         bottomBar = {
             AppBottomBar(
                 currentPage = pagerState.currentPage,
@@ -415,11 +504,36 @@ private fun LeitorCuponsApp(
         }
     }
 
-    if (!preferences.onboardingCompleted) {
-        AppTutorialDialog(
-            onComplete = preferencesStore::completeOnboarding,
-            onSkip = preferencesStore::completeOnboarding,
-        )
+            if (!preferences.onboardingCompleted) {
+                GuidedTutorialOverlay(
+                    steps = tutorialSteps,
+                    stepIndex = tutorialStep,
+                    registry = tutorialRegistry,
+                    onBack = {
+                        if (tutorialStep > 0) tutorialStep -= 1
+                    },
+                    onNext = {
+                        if (tutorialStep == tutorialSteps.lastIndex) {
+                            preferencesStore.completeOnboarding()
+                            taskScreen = null
+                            scope.launch {
+                                pagerState.animateScrollToPage(MainTab.HOME.page)
+                            }
+                        } else {
+                            tutorialStep += 1
+                        }
+                    },
+                    onSkip = {
+                        preferencesStore.completeOnboarding()
+                        taskScreen = null
+                        scope.launch {
+                            pagerState.animateScrollToPage(MainTab.HOME.page)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
     }
 
     pendingTip?.let { tip ->
@@ -465,7 +579,10 @@ private fun AppHeader(
             )
         }
 
-        IconButton(onClick = onSettings) {
+        IconButton(
+            onClick = onSettings,
+            modifier = Modifier.tutorialTarget("header.settings"),
+        ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Configurações",
@@ -507,6 +624,7 @@ private fun AppBottomBar(
         NavigationBarItem(
             selected = addMenuOpen,
             onClick = onAdd,
+            modifier = Modifier.tutorialTarget("bottom.add"),
             icon = {
                 val visuals = LocalAppVisuals.current
                 Surface(
@@ -710,12 +828,15 @@ private fun HomeScreen(
                 title = "Visão geral",
                 subtitle = dashboard.periodLabel,
                 icon = Icons.Default.TrendingUp,
+                modifier = Modifier.tutorialTarget("home.hero"),
             )
         }
 
         item {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .tutorialTarget("home.metrics"),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 DashboardMetric(
