@@ -584,26 +584,28 @@ fun HistoryScreen(
                 )
             }
 
-            UnrecognizedReviewDialog(
+            TaxonomyProductLinkDialog(
                 item = currentItem,
-                position = reviewIndex + 1,
-                total = unrecognizedItems.size,
                 products = products,
+                nodes = taxonomyNodes,
+                productLinks = taxonomyProductLinks,
                 smartSuggestion = smartSuggestion,
+                saving = linkState.saving,
                 onDismiss = { reviewingItemId = null },
-                onSkip = { reviewingItemId = nextItemId },
-                onSelect = { product ->
-                    historyViewModel.linkItem(currentItem, product)
+                onSelect = { product, taxonomyNodeId ->
+                    historyViewModel.linkItem(
+                        item = currentItem,
+                        product = product,
+                        taxonomyNodeId = taxonomyNodeId,
+                    )
                     reviewingItemId = nextItemId
                 },
-                onCreateSuggested = { suggestion ->
-                    historyViewModel.createProductAndLink(
+                onCreate = { name, taxonomyNodeId, unit ->
+                    historyViewModel.createProductAndLinkTaxonomy(
                         item = currentItem,
-                        name = suggestion.name,
-                        sector = suggestion.sector,
-                        category = suggestion.category,
-                        subcategory = suggestion.subcategory.orEmpty(),
-                        unit = suggestion.unit,
+                        name = name,
+                        taxonomyNodeId = taxonomyNodeId,
+                        unit = unit,
                     )
                     reviewingItemId = nextItemId
                 },
