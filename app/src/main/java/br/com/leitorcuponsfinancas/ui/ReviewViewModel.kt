@@ -121,7 +121,7 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
                 is ProductLinkResult.Success -> {
                     _actionState.value = ReviewActionState(
                         message = buildString {
-                            append(""")
+                            append('"')
                             append(item.displayDescription)
                             append("" foi vinculado a "")
                             append(product.normalizedName)
@@ -303,7 +303,9 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
         }
-    }    private suspend fun applyTaxonomy(
+    }
+
+    private suspend fun applyTaxonomy(
         item: HistoryItemRow,
         productId: Long,
         taxonomyNodeId: Long?,
@@ -324,6 +326,4 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
             )
         }
     }
-
-
 }
