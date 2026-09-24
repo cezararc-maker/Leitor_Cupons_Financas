@@ -10,8 +10,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.leitorcuponsfinancas.data.MerchantEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyNodeEntity
 
 @Composable
 fun MerchantScreen(
@@ -33,6 +36,7 @@ fun MerchantScreen(
     merchantViewModel: MerchantViewModel = viewModel(),
 ) {
     val merchants by merchantViewModel.merchants.collectAsStateWithLifecycle()
+    val segments by merchantViewModel.segments.collectAsStateWithLifecycle()
     val editState by merchantViewModel.editState.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<MerchantEntity?>(null) }
 
@@ -44,19 +48,19 @@ fun MerchantScreen(
         item {
             ScreenHero(
                 title = "Estabelecimentos",
-                subtitle = "${merchants.size} estabelecimento(s) mestre. O CNPJ é usado como identidade quando disponível.",
+                subtitle = "${merchants.size} estabelecimento(s) mestre. O segmento limita as opções da taxonomia durante a vinculação.",
                 icon = Icons.Default.Storefront,
             )
         }
 
         item {
             FlowSectionCard(
-                title = "Como funciona",
-                subtitle = "Variações de razão social e nomes de notas podem apontar para um único estabelecimento.",
+                title = "Segmento do estabelecimento",
+                subtitle = "Mercado, Farmácia, Vestuário e outros segmentos usam árvores diferentes de classificação.",
                 icon = Icons.Default.Storefront,
             ) {
                 Text(
-                    "Você pode ajustar o nome exibido sem alterar o CNPJ das compras já registradas.",
+                    "Depois de classificado, o estabelecimento reaproveita o mesmo segmento nas próximas compras. O CNPJ continua sendo a identidade principal quando disponível.",
                 )
             }
         }
@@ -84,6 +88,8 @@ fun MerchantScreen(
         }
 
         items(merchants, key = { it.id }) { merchant ->
+            val segment = segments.firstOrNull { it.id == merchant.segmentNodeId }
+
             Card(
                 onClick = {
                     merchantViewModel.clearMessage()
@@ -106,51 +112,143 @@ fun MerchantScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Text(
+                        text = "Segmento: ${segment?.name ?: "Não classificado"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (segment == null) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                    )
                 }
             }
         }
     }
 
     editing?.let { merchant ->
-        var name by remember(merchant.id) { mutableStateOf(merchant.displayName) }
+        MerchantEditDialog(
+            merchant = merchant,
+            segments = segments,
+            saving = editState.saving,
+            onDismiss = { editing = null },
+            onSave = { name, segmentId ->
+                merchantViewModel.save(
+                    merchant = merchant,
+                    name = name,
+                    segmentNodeId = segmentId,
+                )
+                editing = null
+            },
+        )
+    }
+}
 
-        AlertDialog(
-            onDismissRequest = { editing = null },
-            title = { Text("Editar estabelecimento") },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Nome exibido") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+@Composable
+private fun MerchantEditDialog(
+    merchant: MerchantEntity,
+    segments: List<TaxonomyNodeEntity>,
+    saving: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (String, Long?) -> Unit,
+) {
+    var name by remember(merchant.id) { mutableStateOf(merchant.displayName) }
+    var segmentId by remember(merchant.id) { mutableStateOf(merchant.segmentNodeId) }
+    var choosingSegment by remember(merchant.id) { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        title = { Text("Editar estabelecimento") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nome exibido") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                merchant.cnpjDigits?.let {
+                    Text(
+                        text = "CNPJ: ${formatCnpj(it)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    merchant.cnpjDigits?.let {
-                        Text(
-                            text = "CNPJ: ${formatCnpj(it)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                }
+
+                OutlinedButton(
+                    onClick = { choosingSegment = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        "Segmento: ${segments.firstOrNull { it.id == segmentId }?.name ?: "Escolher"}",
+                    )
+                }
+
+                Text(
+                    text = "A escolha do segmento controla quais departamentos, categorias e subcategorias aparecerão na vinculação dos produtos.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = name.isNotBlank() && !saving,
+                onClick = { onSave(name, segmentId) },
+            ) {
+                Text("Salvar")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                enabled = !saving,
+                onClick = onDismiss,
+            ) {
+                Text("Cancelar")
+            }
+        },
+    )
+
+    if (choosingSegment) {
+        AlertDialog(
+            onDismissRequest = { choosingSegment = false },
+            title = { Text("Segmento do estabelecimento") },
+            text = {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    item {
+                        OutlinedButton(
+                            onClick = {
+                                segmentId = null
+                                choosingSegment = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Não classificado")
+                        }
+                    }
+                    items(segments, key = { it.id }) { segment ->
+                        Button(
+                            onClick = {
+                                segmentId = segment.id
+                                choosingSegment = false
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(segment.name)
+                        }
                     }
                 }
             },
-            confirmButton = {
-                TextButton(
-                    enabled = name.isNotBlank() && !editState.saving,
-                    onClick = {
-                        merchantViewModel.rename(merchant, name)
-                        editing = null
-                    },
-                ) {
-                    Text("Salvar")
-                }
-            },
+            confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { editing = null }) {
-                    Text("Cancelar")
+                TextButton(onClick = { choosingSegment = false }) {
+                    Text("Fechar")
                 }
             },
         )
