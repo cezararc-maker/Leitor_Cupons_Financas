@@ -124,11 +124,17 @@ class ReceiptRepository(
 
         val manualId = java.util.UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
-        val merchantMaster = merchantDao?.let {
-            MerchantRepository(it).resolveOrCreate(
-                name = normalizedMerchant,
-                cnpj = normalizedCnpj.ifBlank { null },
-            )
+        val merchantMaster = if (
+            merchantName.isNotBlank() || normalizedCnpj.isNotBlank()
+        ) {
+            merchantDao?.let {
+                MerchantRepository(it).resolveOrCreate(
+                    name = merchantName.ifBlank { null },
+                    cnpj = normalizedCnpj.ifBlank { null },
+                )
+            }
+        } else {
+            null
         }
 
         val receipt = ReceiptEntity(
