@@ -91,8 +91,15 @@ class TaxonomyTransferManager(
 
                 if (type == "PRODUTO") {
                     val parent = taxonomyDao.findByStableKey(parentKey)
-                    if (parent == null || name.isBlank()) {
-                        warnings += "Linha ${index + 3}: produto sem classificação pai válida."
+                    if (
+                        parent == null ||
+                        name.isBlank() ||
+                        parent.level !in setOf(
+                            TaxonomyLevel.CATEGORY.code,
+                            TaxonomyLevel.SUBCATEGORY.code,
+                        )
+                    ) {
+                        warnings += "Linha ${index + 3}: produto deve apontar para Categoria ou Subcategoria válida."
                         return@forEachIndexed
                     }
 
@@ -150,14 +157,29 @@ class TaxonomyTransferManager(
                     return@forEachIndexed
                 }
 
-                val parentId = if (level == TaxonomyLevel.SEGMENT) {
+                val parent = if (level == TaxonomyLevel.SEGMENT) {
                     null
                 } else {
-                    taxonomyDao.findByStableKey(parentKey)?.id
+                    taxonomyDao.findByStableKey(parentKey)
                 }
+                val parentId = parent?.id
 
                 if (level != TaxonomyLevel.SEGMENT && parentId == null) {
                     warnings += "Linha ${index + 3}: pai \"$parentKey\" não encontrado."
+                    return@forEachIndexed
+                }
+
+                val expectedParentLevel = when (level) {
+                    TaxonomyLevel.SEGMENT -> null
+                    TaxonomyLevel.DEPARTMENT -> TaxonomyLevel.SEGMENT
+                    TaxonomyLevel.CATEGORY -> TaxonomyLevel.DEPARTMENT
+                    TaxonomyLevel.SUBCATEGORY -> TaxonomyLevel.CATEGORY
+                }
+                if (
+                    expectedParentLevel != null &&
+                    parent?.level != expectedParentLevel.code
+                ) {
+                    warnings += "Linha ${index + 3}: hierarquia inválida para ${level.label}."
                     return@forEachIndexed
                 }
 
