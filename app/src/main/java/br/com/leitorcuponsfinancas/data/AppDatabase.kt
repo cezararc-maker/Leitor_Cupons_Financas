@@ -13,6 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ReceiptEntity::class,
         ReceiptItemEntity::class,
         MerchantProductLinkEntity::class,
+        MerchantEntity::class,
     ],
     version = AppDatabase.VERSION,
     exportSchema = true,
@@ -22,9 +23,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun productDao(): ProductDao
     abstract fun receiptDao(): ReceiptDao
     abstract fun merchantProductLinkDao(): MerchantProductLinkDao
+    abstract fun merchantDao(): MerchantDao
 
     companion object {
-        const val VERSION = 5
+        const val VERSION = 6
 
         @Volatile
         private var instance: AppDatabase? = null
@@ -154,6 +156,81 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS merchants (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        displayName TEXT NOT NULL,
+                        cnpjDigits TEXT,
+                        searchKey TEXT NOT NULL,
+                        active INTEGER NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_merchants_cnpjDigits ON merchants(cnpjDigits)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_merchants_searchKey ON merchants(searchKey)",
+                )
+
+                db.execSQL("ALTER TABLE receipts ADD COLUMN merchantId INTEGER")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_receipts_merchantId ON receipts(merchantId)",
+                )
+
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO merchants(
+                        displayName,
+                        cnpjDigits,
+                        searchKey,
+                        active,
+                        createdAt,
+                        updatedAt
+                    )
+                    SELECT
+                        COALESCE(NULLIF(TRIM(merchantName), ''), 'Estabelecimento'),
+                        REPLACE(REPLACE(REPLACE(COALESCE(merchantCnpj, ''), '.', ''), '/', ''), '-', ''),
+                        UPPER(TRIM(COALESCE(NULLIF(merchantName, ''), 'Estabelecimento'))),
+                        1,
+                        MIN(createdAt),
+                        MAX(createdAt)
+                    FROM receipts
+                    WHERE length(
+                        REPLACE(REPLACE(REPLACE(COALESCE(merchantCnpj, ''), '.', ''), '/', ''), '-', '')
+                    ) = 14
+                    GROUP BY REPLACE(REPLACE(REPLACE(COALESCE(merchantCnpj, ''), '.', ''), '/', ''), '-', '')
+                    """.trimIndent(),
+                )
+
+                db.execSQL(
+                    """
+                    UPDATE receipts
+                    SET merchantId = (
+                        SELECT m.id
+                        FROM merchants m
+                        WHERE m.cnpjDigits = REPLACE(
+                            REPLACE(
+                                REPLACE(COALESCE(receipts.merchantCnpj, ''), '.', ''),
+                                '/',
+                                ''
+                            ),
+                            '-',
+                            ''
+                        )
+                        LIMIT 1
+                    )
+                    WHERE merchantId IS NULL
+                    """.trimIndent(),
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
@@ -161,7 +238,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "leitor_cupons_financas.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build()
                     .also { instance = it }
             }
