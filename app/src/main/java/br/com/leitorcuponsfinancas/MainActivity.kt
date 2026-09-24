@@ -106,6 +106,7 @@ import br.com.leitorcuponsfinancas.ui.ProductViewModel
 import br.com.leitorcuponsfinancas.ui.ProfileScreen
 import br.com.leitorcuponsfinancas.ui.ReceiptOcrScreen
 import br.com.leitorcuponsfinancas.ui.SettingsScreen
+import br.com.leitorcuponsfinancas.ui.TaxonomyScreen
 import br.com.leitorcuponsfinancas.ui.ScreenHero
 import br.com.leitorcuponsfinancas.ui.theme.LeitorCuponsTheme
 import br.com.leitorcuponsfinancas.ui.theme.LocalAppVisuals
@@ -148,6 +149,7 @@ private enum class AppScreen {
     PRICE_COMPARE,
     BACKUP,
     SETTINGS,
+    TAXONOMY,
 }
 
 private enum class MainTab(val page: Int) {
@@ -467,6 +469,11 @@ private fun LeitorCuponsApp(
                                     onThemeModeChange = preferencesStore::setThemeMode,
                                     onColorPaletteChange = preferencesStore::setColorPalette,
                                     onGradientEnabledChange = preferencesStore::setGradientEnabled,
+                                    onTaxonomy = { taskScreen = AppScreen.TAXONOMY },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+
+                                AppScreen.TAXONOMY -> TaxonomyScreen(
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
