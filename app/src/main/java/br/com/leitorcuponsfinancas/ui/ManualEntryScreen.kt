@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Storefront
@@ -409,22 +408,14 @@ fun ManualEntryScreen(
                         singleLine = true,
                     )
 
-                    OutlinedTextField(
+                    PurchaseDateField(
                         value = dateText,
                         onValueChange = {
                             dateText = it
                             viewModel.clearMessage()
                         },
-                        label = { RequiredFieldLabel("Data") },
-                        placeholder = { Text("DD/MM/AAAA") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        leadingIcon = {
-                            androidx.compose.material3.Icon(
-                                Icons.Default.CalendarMonth,
-                                contentDescription = null,
-                            )
-                        },
+                        monthsBack = 6,
                     )
                 }
             }
