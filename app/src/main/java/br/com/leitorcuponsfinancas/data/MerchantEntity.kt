@@ -9,6 +9,7 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["cnpjDigits"], unique = true),
         Index(value = ["searchKey"]),
+        Index(value = ["segmentNodeId"]),
     ],
 )
 data class MerchantEntity(
@@ -17,6 +18,7 @@ data class MerchantEntity(
     val displayName: String,
     val cnpjDigits: String? = null,
     val searchKey: String,
+    val segmentNodeId: Long? = null,
     val active: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
