@@ -79,7 +79,7 @@ object ProductDuplicateDetector {
 
     private fun tokens(value: String): Set<String> =
         value.split(' ')
-            .map(String::trim)
+            .map { it.trim() }
             .filter { it.length >= 3 }
             .toSet()
 }
