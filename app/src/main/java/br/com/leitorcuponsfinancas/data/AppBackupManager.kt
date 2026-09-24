@@ -135,10 +135,14 @@ class AppBackupManager(private val context: Context) {
                 while (cursor.moveToNext()) tables += cursor.getString(0)
             }
             val version = it.version
-            val requiredTables = if (version >= 6) {
-                REQUIRED_TABLES + "merchants"
-            } else {
-                REQUIRED_TABLES
+            val requiredTables = when {
+                version >= 7 -> REQUIRED_TABLES + setOf(
+                    "merchants",
+                    "taxonomy_nodes",
+                    "taxonomy_product_links",
+                )
+                version >= 6 -> REQUIRED_TABLES + "merchants"
+                else -> REQUIRED_TABLES
             }
             check(tables.containsAll(requiredTables)) {
                 "O backup não contém todas as tabelas necessárias."
