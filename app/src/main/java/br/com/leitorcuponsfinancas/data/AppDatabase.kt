@@ -237,6 +237,8 @@ abstract class AppDatabase : RoomDatabase() {
         private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE merchants ADD COLUMN segmentNodeId INTEGER")
+                db.execSQL("ALTER TABLE merchants ADD COLUMN cnaeMain TEXT")
+                db.execSQL("ALTER TABLE merchants ADD COLUMN segmentSource TEXT")
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS index_merchants_segmentNodeId ON merchants(segmentNodeId)",
                 )
