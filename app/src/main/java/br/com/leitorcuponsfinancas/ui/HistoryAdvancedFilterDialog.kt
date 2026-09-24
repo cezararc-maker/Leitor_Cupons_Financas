@@ -46,8 +46,8 @@ fun HistoryAdvancedFilterDialog(
 
     val categories = remember(rows) {
         rows.mapNotNull { it.category?.takeIf(String::isNotBlank) }
-            .distinctBy(String::lowercase)
-            .sortedBy(String::lowercase)
+            .distinctBy { it.lowercase() }
+            .sortedBy { it.lowercase() }
     }
     val merchants = remember(rows) {
         rows.mapNotNull { it.displayMerchantName?.takeIf(String::isNotBlank) }
