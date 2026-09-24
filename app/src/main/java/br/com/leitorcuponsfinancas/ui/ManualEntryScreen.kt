@@ -7,13 +7,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -141,230 +149,307 @@ fun ManualEntryScreen(
         viewModel.clearMessage()
     }
 
-    LazyColumn(
+    Column(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            Text(
-                text = "Lançamento manual",
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Text(
-                text = "Use quando não houver NFC-e ou cupom fiscal. Os campos com * são obrigatórios.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-
-        item {
-            OutlinedTextField(
-                value = description,
-                onValueChange = {
-                    description = it
-                    viewModel.clearMessage()
-                },
-                label = { RequiredFieldLabel("Nome do item") },
-                placeholder = { Text("Ex.: Pão francês") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-        }
-
-        item {
-            OutlinedButton(
-                onClick = {
-                    productDialogError = null
-                    showProducts = true
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (selectedProduct == null) {
-                    RequiredButtonLabel("Vincular Produto Mestre")
-                } else {
-                    Text("Produto mestre: ${selectedProduct?.normalizedName}")
-                }
-            }
-            selectedProduct?.let { product ->
-                Text(
-                    text = listOfNotNull(
-                        product.sector,
-                        product.category,
-                        product.subcategory,
-                    ).joinToString(" • "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        item {
-            OutlinedButton(
-                onClick = { showUnits = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row {
-                    Text(
-                        if (unitType == ManualUnitType.OTHER && customUnit.isNotBlank()) {
-                            "Unidade: ${customUnit.trim().uppercase()}"
-                        } else {
-                            "Unidade: ${unitType.label}"
-                        },
-                    )
-                    RequiredAsterisk()
-                }
-            }
-        }
-
-        if (unitType == ManualUnitType.OTHER) {
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                end = 20.dp,
+                top = 12.dp,
+                bottom = 24.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             item {
-                OutlinedTextField(
-                    value = customUnit,
-                    onValueChange = {
-                        customUnit = it
-                        viewModel.clearMessage()
-                    },
-                    label = { RequiredFieldLabel("Tipo de unidade") },
-                    placeholder = { Text("Ex.: Caixa, dúzia, bandeja...") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
+                ScreenHero(
+                    title = "Nova compra",
+                    subtitle = "Preencha apenas o essencial. O app reaproveita cadastros e calcula o total para você.",
+                    icon = Icons.Default.ShoppingCart,
                 )
             }
-        }
 
-        item {
-            OutlinedTextField(
-                value = quantity,
-                onValueChange = {
-                    quantity = it
-                    viewModel.clearMessage()
-                },
-                label = { RequiredFieldLabel(unitType.quantityLabel) },
-                placeholder = {
-                    Text(
-                        when (unitType) {
-                            ManualUnitType.KILOGRAM -> "Ex.: 0,750"
-                            ManualUnitType.LITER -> "Ex.: 1,5"
-                            else -> "Ex.: 10"
-                        },
-                    )
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-        }
-
-        item {
-            OutlinedTextField(
-                value = unitPrice,
-                onValueChange = {
-                    unitPrice = it
-                    viewModel.clearMessage()
-                },
-                label = { RequiredFieldLabel(priceLabel) },
-                placeholder = { Text("Ex.: 1,50") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-        }
-
-        item {
-            Card(Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+            item {
+                FlowSectionCard(
+                    title = "O que você comprou?",
+                    subtitle = "Informe o item e vincule ao Produto Mestre raiz.",
+                    icon = Icons.Default.ShoppingCart,
                 ) {
-                    Text(
-                        text = "Valor total",
-                        style = MaterialTheme.typography.titleMedium,
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = {
+                            description = it
+                            viewModel.clearMessage()
+                        },
+                        label = { RequiredFieldLabel("Nome do item") },
+                        placeholder = { Text("Ex.: Macarrão Renata espaguete 500 g") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
                     )
-                    Text(
-                        text = calculatedTotal?.let {
-                            "R$ ${ManualEntryCalculator.formatMoney(it)}"
-                        } ?: "Preencha quantidade e valor para calcular.",
-                        style = MaterialTheme.typography.headlineSmall,
-                    )
-                    Text(
-                        text = "Calculado automaticamente: quantidade × preço.",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        }
 
-        item {
-            SuggestionTextField(
-                value = merchantName,
-                onValueChange = {
-                    merchantName = it
-                    viewModel.clearMessage()
-                },
-                suggestions = merchantSuggestions.map { it.name },
-                label = { Text("Nome do estabelecimento / empresa (opcional)") },
-                placeholder = { Text("Ex.: Padaria Pão de Queijo") },
-                modifier = Modifier.fillMaxWidth(),
-                onSuggestionSelected = { selected ->
-                    merchantName = selected
-                    merchantSuggestions
-                        .firstOrNull { it.name.equals(selected, ignoreCase = true) }
-                        ?.cnpj
-                        ?.filter(Char::isDigit)
-                        ?.takeIf { it.length == 14 }
-                        ?.let { merchantCnpj = it }
-                    viewModel.clearMessage()
-                },
-            )
-        }
+                    OutlinedButton(
+                        onClick = {
+                            productDialogError = null
+                            showProducts = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (selectedProduct == null) {
+                            RequiredButtonLabel("Vincular Produto Mestre")
+                        } else {
+                            Text("Produto Mestre: ${selectedProduct?.normalizedName}")
+                        }
+                    }
 
-        item {
-            OutlinedTextField(
-                value = merchantCnpj,
-                onValueChange = { value ->
-                    merchantCnpj = value.filter { it.isDigit() }.take(14)
-                    viewModel.clearMessage()
-                },
-                label = { Text("CNPJ do estabelecimento (opcional)") },
-                placeholder = { Text("14 dígitos") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                supportingText = {
-                    Text("Se informado, o CNPJ fica salvo no lançamento.")
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-        }
+                    selectedProduct?.let { product ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                Text(
+                                    text = product.normalizedName,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Text(
+                                    text = listOfNotNull(
+                                        product.sector,
+                                        product.category,
+                                        product.subcategory,
+                                    ).joinToString(" • "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    }
 
-        item {
-            OutlinedTextField(
-                value = dateText,
-                onValueChange = {
-                    dateText = it
-                    viewModel.clearMessage()
-                },
-                label = { RequiredFieldLabel("Data") },
-                placeholder = { Text("DD/MM/AAAA") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-        }
+                    when (val suggestion = smartSuggestion) {
+                        is SmartProductSuggestion.ExistingProduct -> {
+                            if (selectedProduct?.id != suggestion.product.id) {
+                                AnimatedInfoCard(
+                                    visible = true,
+                                    title = "Sugestão inteligente",
+                                    message = "${suggestion.product.normalizedName} • ${suggestion.confidence}% de compatibilidade",
+                                )
+                                OutlinedButton(
+                                    onClick = { applyProduct(suggestion.product) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text("Usar ${suggestion.product.normalizedName}")
+                                }
+                            }
+                        }
 
-        saveState.error?.let { error ->
-            item {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp)) {
-                        Text(
-                            text = "Não foi possível salvar",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(error)
+                        is SmartProductSuggestion.NewProduct -> {
+                            AnimatedInfoCard(
+                                visible = true,
+                                title = "Possível Produto Mestre",
+                                message = "${suggestion.name} • ${suggestion.confidence}% de compatibilidade. Abra Vincular Produto Mestre para revisar.",
+                            )
+                        }
+
+                        null -> Unit
                     }
                 }
             }
+
+            item {
+                FlowSectionCard(
+                    title = "Quanto?",
+                    subtitle = "Quantidade, unidade e valor. O total é calculado automaticamente.",
+                    icon = Icons.Default.Payments,
+                    accent = MaterialTheme.colorScheme.secondary,
+                ) {
+                    OutlinedButton(
+                        onClick = { showUnits = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row {
+                            Text(
+                                if (unitType == ManualUnitType.OTHER && customUnit.isNotBlank()) {
+                                    "Unidade: ${customUnit.trim().uppercase()}"
+                                } else {
+                                    "Unidade: ${unitType.label}"
+                                },
+                            )
+                            RequiredAsterisk()
+                        }
+                    }
+
+                    if (unitType == ManualUnitType.OTHER) {
+                        OutlinedTextField(
+                            value = customUnit,
+                            onValueChange = {
+                                customUnit = it
+                                viewModel.clearMessage()
+                            },
+                            label = { RequiredFieldLabel("Tipo de unidade") },
+                            placeholder = { Text("Ex.: Caixa, dúzia, bandeja...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = quantity,
+                            onValueChange = {
+                                quantity = it
+                                viewModel.clearMessage()
+                            },
+                            label = { RequiredFieldLabel(unitType.quantityLabel) },
+                            placeholder = {
+                                Text(
+                                    when (unitType) {
+                                        ManualUnitType.KILOGRAM -> "0,750"
+                                        ManualUnitType.LITER -> "1,5"
+                                        else -> "2"
+                                    },
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                        )
+
+                        OutlinedTextField(
+                            value = unitPrice,
+                            onValueChange = {
+                                unitPrice = it
+                                viewModel.clearMessage()
+                            },
+                            label = { RequiredFieldLabel(priceLabel) },
+                            placeholder = { Text("5,90") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                        )
+                    }
+
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            Text(
+                                text = "TOTAL",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                            Text(
+                                text = calculatedTotal?.let {
+                                    "R$ ${ManualEntryCalculator.formatMoney(it)}"
+                                } ?: "—",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                            Text(
+                                text = "Quantidade × valor unitário",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                FlowSectionCard(
+                    title = "Onde e quando?",
+                    subtitle = "O estabelecimento é sugerido a partir do seu histórico.",
+                    icon = Icons.Default.Storefront,
+                    accent = MaterialTheme.colorScheme.tertiary,
+                ) {
+                    SuggestionTextField(
+                        value = merchantName,
+                        onValueChange = {
+                            merchantName = it
+                            viewModel.clearMessage()
+                        },
+                        suggestions = merchantSuggestions.map { it.name },
+                        label = { Text("Estabelecimento (opcional)") },
+                        placeholder = { Text("Ex.: Atacadão") },
+                        modifier = Modifier.fillMaxWidth(),
+                        onSuggestionSelected = { selected ->
+                            merchantName = selected
+                            merchantSuggestions
+                                .firstOrNull { it.name.equals(selected, ignoreCase = true) }
+                                ?.cnpj
+                                ?.filter(Char::isDigit)
+                                ?.takeIf { it.length == 14 }
+                                ?.let { merchantCnpj = it }
+                            viewModel.clearMessage()
+                        },
+                    )
+
+                    OutlinedTextField(
+                        value = merchantCnpj,
+                        onValueChange = { value ->
+                            merchantCnpj = value.filter { it.isDigit() }.take(14)
+                            viewModel.clearMessage()
+                        },
+                        label = { Text("CNPJ (opcional)") },
+                        placeholder = { Text("14 dígitos") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+
+                    OutlinedTextField(
+                        value = dateText,
+                        onValueChange = {
+                            dateText = it
+                            viewModel.clearMessage()
+                        },
+                        label = { RequiredFieldLabel("Data") },
+                        placeholder = { Text("DD/MM/AAAA") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        leadingIcon = {
+                            androidx.compose.material3.Icon(
+                                Icons.Default.CalendarMonth,
+                                contentDescription = null,
+                            )
+                        },
+                    )
+                }
+            }
+
+            saveState.error?.let { error ->
+                item {
+                    AnimatedInfoCard(
+                        visible = true,
+                        title = "Não foi possível salvar",
+                        message = error,
+                        accent = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         }
 
-        item {
+        Surface(
+            tonalElevation = 3.dp,
+            shadowElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             Button(
                 enabled = canSave,
                 onClick = {
@@ -379,13 +464,15 @@ fun ManualEntryScreen(
                         productId = selectedProduct?.id,
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
             ) {
                 Text(
                     if (saveState.saving) {
                         "Salvando..."
                     } else {
-                        "Salvar lançamento manual"
+                        "Salvar compra"
                     },
                 )
             }
