@@ -134,8 +134,16 @@ class AppBackupManager(private val context: Context) {
             it.rawQuery("SELECT name FROM sqlite_master WHERE type = 'table'", null).use { cursor ->
                 while (cursor.moveToNext()) tables += cursor.getString(0)
             }
-            check(tables.containsAll(REQUIRED_TABLES)) { "O backup não contém todas as tabelas necessárias." }
-            it.version
+            val version = it.version
+            val requiredTables = if (version >= 6) {
+                REQUIRED_TABLES + "merchants"
+            } else {
+                REQUIRED_TABLES
+            }
+            check(tables.containsAll(requiredTables)) {
+                "O backup não contém todas as tabelas necessárias."
+            }
+            version
         }
     }
 
