@@ -48,8 +48,14 @@ class AppPreferencesStore private constructor(context: Context) {
     }
 
     fun resetTips() {
-        preferences.edit().remove(KEY_SEEN_TIPS).apply()
-        _state.value = _state.value.copy(seenTips = emptySet())
+        preferences.edit()
+            .remove(KEY_SEEN_TIPS)
+            .putBoolean(KEY_SHOW_CONTEXTUAL_TIPS, true)
+            .apply()
+        _state.value = _state.value.copy(
+            showContextualTips = true,
+            seenTips = emptySet(),
+        )
     }
 
     private fun load(): AppPreferences = AppPreferences(
