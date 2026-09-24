@@ -36,6 +36,7 @@ class ManualEntryViewModel(application: Application) : AndroidViewModel(applicat
         receiptDao = database.receiptDao(),
         productDao = database.productDao(),
         linkDao = database.merchantProductLinkDao(),
+        merchantDao = database.merchantDao(),
     )
 
     val products: StateFlow<List<ProductEntity>> = productRepository.products.stateIn(
