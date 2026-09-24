@@ -11,12 +11,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -57,6 +64,31 @@ fun ProductScreen(
     var showForm by rememberSaveable { mutableStateOf(false) }
     var saveError by rememberSaveable { mutableStateOf<String?>(null) }
 
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val categories = remember(products) {
+        products
+            .map { it.category }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .sortedBy { it.lowercase() }
+    }
+
+    val filteredProducts = remember(products, searchQuery, selectedCategory) {
+        products.filter { product ->
+            val matchesCategory = selectedCategory == null ||
+                product.category.equals(selectedCategory, ignoreCase = true)
+            val query = searchQuery.trim()
+            val matchesQuery = query.isBlank() ||
+                product.normalizedName.contains(query, ignoreCase = true) ||
+                product.category.contains(query, ignoreCase = true) ||
+                product.sector.contains(query, ignoreCase = true) ||
+                product.subcategory.orEmpty().contains(query, ignoreCase = true)
+            matchesCategory && matchesQuery
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
@@ -67,58 +99,112 @@ fun ProductScreen(
                     showForm = true
                 },
             ) {
-                Text("+")
+                Icon(Icons.Default.Add, contentDescription = "Adicionar Produto Mestre")
             }
         },
     ) { padding ->
-        if (products.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = "Nenhum produto cadastrado",
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Use o botão + para cadastrar o primeiro Produto Mestre. Cadastre o produto raiz, sem marca: por exemplo, Macarrão, Leite ou Arroz.",
-                    style = MaterialTheme.typography.bodyLarge,
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                ScreenHero(
+                    title = "Produtos Mestres",
+                    subtitle = "${products.size} produto(s) raiz. Marcas e descrições comerciais ficam nos aliases aprendidos.",
+                    icon = Icons.Default.Inventory2,
                 )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
+
+            item {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Buscar Produto Mestre") },
+                    placeholder = { Text("Ex.: Macarrão") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null)
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            if (categories.isNotEmpty()) {
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Text(
-                                text = "Produto Mestre = produto raiz",
-                                style = MaterialTheme.typography.titleSmall,
+                        item {
+                            AssistChip(
+                                onClick = { selectedCategory = null },
+                                label = { Text("Todos") },
                             )
-                            Text(
-                                text = "Cadastre sem marca ou variação comercial. Ex.: Macarrão. Descrições como Renata, Liane e códigos de cada loja ficam nos vínculos e aliases aprendidos.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        }
+                        items(categories) { category ->
+                            AssistChip(
+                                onClick = {
+                                    selectedCategory = if (
+                                        selectedCategory.equals(category, ignoreCase = true)
+                                    ) {
+                                        null
+                                    } else {
+                                        category
+                                    }
+                                },
+                                label = { Text(category) },
                             )
                         }
                     }
                 }
+            }
 
-                items(products, key = { it.id }) { product ->
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = "Produto Mestre = produto raiz",
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            text = "Macarrão Renata, Liane ou Galo apontam para Macarrão. Macarrão instantâneo permanece separado por representar outro tipo de produto.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            if (filteredProducts.isEmpty()) {
+                item {
+                    FlowSectionCard(
+                        title = if (products.isEmpty()) {
+                            "Nenhum Produto Mestre cadastrado"
+                        } else {
+                            "Nenhum resultado"
+                        },
+                        subtitle = if (products.isEmpty()) {
+                            "Use o botão + para cadastrar o primeiro produto raiz."
+                        } else {
+                            "Ajuste a busca ou selecione outra categoria."
+                        },
+                        icon = Icons.Default.Inventory2,
+                    ) {
+                        Text(
+                            text = "Evite criar variações por marca. O objetivo é consolidar seus gastos pelo produto que realmente importa para a análise.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            } else {
+                items(filteredProducts, key = { it.id }) { product ->
                     ProductCard(
                         product = product,
                         onClick = {
