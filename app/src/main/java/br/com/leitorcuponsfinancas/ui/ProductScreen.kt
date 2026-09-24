@@ -85,7 +85,7 @@ fun ProductScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Use o botão + para cadastrar manualmente o primeiro produto.",
+                    text = "Use o botão + para cadastrar o primeiro Produto Mestre. Cadastre o produto raiz, sem marca: por exemplo, Macarrão, Leite ou Arroz.",
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
@@ -97,6 +97,27 @@ fun ProductScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                text = "Produto Mestre = produto raiz",
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                text = "Cadastre sem marca ou variação comercial. Ex.: Macarrão. Descrições como Renata, Liane e códigos de cada loja ficam nos vínculos e aliases aprendidos.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
                 items(products, key = { it.id }) { product ->
                     ProductCard(
                         product = product,
@@ -263,18 +284,27 @@ private fun ProductFormDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (product == null) "Cadastrar produto" else "Editar produto")
+            Text(if (product == null) "Cadastrar Produto Mestre" else "Editar Produto Mestre")
         },
         text = {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 item {
+                    Card(Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Use um nome genérico e estável, sem marca. Ex.: Macarrão. Macarrão instantâneo permanece um Produto Mestre separado porque representa outro tipo de item.",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(12.dp),
+                        )
+                    }
+                }
+                item {
                     SuggestionTextField(
                         value = name,
                         onValueChange = { name = it },
                         suggestions = nameSuggestions,
-                        label = { Text("Nome do produto *") },
+                        label = { Text("Produto raiz *") },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -283,8 +313,8 @@ private fun ProductFormDialog(
                         value = fiscalDescription,
                         onValueChange = { fiscalDescription = it },
                         label = { Text("Descrição na NFC-e (opcional)") },
-                        placeholder = { Text("Ex.: ARROZ TIO LAUTERIOT1") },
-                        supportingText = { Text("Informe exatamente como o produto aparece na nota, ou deixe em branco e ensine depois pelo Histórico.") },
+                        placeholder = { Text("Ex.: MAC RENATA ESPAGUETE 500G") },
+                        supportingText = { Text("Aqui pode ficar uma descrição fiscal real, inclusive com marca. Ela ajuda no reconhecimento, mas não altera o nome raiz do Produto Mestre.") },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
