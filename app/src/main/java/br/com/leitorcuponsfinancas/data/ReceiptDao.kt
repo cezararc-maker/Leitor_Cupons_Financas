@@ -50,6 +50,7 @@ interface ReceiptDao {
             r.issuedDate AS issuedDate,
             r.issuedAt AS issuedAt,
             r.merchantName AS merchantName,
+            m.displayName AS merchantMasterName,
             r.merchantCnpj AS merchantCnpj,
             r.number AS receiptNumber,
             r.series AS receiptSeries,
@@ -76,6 +77,7 @@ interface ReceiptDao {
         FROM receipt_items ri
         INNER JOIN receipts r ON r.id = ri.receiptId
         LEFT JOIN products p ON p.id = ri.productId
+        LEFT JOIN merchants m ON m.id = r.merchantId
         WHERE r.issuedDate IS NOT NULL
           AND r.issuedDate BETWEEN :startDate AND :endDate
         ORDER BY r.issuedDate DESC, r.id DESC, ri.lineNumber ASC
@@ -85,6 +87,48 @@ interface ReceiptDao {
         startDate: String,
         endDate: String,
     ): Flow<List<HistoryItemRow>>
+
+    @Query(
+        """
+        SELECT
+            ri.id AS itemId,
+            r.id AS receiptId,
+            r.issuedDate AS issuedDate,
+            r.issuedAt AS issuedAt,
+            r.merchantName AS merchantName,
+            m.displayName AS merchantMasterName,
+            r.merchantCnpj AS merchantCnpj,
+            r.number AS receiptNumber,
+            r.series AS receiptSeries,
+            r.sourceType AS sourceType,
+            r.createdByName AS createdByName,
+            ri.fiscalDescription AS fiscalDescription,
+            ri.itemCode AS itemCode,
+            ri.quantity AS quantity,
+            ri.unit AS unit,
+            ri.unitPrice AS unitPrice,
+            ri.totalAmount AS totalAmount,
+            ri.productId AS productId,
+            ri.correctedDescription AS correctedDescription,
+            ri.correctedQuantity AS correctedQuantity,
+            ri.correctedUnit AS correctedUnit,
+            ri.correctedUnitPrice AS correctedUnitPrice,
+            ri.correctedTotalAmount AS correctedTotalAmount,
+            ri.correctedByName AS correctedByName,
+            ri.correctedAt AS correctedAt,
+            p.normalizedName AS productName,
+            p.sector AS sector,
+            p.category AS category,
+            p.subcategory AS subcategory
+        FROM receipt_items ri
+        INNER JOIN receipts r ON r.id = ri.receiptId
+        LEFT JOIN products p ON p.id = ri.productId
+        LEFT JOIN merchants m ON m.id = r.merchantId
+        WHERE ri.productId IS NULL
+        ORDER BY COALESCE(r.issuedDate, '') DESC, r.id DESC, ri.lineNumber ASC
+        """,
+    )
+    fun observeItemsNeedingReview(): Flow<List<HistoryItemRow>>
 
     @Query("UPDATE receipt_items SET productId = :productId WHERE id = :itemId")
     suspend fun updateItemProduct(
