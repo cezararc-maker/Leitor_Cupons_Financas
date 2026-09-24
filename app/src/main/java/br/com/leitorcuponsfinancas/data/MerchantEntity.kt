@@ -19,6 +19,8 @@ data class MerchantEntity(
     val cnpjDigits: String? = null,
     val searchKey: String,
     val segmentNodeId: Long? = null,
+    val cnaeMain: String? = null,
+    val segmentSource: String? = null,
     val active: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
