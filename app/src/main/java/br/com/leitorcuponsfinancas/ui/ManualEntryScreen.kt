@@ -37,7 +37,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.leitorcuponsfinancas.data.MerchantEntity
 import br.com.leitorcuponsfinancas.data.ProductEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyLevel
+import br.com.leitorcuponsfinancas.data.TaxonomyNodeEntity
+import br.com.leitorcuponsfinancas.data.TaxonomyProductLinkEntity
+import br.com.leitorcuponsfinancas.domain.ProductNormalizer
 import br.com.leitorcuponsfinancas.domain.ProductSuggestionEngine
 import br.com.leitorcuponsfinancas.domain.SmartProductSuggestion
 import java.time.LocalDate
@@ -50,6 +55,9 @@ fun ManualEntryScreen(
     viewModel: ManualEntryViewModel = viewModel(),
 ) {
     val products by viewModel.products.collectAsStateWithLifecycle()
+    val taxonomyNodes by viewModel.taxonomyNodes.collectAsStateWithLifecycle()
+    val taxonomyProductLinks by viewModel.taxonomyProductLinks.collectAsStateWithLifecycle()
+    val merchants by viewModel.merchants.collectAsStateWithLifecycle()
     val learnedLinks by viewModel.learnedLinks.collectAsStateWithLifecycle()
     val merchantSuggestions by viewModel.merchantSuggestions.collectAsStateWithLifecycle()
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
@@ -65,6 +73,7 @@ fun ManualEntryScreen(
     var customUnit by remember { mutableStateOf("") }
     var unitPrice by remember { mutableStateOf("") }
     var selectedProduct by remember { mutableStateOf<ProductEntity?>(null) }
+    var selectedTaxonomyNodeId by remember { mutableStateOf<Long?>(null) }
     var showProducts by remember { mutableStateOf(false) }
     var showUnits by remember { mutableStateOf(false) }
     var productDialogError by remember { mutableStateOf<String?>(null) }
@@ -81,6 +90,7 @@ fun ManualEntryScreen(
             customUnit = ""
             unitPrice = ""
             selectedProduct = null
+            selectedTaxonomyNodeId = null
             showProducts = false
             showUnits = false
             productDialogError = null
@@ -128,6 +138,11 @@ fun ManualEntryScreen(
 
     fun applyProduct(product: ProductEntity) {
         selectedProduct = product
+        selectedTaxonomyNodeId = inferManualTaxonomyNodeId(
+            product = product,
+            nodes = taxonomyNodes,
+            links = taxonomyProductLinks,
+        )
 
         val productUnit = product.unit.trim().uppercase()
         val recognizedUnit = ManualUnitType.entries.firstOrNull {
@@ -146,6 +161,15 @@ fun ManualEntryScreen(
         productDialogError = null
         viewModel.clearMessage()
     }
+
+    val matchedMerchant = remember(merchantName, merchantCnpj, merchants) {
+        findManualMerchant(
+            merchants = merchants,
+            merchantName = merchantName,
+            merchantCnpj = merchantCnpj,
+        )
+    }
+    val merchantSegmentNodeId = matchedMerchant?.segmentNodeId
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -449,6 +473,7 @@ fun ManualEntryScreen(
                         unit = effectiveUnit,
                         unitPrice = unitPrice,
                         productId = selectedProduct?.id,
+                        taxonomyNodeId = selectedTaxonomyNodeId,
                     )
                 },
                 modifier = Modifier
@@ -519,22 +544,32 @@ fun ManualEntryScreen(
             description = description,
             effectiveUnit = effectiveUnit,
             products = products,
+            taxonomyNodes = taxonomyNodes,
+            taxonomyProductLinks = taxonomyProductLinks,
+            segmentLockedTo = merchantSegmentNodeId,
             suggestion = smartSuggestion,
             currentProduct = selectedProduct,
+            currentTaxonomyNodeId = selectedTaxonomyNodeId,
             error = productDialogError,
             onDismiss = {
                 showProducts = false
                 productDialogError = null
             },
-            onSelect = ::applyProduct,
-            onCreate = { name, sector, category, subcategory, unit ->
-                viewModel.createProductMaster(
+            onSelect = { product, taxonomyNodeId ->
+                selectedTaxonomyNodeId = taxonomyNodeId
+                viewModel.linkProductTaxonomy(product.id, taxonomyNodeId)
+                applyProduct(product)
+                selectedTaxonomyNodeId = taxonomyNodeId
+            },
+            onCreate = { name, taxonomyNodeId, unit ->
+                viewModel.createProductMasterTaxonomy(
                     name = name,
-                    sector = sector,
-                    category = category,
-                    subcategory = subcategory,
+                    taxonomyNodeId = taxonomyNodeId,
                     unit = unit,
-                    onCreated = ::applyProduct,
+                    onCreated = { product ->
+                        applyProduct(product)
+                        selectedTaxonomyNodeId = taxonomyNodeId
+                    },
                     onError = { productDialogError = it },
                 )
             },
