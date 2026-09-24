@@ -24,6 +24,10 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -40,48 +44,109 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.leitorcuponsfinancas.data.AppPreferences
+import br.com.leitorcuponsfinancas.data.AppPreferencesStore
+import br.com.leitorcuponsfinancas.ui.AppTutorialDialog
 import br.com.leitorcuponsfinancas.ui.BackArrowButton
 import br.com.leitorcuponsfinancas.ui.BackupScreen
+import br.com.leitorcuponsfinancas.ui.ContextualTipDialog
 import br.com.leitorcuponsfinancas.ui.HistoryScreen
+import br.com.leitorcuponsfinancas.ui.HomeDashboardState
+import br.com.leitorcuponsfinancas.ui.HomeViewModel
 import br.com.leitorcuponsfinancas.ui.ManualEntryScreen
 import br.com.leitorcuponsfinancas.ui.NfceScreen
 import br.com.leitorcuponsfinancas.ui.ProductScreen
 import br.com.leitorcuponsfinancas.ui.ProductViewModel
 import br.com.leitorcuponsfinancas.ui.ProfileScreen
 import br.com.leitorcuponsfinancas.ui.ReceiptOcrScreen
+import br.com.leitorcuponsfinancas.ui.SettingsScreen
 import br.com.leitorcuponsfinancas.ui.theme.LeitorCuponsTheme
+import java.text.NumberFormat
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            LeitorCuponsTheme {
-                Surface(Modifier.fillMaxSize()) { LeitorCuponsApp() }
+            val preferencesStore = remember {
+                AppPreferencesStore.getInstance(applicationContext)
+            }
+            val preferences by preferencesStore.state.collectAsStateWithLifecycle()
+
+            LeitorCuponsTheme(fontScale = preferences.fontScale) {
+                Surface(Modifier.fillMaxSize()) {
+                    LeitorCuponsApp(
+                        preferences = preferences,
+                        preferencesStore = preferencesStore,
+                    )
+                }
             }
         }
     }
 }
 
-private enum class AppScreen { HOME, PRODUCTS, NFCE, OCR, HISTORY, MANUAL, PROFILE, BACKUP }
+private enum class AppScreen {
+    HOME,
+    PRODUCTS,
+    NFCE,
+    OCR,
+    HISTORY,
+    MANUAL,
+    PROFILE,
+    BACKUP,
+    SETTINGS,
+}
+
+private data class AppTip(
+    val key: String,
+    val title: String,
+    val text: String,
+)
 
 @Composable
-private fun LeitorCuponsApp(productViewModel: ProductViewModel = viewModel()) {
+private fun LeitorCuponsApp(
+    preferences: AppPreferences,
+    preferencesStore: AppPreferencesStore,
+    productViewModel: ProductViewModel = viewModel(),
+    homeViewModel: HomeViewModel = viewModel(),
+) {
     val products by productViewModel.products.collectAsStateWithLifecycle()
     val learnedLinks by productViewModel.learnedLinks.collectAsStateWithLifecycle()
+    val dashboard by homeViewModel.dashboard.collectAsStateWithLifecycle()
+
     var screen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
     var addMenuOpen by rememberSaveable { mutableStateOf(false) }
+    var pendingTip by remember { mutableStateOf<AppTip?>(null) }
+
+    fun navigate(target: AppScreen, tip: AppTip? = null) {
+        addMenuOpen = false
+        screen = target
+        if (
+            tip != null &&
+            preferences.showContextualTips &&
+            tip.key !in preferences.seenTips
+        ) {
+            pendingTip = tip
+        }
+    }
 
     BackHandler(enabled = addMenuOpen || screen != AppScreen.HOME) {
-        if (addMenuOpen) addMenuOpen = false else screen = AppScreen.HOME
+        if (addMenuOpen) {
+            addMenuOpen = false
+        } else {
+            screen = AppScreen.HOME
+        }
     }
 
     Scaffold(
@@ -89,11 +154,29 @@ private fun LeitorCuponsApp(productViewModel: ProductViewModel = viewModel()) {
             AppBottomBar(
                 current = screen,
                 addMenuOpen = addMenuOpen,
-                onHome = { addMenuOpen = false; screen = AppScreen.HOME },
-                onHistory = { addMenuOpen = false; screen = AppScreen.HISTORY },
+                onHome = { navigate(AppScreen.HOME) },
+                onHistory = {
+                    navigate(
+                        AppScreen.HISTORY,
+                        AppTip(
+                            key = "history",
+                            title = "Histórico e gastos",
+                            text = "Aqui você consulta compras por período, pesquisa itens e corrige informações quando necessário.",
+                        ),
+                    )
+                },
                 onAdd = { addMenuOpen = !addMenuOpen },
-                onProducts = { addMenuOpen = false; screen = AppScreen.PRODUCTS },
-                onProfile = { addMenuOpen = false; screen = AppScreen.PROFILE },
+                onProducts = {
+                    navigate(
+                        AppScreen.PRODUCTS,
+                        AppTip(
+                            key = "products",
+                            title = "Produtos mestres",
+                            text = "Cadastre um produto uma única vez e reutilize setores, categorias e subcategorias sugeridos pelo próprio aplicativo.",
+                        ),
+                    )
+                },
+                onProfile = { navigate(AppScreen.PROFILE) },
             )
         },
     ) { innerPadding ->
@@ -103,16 +186,21 @@ private fun LeitorCuponsApp(productViewModel: ProductViewModel = viewModel()) {
                 .padding(innerPadding),
         ) {
             Column(Modifier.fillMaxSize()) {
-                AppHeader()
+                AppHeader(onSettings = { navigate(AppScreen.SETTINGS) })
                 HorizontalDivider()
+
                 when (screen) {
                     AppScreen.HOME -> HomeScreen(
                         productCount = products.size,
-                        onHistory = { screen = AppScreen.HISTORY },
-                        onProducts = { screen = AppScreen.PRODUCTS },
-                        onBackup = { screen = AppScreen.BACKUP },
+                        dashboard = dashboard,
+                        onHistory = { navigate(AppScreen.HISTORY) },
+                        onProducts = { navigate(AppScreen.PRODUCTS) },
+                        onBackup = { navigate(AppScreen.BACKUP) },
                     )
-                    else -> SecondaryScreenScaffold(onBack = { screen = AppScreen.HOME }) {
+
+                    else -> SecondaryScreenScaffold(
+                        onBack = { screen = AppScreen.HOME },
+                    ) {
                         when (screen) {
                             AppScreen.PRODUCTS -> ProductScreen(
                                 products = products,
@@ -121,27 +209,45 @@ private fun LeitorCuponsApp(productViewModel: ProductViewModel = viewModel()) {
                                 onDeactivate = productViewModel::deactivate,
                                 modifier = Modifier.fillMaxSize(),
                             )
+
                             AppScreen.NFCE -> NfceScreen(
                                 onBack = { screen = AppScreen.HOME },
                                 modifier = Modifier.fillMaxSize(),
                             )
-                            AppScreen.OCR -> ReceiptOcrScreen(modifier = Modifier.fillMaxSize())
+
+                            AppScreen.OCR -> ReceiptOcrScreen(
+                                modifier = Modifier.fillMaxSize(),
+                            )
+
                             AppScreen.HISTORY -> HistoryScreen(
                                 onBack = { screen = AppScreen.HOME },
                                 modifier = Modifier.fillMaxSize(),
                             )
+
                             AppScreen.MANUAL -> ManualEntryScreen(
                                 onBack = { screen = AppScreen.HOME },
                                 modifier = Modifier.fillMaxSize(),
                             )
+
                             AppScreen.PROFILE -> ProfileScreen(
                                 onBack = { screen = AppScreen.HOME },
                                 modifier = Modifier.fillMaxSize(),
                             )
+
                             AppScreen.BACKUP -> BackupScreen(
                                 onBack = { screen = AppScreen.HOME },
                                 modifier = Modifier.fillMaxSize(),
                             )
+
+                            AppScreen.SETTINGS -> SettingsScreen(
+                                preferences = preferences,
+                                onFontScaleChange = preferencesStore::setFontScale,
+                                onShowTipsChange = preferencesStore::setShowContextualTips,
+                                onRestartTutorial = preferencesStore::restartOnboarding,
+                                onResetTips = preferencesStore::resetTips,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+
                             AppScreen.HOME -> Unit
                         }
                     }
@@ -153,32 +259,94 @@ private fun LeitorCuponsApp(productViewModel: ProductViewModel = viewModel()) {
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 12.dp),
-                    onNfce = { addMenuOpen = false; screen = AppScreen.NFCE },
-                    onOcr = { addMenuOpen = false; screen = AppScreen.OCR },
-                    onManual = { addMenuOpen = false; screen = AppScreen.MANUAL },
+                    onNfce = {
+                        navigate(
+                            AppScreen.NFCE,
+                            AppTip(
+                                key = "nfce",
+                                title = "QR Code ou chave NFC-e",
+                                text = "Use esta opção quando você tiver o QR Code ou a chave de acesso da NFC-e.",
+                            ),
+                        )
+                    },
+                    onOcr = {
+                        navigate(
+                            AppScreen.OCR,
+                            AppTip(
+                                key = "ocr",
+                                title = "Foto, imagem ou PDF",
+                                text = "O aplicativo identifica os dados do cupom e sempre apresenta uma etapa de revisão antes de salvar.",
+                            ),
+                        )
+                    },
+                    onManual = {
+                        navigate(
+                            AppScreen.MANUAL,
+                            AppTip(
+                                key = "manual",
+                                title = "Lançamento manual",
+                                text = "Use as sugestões de produtos e estabelecimentos já conhecidos para preencher mais rápido e evitar duplicidades.",
+                            ),
+                        )
+                    },
                 )
             }
         }
     }
+
+    if (!preferences.onboardingCompleted) {
+        AppTutorialDialog(
+            onComplete = preferencesStore::completeOnboarding,
+            onSkip = preferencesStore::completeOnboarding,
+        )
+    }
+
+    pendingTip?.let { tip ->
+        ContextualTipDialog(
+            title = tip.title,
+            text = tip.text,
+            onDismiss = {
+                preferencesStore.markTipSeen(tip.key)
+                pendingTip = null
+            },
+            onSkipAll = {
+                preferencesStore.setShowContextualTips(false)
+                pendingTip = null
+            },
+        )
+    }
 }
 
 @Composable
-private fun AppHeader() {
-    Column(
+private fun AppHeader(
+    onSettings: () -> Unit,
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = "Leitor Cupons Finanças",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = "Organize compras. Entenda seus gastos.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = "Leitor Cupons Finanças",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Organize compras. Entenda seus gastos.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        IconButton(onClick = onSettings) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Configurações",
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 
@@ -261,7 +429,10 @@ private fun QuickAddMenu(
 }
 
 @Composable
-private fun SecondaryScreenScaffold(onBack: () -> Unit, content: @Composable () -> Unit) {
+private fun SecondaryScreenScaffold(
+    onBack: () -> Unit,
+    content: @Composable () -> Unit,
+) {
     Column(Modifier.fillMaxSize()) {
         BackArrowButton(
             onClick = onBack,
@@ -274,10 +445,13 @@ private fun SecondaryScreenScaffold(onBack: () -> Unit, content: @Composable () 
 @Composable
 private fun HomeScreen(
     productCount: Int,
+    dashboard: HomeDashboardState,
     onHistory: () -> Unit,
     onProducts: () -> Unit,
     onBackup: () -> Unit,
 ) {
+    val analytics = dashboard.analytics
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(20.dp),
@@ -290,9 +464,9 @@ private fun HomeScreen(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "Seu controle financeiro começa pelos itens realmente comprados.",
+                text = dashboard.periodLabel,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
 
@@ -302,18 +476,90 @@ private fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 DashboardMetric(
-                    title = "Produtos",
+                    title = "Gasto no mês",
+                    value = formatCurrency(analytics.totalSpent),
+                    icon = Icons.Default.TrendingUp,
+                    accent = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                DashboardMetric(
+                    title = "Compras",
+                    value = analytics.purchaseCount.toString(),
+                    icon = Icons.Default.ShoppingCart,
+                    accent = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                DashboardMetric(
+                    title = "Produtos mestres",
                     value = productCount.toString(),
                     icon = Icons.Default.Inventory2,
+                    accent = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.weight(1f),
                 )
                 DashboardMetric(
                     title = "Leitura",
                     value = "QR + OCR",
                     icon = Icons.Default.ReceiptLong,
+                    accent = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),
                 )
             }
+        }
+
+        item {
+            DashboardRankingCard(
+                title = "Estabelecimentos que mais custaram",
+                subtitle = "Ranking por gasto no mês",
+                icon = Icons.Default.Storefront,
+                accent = MaterialTheme.colorScheme.tertiary,
+                rows = analytics.merchantsBySpend.take(3).map {
+                    it.name to "${formatCurrency(it.totalSpent)} • ${it.purchaseCount} compra(s)"
+                },
+            )
+        }
+
+        item {
+            DashboardRankingCard(
+                title = "Onde você compra com mais frequência",
+                subtitle = "Quantidade de compras no mês",
+                icon = Icons.Default.History,
+                accent = MaterialTheme.colorScheme.secondary,
+                rows = analytics.merchantsByFrequency.take(3).map {
+                    it.name to "${it.purchaseCount} compra(s) • ${formatCurrency(it.totalSpent)}"
+                },
+            )
+        }
+
+        item {
+            DashboardRankingCard(
+                title = "Produtos mais comprados",
+                subtitle = "Quantidade acumulada no mês",
+                icon = Icons.Default.ShoppingCart,
+                accent = MaterialTheme.colorScheme.primary,
+                rows = analytics.productsMostPurchased.take(3).map {
+                    it.name to "${formatQuantity(it.quantity)} • ${formatCurrency(it.totalSpent)}"
+                },
+            )
+        }
+
+        item {
+            DashboardRankingCard(
+                title = "Produtos com maior preço unitário",
+                subtitle = "Maior valor unitário registrado no mês",
+                icon = Icons.Default.TrendingUp,
+                accent = MaterialTheme.colorScheme.tertiary,
+                rows = analytics.productsMostExpensive.take(3).map {
+                    it.name to formatCurrency(it.highestUnitPrice)
+                },
+            )
         }
 
         item {
@@ -380,6 +626,7 @@ private fun DashboardMetric(
     title: String,
     value: String,
     icon: ImageVector,
+    accent: Color,
     modifier: Modifier = Modifier,
 ) {
     Card(modifier = modifier) {
@@ -387,9 +634,85 @@ private fun DashboardMetric(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(text = title, style = MaterialTheme.typography.bodySmall)
+            Icon(icon, contentDescription = null, tint = accent)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardRankingCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accent: Color,
+    rows: List<Pair<String, String>>,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(icon, contentDescription = null, tint = accent)
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (rows.isEmpty()) {
+                Text(
+                    text = "Ainda não há dados suficientes neste mês.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                rows.forEachIndexed { index, row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            text = "${index + 1}.",
+                            color = accent,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = row.first,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Text(
+                                text = row.second,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -411,10 +734,18 @@ private fun DashboardActionCard(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             IconButton(onClick = onClick) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
             Column(Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
@@ -424,3 +755,15 @@ private fun DashboardActionCard(
         }
     }
 }
+
+private fun formatCurrency(value: Double): String =
+    NumberFormat
+        .getCurrencyInstance(Locale("pt", "BR"))
+        .format(value)
+
+private fun formatQuantity(value: Double): String =
+    if (value % 1.0 == 0.0) {
+        "${value.toLong()} unidade(s)"
+    } else {
+        String.format(Locale("pt", "BR"), "%.2f unidade(s)", value)
+    }
