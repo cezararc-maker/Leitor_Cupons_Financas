@@ -81,4 +81,5 @@ class MerchantViewModel(application: Application) : AndroidViewModel(application
                 message = "Estabelecimento e segmento atualizados.",
             )
         }
-    }}
+    }
+}
