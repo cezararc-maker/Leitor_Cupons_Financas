@@ -910,10 +910,10 @@ private fun EditHistoryItemDialog(
         mutableStateOf(item.displayUnit.orEmpty())
     }
     var unitPrice by remember(item.itemId, item.correctedAt) {
-        mutableStateOf(item.displayUnitPrice?.replace(".", ",").orEmpty())
+        mutableStateOf(CurrencyInputFormatter.fromStoredDecimal(item.displayUnitPrice))
     }
     var totalAmount by remember(item.itemId, item.correctedAt) {
-        mutableStateOf(item.displayTotalAmount?.replace(".", ",").orEmpty())
+        mutableStateOf(CurrencyInputFormatter.fromStoredDecimal(item.displayTotalAmount))
     }
 
     AlertDialog(
@@ -985,20 +985,18 @@ private fun EditHistoryItemDialog(
                     )
                 }
                 item {
-                    OutlinedTextField(
+                    CurrencyTextField(
                         value = unitPrice,
                         onValueChange = { unitPrice = it },
                         label = { Text("Valor unitário") },
-                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
                 item {
-                    OutlinedTextField(
+                    CurrencyTextField(
                         value = totalAmount,
                         onValueChange = { totalAmount = it },
                         label = { Text("Valor total") },
-                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
