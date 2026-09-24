@@ -67,7 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.CircleShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -190,7 +190,7 @@ private fun LeitorCuponsApp(
                         AppTip(
                             key = "products",
                             title = "Produtos mestres",
-                            text = "Cadastre um produto uma única vez e reutilize setores, categorias e subcategorias sugeridos pelo próprio aplicativo.",
+                            text = "Produto Mestre representa o produto raiz, sem marca. Vincule diferentes descrições fiscais ao mesmo item e reutilize setores, categorias e subcategorias.",
                         ),
                     )
                 },
