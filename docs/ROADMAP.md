@@ -247,6 +247,23 @@ Exemplos de erros impeditivos:
 
 Advertências não comprovadamente erradas podem ser mostradas sem bloquear a gravação, desde que o dado permaneça claramente marcado como pendente de revisão.
 
+### Ambiente padrão de testes
+
+A partir desta etapa:
+
+- testes funcionais e visuais serão feitos no aparelho Android físico;
+- o computador continuará executando apenas build/testes automatizados necessários;
+- scripts padrão não devem iniciar Emulator;
+- o Emulator só será utilizado quando solicitado explicitamente;
+- comandos de atualização devem preservar os dados do celular com `adb install -r`;
+- nenhuma automação pode alterar rotação, brilho, acessibilidade ou outras configurações do aparelho.
+
+Script padrão:
+
+```powershell
+.\scripts\atualizar-app-celular.ps1
+```
+
 ## Próxima etapa imediata — estabilização no celular
 
 Antes de adicionar novas grandes funcionalidades:
