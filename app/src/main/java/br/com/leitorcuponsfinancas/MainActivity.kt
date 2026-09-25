@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -961,10 +962,8 @@ private fun HomeScreen(
 
         if (dashboard.reviewCount > 0) {
             item {
-                DashboardActionCard(
-                    icon = Icons.Default.FactCheck,
-                    title = "Itens para revisar",
-                    subtitle = "${dashboard.reviewCount} item(ns) ainda precisam de Produto Mestre.",
+                ReviewAlertCard(
+                    count = dashboard.reviewCount,
                     onClick = onReview,
                 )
             }
@@ -1212,6 +1211,62 @@ private fun DashboardRankingCard(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReviewAlertCard(
+    count: Int,
+    onClick: () -> Unit,
+) {
+    val alertColor = MaterialTheme.colorScheme.error
+
+    Card(
+        onClick = onClick,
+        border = BorderStroke(1.dp, alertColor),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.28f),
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = Color.Transparent,
+                border = BorderStroke(1.5.dp, alertColor),
+                modifier = Modifier.size(38.dp),
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Text(
+                        text = "i",
+                        color = alertColor,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "Itens precisam da sua revisão",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = alertColor,
+                )
+                Text(
+                    text = "$count item(ns) ainda precisam de Produto Mestre.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = alertColor,
+                )
             }
         }
     }
