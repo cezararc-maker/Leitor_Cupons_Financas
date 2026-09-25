@@ -75,3 +75,12 @@ O projeto será testado em três níveis:
 3. dispositivo Android real antes de uma versão de uso diário.
 
 O Android Emulator permite inclusive testar QR Codes usando imagens inseridas na câmera virtual.
+
+## Roadmap e continuidade
+
+O estado atual, decisões de produto e a ordem oficial das próximas etapas estão consolidados em:
+
+- [docs/ROADMAP.md](docs/ROADMAP.md)
+
+Esse arquivo deve ser atualizado sempre que uma etapa importante for concluída ou a prioridade do projeto mudar.
+
