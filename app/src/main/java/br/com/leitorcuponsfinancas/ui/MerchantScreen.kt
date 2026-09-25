@@ -186,7 +186,7 @@ private fun MerchantEditDialog(
             ) {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = { name = TextInputRules.capitalizeFirstLetter(it) },
                     label = { Text("Nome exibido") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
