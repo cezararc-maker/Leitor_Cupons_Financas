@@ -59,3 +59,69 @@ adb -s <serial> shell am start -n br.com.leitorcuponsfinancas/.MainActivity
 ```
 
 Não usar `monkey` apenas para iniciar o aplicativo.
+
+
+## Padrão de botões e ações
+
+As ações do aplicativo devem ter hierarquia visual consistente.
+
+### Ação primária
+
+Usar botão preenchido e com a cor `MaterialTheme.colorScheme.primary`, acompanhando automaticamente a paleta escolhida pelo usuário.
+
+Exemplos:
+
+- Confirmar;
+- Criar;
+- Criar e vincular;
+- Vincular;
+- Usar sugestão;
+- OK;
+- Prosseguir;
+- Salvar.
+
+Em diálogos e formulários, deve existir preferencialmente **uma ação primária final**. Ela só fica habilitada quando os campos mínimos necessários estiverem válidos.
+
+### Ação neutra
+
+Usar botão de contorno ou texto com `onSurfaceVariant`, sem competir visualmente com a ação principal.
+
+Exemplos:
+
+- Cancelar;
+- Fechar;
+- Voltar;
+- Trocar segmento;
+- Voltar um nível;
+- escolher uma opção intermediária da hierarquia.
+
+### Ação destrutiva
+
+Excluir/apagar deve usar semântica de erro e exigir confirmação quando houver risco de perda de dados. Não reutilizar a aparência da ação positiva.
+
+### Sugestão inteligente
+
+Quando o aplicativo apresenta uma correspondência existente, por exemplo:
+
+```
+Possível correspondência
+Detergente • 92% de compatibilidade
+
+[ Usar Detergente ]
+```
+
+tocar em **Usar Detergente** significa aceitar a sugestão e deve vincular o item diretamente ao Produto Mestre sugerido. Não abrir novamente toda a navegação da taxonomia nem exigir recriação do Produto Mestre.
+
+Se a sugestão já possuir classificação taxonômica compatível com o segmento do estabelecimento, essa classificação deve ser reutilizada automaticamente.
+
+### Vinculação manual
+
+Quando o usuário optar por vinculação manual:
+
+1. navegar pela hierarquia;
+2. selecionar um Produto Mestre existente **ou** entrar no modo de criação;
+3. opções intermediárias permanecem visualmente neutras;
+4. o botão final `Vincular`, `Confirmar vínculo` ou `Criar e vincular` fica em destaque e usa a cor do tema;
+5. `Cancelar` permanece neutro.
+
+Selecionar um Produto Mestre na lista não deve salvar imediatamente; a seleção é mostrada e a ação final confirma a operação.
