@@ -213,6 +213,16 @@ Vale alimentação ... R$ 40,00
 
 A tela deve validar que a soma dos pagamentos corresponda ao total líquido da compra.
 
+### Padrão de ações na interface
+
+Foi definido um padrão visual reutilizável:
+
+- ações positivas/finais (`Confirmar`, `Criar`, `Vincular`, `OK`, `Prosseguir`) usam botão primário preenchido e acompanham a cor do tema;
+- ações neutras (`Cancelar`, `Fechar`, `Voltar`) usam estilo neutro;
+- ações destrutivas usam semântica de erro e confirmação;
+- sugestões inteligentes aceitas pelo botão `Usar <Produto>` devem vincular diretamente, sem obrigar o usuário a percorrer novamente a taxonomia;
+- em cadastro/vinculação manual, a ação final só é habilitada quando o preenchimento necessário estiver completo.
+
 ### Integridade financeira e bloqueio de gravação
 
 Por se tratar de controle financeiro, o aplicativo não deve gravar dados comprovadamente inconsistentes.
