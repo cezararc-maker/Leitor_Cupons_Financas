@@ -203,7 +203,7 @@ fun ManualEntryScreen(
                     OutlinedTextField(
                         value = description,
                         onValueChange = {
-                            description = it
+                            description = TextInputRules.capitalizeFirstLetter(it)
                             viewModel.clearMessage()
                         },
                         label = { RequiredFieldLabel("Nome do item") },
@@ -311,7 +311,7 @@ fun ManualEntryScreen(
                         OutlinedTextField(
                             value = customUnit,
                             onValueChange = {
-                                customUnit = it
+                                customUnit = TextInputRules.capitalizeFirstLetter(it)
                                 viewModel.clearMessage()
                             },
                             label = { RequiredFieldLabel("Tipo de unidade") },
@@ -770,7 +770,7 @@ private fun ManualProductLinkDialog(
                     item {
                         OutlinedTextField(
                             value = query,
-                            onValueChange = { query = it },
+                            onValueChange = { query = TextInputRules.capitalizeFirstLetter(it) },
                             label = { Text("Buscar nesta classificação") },
                             placeholder = { Text("Ex.: Banana") },
                             singleLine = true,
@@ -836,7 +836,7 @@ private fun ManualProductLinkDialog(
                         item {
                             OutlinedTextField(
                                 value = name,
-                                onValueChange = { name = it },
+                                onValueChange = { name = TextInputRules.capitalizeFirstLetter(it) },
                                 label = { RequiredFieldLabel("Produto raiz") },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
