@@ -79,3 +79,71 @@ Ao ler fotos, PDFs ou recibos, procurar termos como:
 - TOTAL DESCONTOS.
 
 Qualquer valor inferido automaticamente deve passar pela revisão do usuário antes de salvar.
+
+
+## Interface no lançamento manual
+
+O lançamento manual deve ter uma opção visual de ativação de desconto.
+
+Exemplo:
+
+```
+○ Desconto
+```
+
+Ao marcar:
+
+```
+● Desconto
+
+Tipo:
+○ Valor por unidade
+○ Percentual por unidade
+○ Valor total do item
+
+Valor/percentual: [        ]
+```
+
+Apenas uma modalidade de desconto do item deve ficar ativa por vez.
+
+### Cálculos
+
+Exemplo por valor unitário:
+
+```
+Quantidade: 3
+Preço bruto unitário: R$ 10,00
+Desconto unitário:    R$  2,00
+
+Bruto:      R$ 30,00
+Desconto:   R$  6,00
+Líquido:    R$ 24,00
+```
+
+Exemplo percentual:
+
+```
+Quantidade: 2
+Preço bruto unitário: R$ 50,00
+Desconto: 10%
+
+Bruto:      R$ 100,00
+Desconto:   R$  10,00
+Líquido:    R$  90,00
+```
+
+O usuário também pode informar desconto global da compra. Esse desconto global não deve ser distribuído automaticamente entre itens sem uma regra segura.
+
+## Edição pelo Histórico
+
+Ao abrir uma compra/NF, o desconto total pode ser revisado no cabeçalho da compra.
+
+Ao abrir um item, o usuário pode revisar:
+
+- preço bruto;
+- desconto unitário;
+- percentual;
+- desconto total do item;
+- preço líquido.
+
+O histórico deve preservar os valores originais/importados e registrar a correção do usuário quando houver edição.
