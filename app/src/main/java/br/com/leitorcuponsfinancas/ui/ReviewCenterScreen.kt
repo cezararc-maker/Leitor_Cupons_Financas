@@ -283,7 +283,7 @@ private fun ProductChooserDialog(
                 )
                 OutlinedTextField(
                     value = query,
-                    onValueChange = { query = it },
+                    onValueChange = { query = TextInputRules.capitalizeFirstLetter(it) },
                     label = { Text("Buscar Produto Mestre") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
