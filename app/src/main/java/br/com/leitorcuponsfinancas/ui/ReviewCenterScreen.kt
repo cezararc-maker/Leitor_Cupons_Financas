@@ -34,6 +34,7 @@ import br.com.leitorcuponsfinancas.data.HistoryItemRow
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.domain.ProductSuggestionEngine
 import br.com.leitorcuponsfinancas.domain.SmartProductSuggestion
+import br.com.leitorcuponsfinancas.domain.TaxonomySuggestionResolver
 
 @Composable
 fun ReviewCenterScreen(
@@ -119,9 +120,19 @@ fun ReviewCenterScreen(
                     item = item,
                     suggestion = suggestion,
                     saving = actionState.saving,
-                    onAcceptSuggestion = {
+                    onAcceptSuggestion = { product ->
                         reviewViewModel.clearMessage()
-                        linkingItem = item
+                        val taxonomyNodeId = TaxonomySuggestionResolver.resolveNodeId(
+                            productId = product.id,
+                            productLinks = taxonomyProductLinks,
+                            nodes = taxonomyNodes,
+                            merchantSegmentNodeId = item.merchantSegmentNodeId,
+                        )
+                        reviewViewModel.link(
+                            item = item,
+                            product = product,
+                            taxonomyNodeId = taxonomyNodeId,
+                        )
                     },
                     onChoose = {
                         reviewViewModel.clearMessage()
@@ -214,13 +225,12 @@ private fun ReviewItemCard(
                         title = "Possível correspondência",
                         message = "${suggestion.product.normalizedName} • ${suggestion.confidence}% de compatibilidade",
                     )
-                    Button(
+                    PrimaryActionButton(
+                        text = "Usar ${suggestion.product.normalizedName}",
                         enabled = !saving,
                         onClick = { onAcceptSuggestion(suggestion.product) },
                         modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Usar ${suggestion.product.normalizedName}")
-                    }
+                    )
                 }
 
                 is SmartProductSuggestion.NewProduct -> {
