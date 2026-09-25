@@ -115,6 +115,39 @@ A base real passa a ser construída daqui para frente. Não serão criados dados
 
 Quando não houver histórico suficiente, a interface deve informar isso claramente.
 
+### Forma de pagamento e parcelamento
+
+Cada compra deve permitir registrar **uma ou mais formas de pagamento**, porque uma mesma compra pode ser dividida entre meios diferentes.
+
+Formas iniciais:
+
+- PIX;
+- Dinheiro;
+- Débito;
+- Crédito;
+- Outros.
+
+Para Crédito, registrar também:
+
+- à vista ou parcelado;
+- quantidade de parcelas;
+- valor total associado àquela forma de pagamento;
+- futuramente, cartão/conta utilizado e competência de cobrança.
+
+A modelagem não deve limitar a compra a um único campo `paymentMethod`. O desenho previsto usa registros de pagamento vinculados à compra, permitindo pagamento misto.
+
+Esses dados alimentarão análises como:
+
+- distribuição dos gastos por forma de pagamento;
+- percentual pago no crédito;
+- percentual parcelado;
+- quantidade e valor de compras parceladas;
+- compromissos futuros de parcelas, quando houver informação suficiente de vencimento/cartão;
+- comparação entre consumo realizado e fluxo financeiro;
+- filtros de histórico por forma de pagamento.
+
+A captura poderá vir de NFC-e, OCR/IA ou confirmação manual. Quando o documento não trouxer parcelamento de forma confiável, o app deve pedir confirmação do usuário.
+
 ## Próxima etapa imediata — estabilização no celular
 
 Antes de adicionar novas grandes funcionalidades:
@@ -148,7 +181,9 @@ Interpretar corretamente:
 - PDFs;
 - recibos;
 - pedidos/delivery;
-- documentos sem QR Code.
+- documentos sem QR Code;
+- forma(s) de pagamento;
+- parcelamento, quando informado no documento.
 
 ### Arquitetura planejada
 
@@ -227,7 +262,12 @@ Conforme a base real crescer:
 - maior/menor preço de um Produto Mestre;
 - evolução de preços;
 - comparação por kg/litro/unidade;
-- economia obtida no Modo Compras.
+- economia obtida no Modo Compras;
+- gastos por PIX, Dinheiro, Débito e Crédito;
+- participação do crédito no consumo;
+- compras à vista x parceladas;
+- quantidade média de parcelas;
+- valor comprometido em parcelas futuras, quando os dados permitirem.
 
 ## Fase 5 — CNPJ, CNAE e segmento
 
@@ -286,6 +326,7 @@ Estrutura prevista:
 - O Modo Compras ainda não foi implementado.
 - A exportação XLSX ainda não foi implementada.
 - CNPJ → CNAE → Segmento ainda não possui fonte/API escolhida.
+- Forma de pagamento e parcelamento ainda não foram persistidos no banco; o modelo está documentado para entrar junto da evolução da captura/revisão de documentos.
 - Comparações históricas precisam de tempo de uso real para ganhar relevância.
 - Migrações futuras devem preservar banco, histórico, aprendizado e taxonomia do usuário.
 
@@ -295,16 +336,17 @@ Estrutura prevista:
 1. Instalar e validar a versão atual no celular
 2. Corrigir problemas encontrados
 3. Estabilizar taxonomia e revisão
-4. Melhorar OCR local
-5. Implementar fallback de IA para fotos/recibos
-6. Criar Modo Compras
-7. Adicionar código de barras e leitura de etiqueta
-8. Criar comparação por kg/litro/unidade
-9. Refinar indicadores e dashboard
-10. Validar restauração de backup
-11. Implementar exportação XLSX
-12. Definir e integrar CNPJ → CNAE → Segmento
-13. Voz e assistentes/IA
+4. Melhorar OCR local e estruturar captura de forma de pagamento/parcelamento
+5. Implementar fallback de IA para fotos/recibos, incluindo leitura de pagamentos quando disponível
+6. Persistir e analisar formas de pagamento e parcelamento
+7. Criar Modo Compras
+8. Adicionar código de barras e leitura de etiqueta
+9. Criar comparação por kg/litro/unidade
+10. Refinar indicadores e dashboard
+11. Validar restauração de backup
+12. Implementar exportação XLSX
+13. Definir e integrar CNPJ → CNAE → Segmento
+14. Voz e assistentes/IA
 ```
 
 ## Regra para manutenção deste roadmap
