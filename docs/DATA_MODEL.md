@@ -63,9 +63,10 @@ Representa uma parcela do pagamento de uma compra. Uma compra pode possuir mais 
 
 - id
 - purchaseId
-- method: PIX | CASH | DEBIT | CREDIT | OTHER
+- method: PIX | CASH | DEBIT | CREDIT | BENEFIT | OTHER
 - amount
-- installmentCount: opcional; para crédito, 1 significa crédito à vista
+- installmentCount: opcional; usado quando o usuário confirmar parcelamento
+- benefitType: opcional; FOOD | MEAL | OTHER quando method = BENEFIT
 - instrumentId: opcional e futuro; identifica cartão/conta quando houver cadastro de instrumentos financeiros
 - firstDueDate: opcional; usado apenas quando houver informação confiável para projeção de fluxo
 - source: NFCE | OCR | AI | USER
@@ -110,3 +111,34 @@ Desconto não é uma forma de pagamento e não deve ser misturado com parcelas.
 - Preservar o valor bruto e o valor líquido; não substituir um pelo outro.
 - No lançamento manual, permitir desconto por item e desconto total.
 - Se houver desconto global que não possa ser distribuído com segurança entre os itens, mantê-lo apenas no nível da compra em vez de inventar rateio.
+
+
+## Receipt / Purchase detail editing
+
+A compra/nota é uma entidade editável no Histórico.
+
+A edição em nível de compra pode alterar:
+
+- estabelecimento;
+- data;
+- número/série/chave quando aplicável;
+- valor bruto;
+- desconto total;
+- total líquido;
+- pagamentos;
+- parcelamento;
+- observações e dados complementares.
+
+A edição em nível de item continua separada e pode alterar:
+
+- Produto Mestre;
+- quantidade;
+- unidade;
+- preço unitário bruto;
+- desconto do item;
+- total líquido;
+- classificação/revisão.
+
+### Regra de escopo
+
+Forma de pagamento e parcelamento pertencem à compra/nota. Não duplicar esses campos em cada item.
