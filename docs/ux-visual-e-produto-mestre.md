@@ -125,3 +125,52 @@ Quando o usuário optar por vinculação manual:
 5. `Cancelar` permanece neutro.
 
 Selecionar um Produto Mestre na lista não deve salvar imediatamente; a seleção é mostrada e a ação final confirma a operação.
+
+
+## Padrão dos campos de texto
+
+Todos os campos de entrada do aplicativo devem ocupar **uma única linha**.
+
+Comportamento esperado:
+
+- o texto não aumenta a altura do campo;
+- conforme a digitação avança, o conteúdo anterior permanece para trás e o campo acompanha o cursor horizontalmente;
+- o cursor permanece visível na posição atual;
+- campos textuais digitados pelo usuário iniciam com a primeira letra em maiúscula;
+- o restante do texto é preservado exatamente como o usuário digitou.
+
+Exemplo:
+
+```
+detergente neutro
+↓
+Detergente neutro
+```
+
+A capitalização vale para textos semânticos, como:
+
+- nome de produto;
+- estabelecimento;
+- categoria;
+- subcategoria;
+- observação;
+- nome do usuário;
+- pesquisa textual;
+- descrição corrigida.
+
+### Exceções de integridade
+
+Campos técnicos não devem ter seu conteúdo alterado automaticamente, porque qualquer modificação pode invalidar o dado:
+
+- URL;
+- chave de acesso;
+- CNPJ/CPF;
+- códigos;
+- números de documento;
+- datas;
+- valores;
+- quantidades.
+
+Esses campos continuam em uma única linha, mas preservam exatamente os caracteres válidos informados/importados.
+
+Unidades padronizadas, como `UN`, `KG` e `L`, continuam sendo convertidas para maiúsculas integralmente.
