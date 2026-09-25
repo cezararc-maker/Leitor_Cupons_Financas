@@ -238,3 +238,15 @@ Ao abrir uma compra:
 - abrir um item específico para corrigir seus dados.
 
 Pagamentos e parcelamento são dados da compra/NF, portanto uma alteração feita nessa tela vale para a compra inteira e não precisa ser repetida item a item.
+
+
+## Validação impeditiva
+
+A compra não pode ser salva quando:
+
+- a soma dos pagamentos divergir do total líquido além da tolerância de arredondamento;
+- houver pagamento negativo;
+- crédito estiver marcado como parcelado sem quantidade válida de parcelas;
+- uma forma selecionada exigir valor e ele estiver ausente.
+
+O campo incorreto deve receber contorno vermelho e mensagem específica. Ao confirmar o diálogo de erro, a interface deve direcionar o usuário para o primeiro pagamento inconsistente.
