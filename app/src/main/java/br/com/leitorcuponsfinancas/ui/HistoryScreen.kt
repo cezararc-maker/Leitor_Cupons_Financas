@@ -210,7 +210,11 @@ fun HistoryScreen(
 
                             BasicTextField(
                                 value = searchQuery,
-                                onValueChange = historyViewModel::updateSearchQuery,
+                                onValueChange = {
+                                    historyViewModel.updateSearchQuery(
+                                        TextInputRules.capitalizeFirstLetter(it),
+                                    )
+                                },
                                 singleLine = true,
                                 textStyle = MaterialTheme.typography.bodyMedium.copy(
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -1014,7 +1018,7 @@ private fun EditHistoryItemDialog(
                 item {
                     OutlinedTextField(
                         value = description,
-                        onValueChange = { description = it },
+                        onValueChange = { description = TextInputRules.capitalizeFirstLetter(it) },
                         label = { Text("Descrição") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -1246,7 +1250,7 @@ private fun ProductLinkDialog(
                     item {
                         OutlinedTextField(
                             value = name,
-                            onValueChange = { name = it },
+                            onValueChange = { name = TextInputRules.capitalizeFirstLetter(it) },
                             label = { Text("Nome do produto *") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
@@ -1255,7 +1259,7 @@ private fun ProductLinkDialog(
                     item {
                         OutlinedTextField(
                             value = sector,
-                            onValueChange = { sector = it },
+                            onValueChange = { sector = TextInputRules.capitalizeFirstLetter(it) },
                             label = { Text("Setor *") },
                             placeholder = { Text("Ex.: Alimentação") },
                             modifier = Modifier.fillMaxWidth(),
@@ -1265,7 +1269,7 @@ private fun ProductLinkDialog(
                     item {
                         OutlinedTextField(
                             value = category,
-                            onValueChange = { category = it },
+                            onValueChange = { category = TextInputRules.capitalizeFirstLetter(it) },
                             label = { Text("Categoria *") },
                             placeholder = { Text("Ex.: Mercado") },
                             modifier = Modifier.fillMaxWidth(),
@@ -1275,7 +1279,7 @@ private fun ProductLinkDialog(
                     item {
                         OutlinedTextField(
                             value = subcategory,
-                            onValueChange = { subcategory = it },
+                            onValueChange = { subcategory = TextInputRules.capitalizeFirstLetter(it) },
                             label = { Text("Subcategoria (opcional)") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
