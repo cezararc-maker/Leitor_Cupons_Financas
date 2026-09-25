@@ -132,7 +132,7 @@ fun ProductScreen(
             item {
                 OutlinedTextField(
                     value = searchQuery,
-                    onValueChange = { searchQuery = it },
+                    onValueChange = { searchQuery = TextInputRules.capitalizeFirstLetter(it) },
                     label = { Text("Buscar Produto Mestre") },
                     placeholder = { Text("Ex.: Macarrão") },
                     leadingIcon = {
@@ -482,12 +482,13 @@ private fun ProductFormDialog(
                     item {
                         OutlinedTextField(
                             value = fiscalDescription,
-                            onValueChange = { fiscalDescription = it },
+                            onValueChange = { fiscalDescription = TextInputRules.capitalizeFirstLetter(it) },
                             label = { Text("Descrição fiscal conhecida (opcional)") },
                             placeholder = { Text("Ex.: MAC RENATA ESPAGUETE 500G") },
                             supportingText = {
                                 Text("Pode conter marca. Serve apenas para ajudar no reconhecimento fiscal.")
                             },
+                            singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -571,10 +572,10 @@ private fun ProductFormDialog(
                     item {
                         OutlinedTextField(
                             value = notes,
-                            onValueChange = { notes = it },
+                            onValueChange = { notes = TextInputRules.capitalizeFirstLetter(it) },
                             label = { Text("Observações") },
+                            singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
-                            minLines = 2,
                         )
                     }
 
