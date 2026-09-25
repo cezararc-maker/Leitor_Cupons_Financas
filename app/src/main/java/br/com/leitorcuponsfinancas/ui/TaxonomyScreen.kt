@@ -256,7 +256,7 @@ fun TaxonomyScreen(
                     }
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = { name = TextInputRules.capitalizeFirstLetter(it) },
                         label = { Text("Nome") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -305,7 +305,7 @@ fun TaxonomyScreen(
                 ) {
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = { name = TextInputRules.capitalizeFirstLetter(it) },
                         label = { Text("Nome exibido") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
