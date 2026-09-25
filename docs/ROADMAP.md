@@ -172,6 +172,47 @@ Esses dados alimentarão análises como:
 
 A captura poderá vir de NFC-e, OCR/IA ou confirmação manual. A forma de pagamento deve ser importada automaticamente quando estiver disponível no documento fiscal. Quando o documento não trouxer parcelamento de forma confiável, o app deve pedir confirmação do usuário.
 
+### Edição da compra / nota no Histórico
+
+O Histórico deve permitir abrir uma compra/NF como uma entidade completa, e não apenas navegar por itens.
+
+Ao tocar em uma nota/compra, abrir uma tela de detalhes com:
+
+- dados da compra/NF;
+- estabelecimento;
+- data;
+- número/chave quando existirem;
+- valor bruto;
+- desconto total;
+- valor líquido;
+- formas de pagamento;
+- parcelamento;
+- itens;
+- pendências de revisão.
+
+A edição da compra/NF deve permitir:
+
+- corrigir dados cadastrais da nota;
+- adicionar, remover ou ajustar formas de pagamento;
+- registrar pagamento misto;
+- complementar parcelamento quando a nota não trouxer essa informação;
+- registrar desconto total da compra;
+- abrir cada item para corrigir Produto Mestre, quantidade, preço e desconto por item.
+
+As formas de pagamento pertencem à compra/NF e **não** devem ser repetidas em cada item.
+
+Exemplo:
+
+```
+NF 12345 — Total R$ 180,00
+
+PIX ................ R$ 60,00
+Crédito ............ R$ 80,00 em 2x
+Vale alimentação ... R$ 40,00
+```
+
+A tela deve validar que a soma dos pagamentos corresponda ao total líquido da compra.
+
 ## Próxima etapa imediata — estabilização no celular
 
 Antes de adicionar novas grandes funcionalidades:
@@ -355,7 +396,7 @@ Estrutura prevista:
 - O Modo Compras ainda não foi implementado.
 - A exportação XLSX ainda não foi implementada.
 - CNPJ → CNAE → Segmento ainda não possui fonte/API escolhida.
-- Forma de pagamento, parcelamento e descontos ainda não foram persistidos no banco; o modelo está documentado para entrar junto da evolução da captura/revisão de documentos.
+- Forma de pagamento, parcelamento, descontos e edição cadastral completa da compra/NF ainda não foram persistidos no banco; o modelo está documentado para entrar junto da evolução da captura/revisão de documentos.
 - Comparações históricas precisam de tempo de uso real para ganhar relevância.
 - Migrações futuras devem preservar banco, histórico, aprendizado e taxonomia do usuário.
 
@@ -367,15 +408,17 @@ Estrutura prevista:
 3. Estabilizar taxonomia e revisão
 4. Melhorar OCR local e estruturar captura de descontos, forma de pagamento e parcelamento
 5. Implementar fallback de IA para fotos/recibos, incluindo leitura de descontos e pagamentos quando disponível
-6. Persistir e analisar descontos, formas de pagamento e parcelamento
-7. Criar Modo Compras
-8. Adicionar código de barras e leitura de etiqueta
-9. Criar comparação por kg/litro/unidade
-10. Refinar indicadores e dashboard
-11. Validar restauração de backup
-12. Implementar exportação XLSX
-13. Definir e integrar CNPJ → CNAE → Segmento
-14. Voz e assistentes/IA
+6. Persistir descontos, formas de pagamento e parcelamento
+7. Criar detalhe/edição completa da compra/NF no Histórico
+8. Analisar descontos e formas de pagamento no dashboard
+9. Criar Modo Compras
+10. Adicionar código de barras e leitura de etiqueta
+11. Criar comparação por kg/litro/unidade
+12. Refinar indicadores e dashboard
+13. Validar restauração de backup
+14. Implementar exportação XLSX
+15. Definir e integrar CNPJ → CNAE → Segmento
+16. Voz e assistentes/IA
 ```
 
 ## Regra para manutenção deste roadmap
