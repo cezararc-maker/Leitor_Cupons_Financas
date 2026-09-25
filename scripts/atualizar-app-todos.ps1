@@ -1,3 +1,7 @@
+# USO OPCIONAL / SOMENTE QUANDO O EMULATOR FOR SOLICITADO EXPLICITAMENTE.
+# O fluxo padrao do projeto e scripts/atualizar-app-celular.ps1.
+# Este arquivo e mantido apenas para testes futuros que exijam Emulator.
+
 param(
     [string]$PhoneSerial,
     [switch]$SkipBuild,
