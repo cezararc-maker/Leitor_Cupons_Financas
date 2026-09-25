@@ -213,6 +213,40 @@ Vale alimentação ... R$ 40,00
 
 A tela deve validar que a soma dos pagamentos corresponda ao total líquido da compra.
 
+### Integridade financeira e bloqueio de gravação
+
+Por se tratar de controle financeiro, o aplicativo não deve gravar dados comprovadamente inconsistentes.
+
+A validação deve existir em duas camadas:
+
+1. **interface**, para orientar o usuário imediatamente;
+2. **regra de domínio/persistência**, para impedir que uma falha de interface grave informação inválida.
+
+Comportamento padrão ao tentar salvar dados inválidos:
+
+- destacar em vermelho cada campo com erro;
+- exibir mensagem curta junto ao campo;
+- quando houver erro relevante ou múltiplos erros, abrir uma janela explicando:
+  - o que está errado;
+  - por que isso impede a gravação;
+  - uma correção possível;
+- após o usuário tocar em **OK**, rolar a tela e mover o foco para o primeiro campo inválido;
+- manter o botão Salvar bloqueado enquanto existir erro impeditivo;
+- nunca fazer salvamento parcial de uma compra/NF.
+
+Exemplos de erros impeditivos:
+
+- pagamentos somados diferentes do total líquido da compra, fora da tolerância definida;
+- desconto maior que o valor bruto;
+- quantidade menor ou igual a zero;
+- preço negativo;
+- crédito marcado como parcelado sem quantidade válida de parcelas;
+- percentual de desconto fora do intervalo permitido;
+- total líquido incompatível com os componentes conhecidos da compra;
+- campos obrigatórios ausentes.
+
+Advertências não comprovadamente erradas podem ser mostradas sem bloquear a gravação, desde que o dado permaneça claramente marcado como pendente de revisão.
+
 ## Próxima etapa imediata — estabilização no celular
 
 Antes de adicionar novas grandes funcionalidades:
@@ -396,7 +430,7 @@ Estrutura prevista:
 - O Modo Compras ainda não foi implementado.
 - A exportação XLSX ainda não foi implementada.
 - CNPJ → CNAE → Segmento ainda não possui fonte/API escolhida.
-- Forma de pagamento, parcelamento, descontos e edição cadastral completa da compra/NF ainda não foram persistidos no banco; o modelo está documentado para entrar junto da evolução da captura/revisão de documentos.
+- Forma de pagamento, parcelamento, descontos, edição cadastral completa da compra/NF e a camada de validação financeira impeditiva ainda não foram persistidos no banco; o modelo está documentado para entrar junto da evolução da captura/revisão de documentos.
 - Comparações históricas precisam de tempo de uso real para ganhar relevância.
 - Migrações futuras devem preservar banco, histórico, aprendizado e taxonomia do usuário.
 
@@ -408,8 +442,8 @@ Estrutura prevista:
 3. Estabilizar taxonomia e revisão
 4. Melhorar OCR local e estruturar captura de descontos, forma de pagamento e parcelamento
 5. Implementar fallback de IA para fotos/recibos, incluindo leitura de descontos e pagamentos quando disponível
-6. Persistir descontos, formas de pagamento e parcelamento
-7. Criar detalhe/edição completa da compra/NF no Histórico
+6. Persistir descontos, formas de pagamento e parcelamento com validação financeira impeditiva
+7. Criar detalhe/edição completa da compra/NF no Histórico, com destaque e navegação para erros
 8. Analisar descontos e formas de pagamento no dashboard
 9. Criar Modo Compras
 10. Adicionar código de barras e leitura de etiqueta
