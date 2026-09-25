@@ -50,7 +50,7 @@ fun ProfileScreen(
         OutlinedTextField(
             value = name,
             onValueChange = {
-                name = it
+                name = TextInputRules.capitalizeFirstLetter(it)
                 savedMessage = null
             },
             label = { Text("Nome do usuário") },
