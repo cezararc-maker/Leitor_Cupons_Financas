@@ -115,6 +115,30 @@ A base real passa a ser construída daqui para frente. Não serão criados dados
 
 Quando não houver histórico suficiente, a interface deve informar isso claramente.
 
+### Descontos
+
+Os descontos fazem parte do histórico financeiro e devem ser preservados em dois níveis:
+
+- **por item**, quando o documento informar desconto individual do produto;
+- **total da compra**, quando houver desconto global ou totalização fiscal.
+
+Para análises, o app deve manter separados:
+
+- valor bruto;
+- desconto;
+- valor líquido efetivamente pago/atribuído ao item ou compra.
+
+Isso permitirá medir:
+
+- economia obtida por descontos;
+- produtos/categorias com mais desconto;
+- percentual médio de desconto;
+- estabelecimentos que mais concederam descontos;
+- diferença entre preço bruto e preço efetivo;
+- evolução do preço líquido do Produto Mestre.
+
+No lançamento manual, o usuário também poderá informar desconto por item e/ou desconto total.
+
 ### Forma de pagamento e parcelamento
 
 Cada compra deve permitir registrar **uma ou mais formas de pagamento**, porque uma mesma compra pode ser dividida entre meios diferentes.
@@ -146,7 +170,7 @@ Esses dados alimentarão análises como:
 - comparação entre consumo realizado e fluxo financeiro;
 - filtros de histórico por forma de pagamento.
 
-A captura poderá vir de NFC-e, OCR/IA ou confirmação manual. Quando o documento não trouxer parcelamento de forma confiável, o app deve pedir confirmação do usuário.
+A captura poderá vir de NFC-e, OCR/IA ou confirmação manual. A forma de pagamento deve ser importada automaticamente quando estiver disponível no documento fiscal. Quando o documento não trouxer parcelamento de forma confiável, o app deve pedir confirmação do usuário.
 
 ## Próxima etapa imediata — estabilização no celular
 
@@ -183,6 +207,7 @@ Interpretar corretamente:
 - pedidos/delivery;
 - documentos sem QR Code;
 - forma(s) de pagamento;
+- descontos por item e total;
 - parcelamento, quando informado no documento.
 
 ### Arquitetura planejada
@@ -267,7 +292,11 @@ Conforme a base real crescer:
 - participação do crédito no consumo;
 - compras à vista x parceladas;
 - quantidade média de parcelas;
-- valor comprometido em parcelas futuras, quando os dados permitirem.
+- valor comprometido em parcelas futuras, quando os dados permitirem;
+- desconto total obtido;
+- desconto médio por compra;
+- produtos/categorias/estabelecimentos com maior desconto;
+- preço bruto x preço líquido efetivo.
 
 ## Fase 5 — CNPJ, CNAE e segmento
 
@@ -326,7 +355,7 @@ Estrutura prevista:
 - O Modo Compras ainda não foi implementado.
 - A exportação XLSX ainda não foi implementada.
 - CNPJ → CNAE → Segmento ainda não possui fonte/API escolhida.
-- Forma de pagamento e parcelamento ainda não foram persistidos no banco; o modelo está documentado para entrar junto da evolução da captura/revisão de documentos.
+- Forma de pagamento, parcelamento e descontos ainda não foram persistidos no banco; o modelo está documentado para entrar junto da evolução da captura/revisão de documentos.
 - Comparações históricas precisam de tempo de uso real para ganhar relevância.
 - Migrações futuras devem preservar banco, histórico, aprendizado e taxonomia do usuário.
 
@@ -336,9 +365,9 @@ Estrutura prevista:
 1. Instalar e validar a versão atual no celular
 2. Corrigir problemas encontrados
 3. Estabilizar taxonomia e revisão
-4. Melhorar OCR local e estruturar captura de forma de pagamento/parcelamento
-5. Implementar fallback de IA para fotos/recibos, incluindo leitura de pagamentos quando disponível
-6. Persistir e analisar formas de pagamento e parcelamento
+4. Melhorar OCR local e estruturar captura de descontos, forma de pagamento e parcelamento
+5. Implementar fallback de IA para fotos/recibos, incluindo leitura de descontos e pagamentos quando disponível
+6. Persistir e analisar descontos, formas de pagamento e parcelamento
 7. Criar Modo Compras
 8. Adicionar código de barras e leitura de etiqueta
 9. Criar comparação por kg/litro/unidade
