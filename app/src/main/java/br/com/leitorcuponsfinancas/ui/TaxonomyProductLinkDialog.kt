@@ -299,7 +299,7 @@ fun TaxonomyProductLinkDialog(
                         item {
                             OutlinedTextField(
                                 value = query,
-                                onValueChange = { query = it },
+                                onValueChange = { query = TextInputRules.capitalizeFirstLetter(it) },
                                 label = { Text("Buscar em todos os Produtos Mestres") },
                                 placeholder = { Text("Ex.: Banana") },
                                 singleLine = true,
@@ -354,7 +354,7 @@ fun TaxonomyProductLinkDialog(
                         item {
                             OutlinedTextField(
                                 value = newName,
-                                onValueChange = { newName = it },
+                                onValueChange = { newName = TextInputRules.capitalizeFirstLetter(it) },
                                 label = { Text("Produto raiz *") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
