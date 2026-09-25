@@ -42,7 +42,7 @@ Pré-requisitos:
 
 - Git;
 - Android Studio com Android SDK;
-- virtualização habilitada para usar o Android Emulator.
+- aparelho Android com Depuração USB habilitada para os testes funcionais.
 
 Depois de clonar a branch, execute:
 
@@ -60,21 +60,27 @@ O script:
 5. gera o Gradle Wrapper;
 6. executa os testes unitários.
 
-## Executar no Android Emulator
+## Executar e testar no Android físico
 
-Abra a pasta do projeto no Android Studio, aguarde a sincronização do Gradle, crie um Android Virtual Device em **Device Manager** e execute o módulo `app`.
+O aparelho Android físico é o ambiente padrão para validação funcional e visual.
 
-O Android Emulator será nosso ambiente principal de validação antes de instalar APKs em um aparelho físico.
+Use:
+
+```powershell
+.\scripts\atualizar-app-celular.ps1
+```
+
+Esse fluxo atualiza o projeto, executa os testes unitários, gera o APK, instala com `adb install -r` preservando os dados e abre o aplicativo no celular.
+
+O Android Emulator permanece disponível apenas para testes excepcionais solicitados explicitamente.
 
 ## Testes
 
-O projeto será testado em três níveis:
+O projeto usa:
 
-1. testes unitários de regras, parser e classificação;
-2. Android Emulator no computador;
-3. dispositivo Android real antes de uma versão de uso diário.
-
-O Android Emulator permite inclusive testar QR Codes usando imagens inseridas na câmera virtual.
+1. testes unitários de regras, parser e classificação, sem Emulator;
+2. GitHub Actions;
+3. validação funcional e visual no aparelho Android físico.
 
 ## Roadmap e continuidade
 
