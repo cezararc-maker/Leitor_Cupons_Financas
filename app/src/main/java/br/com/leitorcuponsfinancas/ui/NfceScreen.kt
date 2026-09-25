@@ -257,7 +257,7 @@ fun NfceScreen(
                 },
                 label = { Text("URL ou conteúdo da NFC-e") },
                 placeholder = { Text("https://.../nfce/qrcode?p=...") },
-                minLines = 3,
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
