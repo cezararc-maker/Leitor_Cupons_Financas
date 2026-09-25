@@ -178,11 +178,11 @@ fun ReceiptOcrScreen(
                             merchant = it
                             confirmed = false
                         }
-                        EditField("CNPJ", cnpj) {
+                        EditField("CNPJ", cnpj, capitalize = false) {
                             cnpj = it
                             confirmed = false
                         }
-                        EditField("Chave de acesso", accessKey) {
+                        EditField("Chave de acesso", accessKey, capitalize = false) {
                             accessKey = it
                             confirmed = false
                         }
@@ -194,6 +194,7 @@ fun ReceiptOcrScreen(
                                     confirmed = false
                                 },
                                 label = { Text("NFC-e nº") },
+                                singleLine = true,
                                 modifier = Modifier.weight(1f),
                             )
                             OutlinedTextField(
@@ -203,10 +204,11 @@ fun ReceiptOcrScreen(
                                     confirmed = false
                                 },
                                 label = { Text("Série") },
+                                singleLine = true,
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        EditField("Data/hora *", issuedAt) {
+                        EditField("Data/hora *", issuedAt, capitalize = false) {
                             issuedAt = it
                             confirmed = false
                         }
@@ -247,7 +249,7 @@ fun ReceiptOcrScreen(
                                         items[index] = item.copy(description = it)
                                         confirmed = false
                                     }
-                                    EditField("Código", item.code) {
+                                    EditField("Código", item.code, capitalize = false) {
                                         items[index] = item.copy(code = it)
                                         confirmed = false
                                     }
@@ -259,15 +261,17 @@ fun ReceiptOcrScreen(
                                                 confirmed = false
                                             },
                                             label = { Text("Qtd.") },
+                                            singleLine = true,
                                             modifier = Modifier.weight(1f),
                                         )
                                         OutlinedTextField(
                                             value = item.unit,
                                             onValueChange = {
-                                                items[index] = item.copy(unit = it)
+                                                items[index] = item.copy(unit = it.uppercase())
                                                 confirmed = false
                                             },
                                             label = { Text("Unidade") },
+                                            singleLine = true,
                                             modifier = Modifier.weight(1f),
                                         )
                                     }
@@ -391,12 +395,22 @@ fun ReceiptOcrScreen(
 private fun EditField(
     label: String,
     value: String,
+    capitalize: Boolean = true,
     onChange: (String) -> Unit,
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = onChange,
+        onValueChange = { typed ->
+            onChange(
+                if (capitalize) {
+                    TextInputRules.capitalizeFirstLetter(typed)
+                } else {
+                    typed
+                },
+            )
+        },
         label = { Text(label) },
+        singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
 }
