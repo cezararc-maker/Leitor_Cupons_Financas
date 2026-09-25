@@ -23,6 +23,7 @@ Por isso a compra terá uma coleção de pagamentos, e não apenas `paymentMetho
 - Dinheiro
 - Débito
 - Crédito
+- Vale alimentação/refeição (VR/VA)
 - Outros
 
 ## Crédito
@@ -163,3 +164,77 @@ A evolução do OCR/IA deve tentar identificar expressões como:
 - 2x, 3x, 10x etc.
 
 Todo resultado automático continua sujeito à revisão do usuário.
+
+
+## Componente de seleção na interface
+
+### Formas de pagamento
+
+Como uma compra pode ter mais de uma forma de pagamento, o controle visual pode usar **círculos/bolinhas clicáveis**, mas deve funcionar como seleção múltipla.
+
+Exemplo:
+
+```
+○ PIX
+○ Dinheiro
+● Débito
+● Crédito
+○ Vale alimentação/refeição
+```
+
+Tocar na bolinha ou no texto alterna a seleção.
+
+Ao marcar uma forma, abrir os campos necessários:
+
+```
+● Crédito
+Valor: R$ 120,00
+
+Parcelado?
+○ Não
+● Sim
+
+Quantidade de parcelas: [ 3 ]
+```
+
+Para opções mutuamente exclusivas, como "à vista" x "parcelado", usar comportamento de radio button: apenas uma opção pode permanecer marcada.
+
+### Pagamento misto
+
+Quando mais de uma forma estiver selecionada, cada uma recebe seu próprio valor.
+
+Exemplo:
+
+```
+● PIX
+Valor: R$ 50,00
+
+● Crédito
+Valor: R$ 100,00
+Parcelado: 2x
+
+● Vale alimentação/refeição
+Valor: R$ 30,00
+
+Total dos pagamentos: R$ 180,00
+Total da compra:      R$ 180,00
+```
+
+Se os totais não fecharem, a revisão deve avisar o usuário antes de salvar.
+
+## Edição pelo Histórico
+
+O Histórico terá uma visão por compra/NF.
+
+Ao abrir uma compra:
+
+- visualizar dados gerais;
+- conferir itens;
+- corrigir cadastro da nota;
+- adicionar/remover formas de pagamento;
+- informar pagamento misto;
+- complementar parcelamento;
+- registrar/alterar desconto total;
+- abrir um item específico para corrigir seus dados.
+
+Pagamentos e parcelamento são dados da compra/NF, portanto uma alteração feita nessa tela vale para a compra inteira e não precisa ser repetida item a item.
