@@ -213,6 +213,15 @@ Vale alimentação ... R$ 40,00
 
 A tela deve validar que a soma dos pagamentos corresponda ao total líquido da compra.
 
+### Padrão dos campos de entrada
+
+Foi definido como padrão permanente:
+
+- campos textuais em linha única, com rolagem horizontal automática durante a digitação;
+- primeira letra maiúscula em textos digitados pelo usuário;
+- preservação integral de identificadores técnicos, números, URLs, chaves, datas e valores;
+- unidades padronizadas permanecem em maiúsculas.
+
 ### Padrão de ações na interface
 
 Foi definido um padrão visual reutilizável:
