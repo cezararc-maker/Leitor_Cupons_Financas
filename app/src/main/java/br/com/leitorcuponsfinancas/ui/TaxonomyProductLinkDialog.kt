@@ -9,13 +9,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +51,9 @@ fun TaxonomyProductLinkDialog(
     var selectedNodeId by remember(item.itemId, lockedSegmentId, nodes.size) {
         mutableStateOf(lockedSegmentId)
     }
+    var selectedProductId by remember(item.itemId) {
+        mutableStateOf<Long?>(null)
+    }
     var query by remember(item.itemId) { mutableStateOf("") }
     var creating by remember(item.itemId) { mutableStateOf(false) }
     var newName by remember(item.itemId) { mutableStateOf(item.displayDescription) }
@@ -61,6 +62,7 @@ fun TaxonomyProductLinkDialog(
     }
 
     val currentNode = nodes.firstOrNull { it.id == selectedNodeId }
+    val selectedProduct = products.firstOrNull { it.id == selectedProductId }
     val path = remember(selectedNodeId, nodes) {
         selectedNodeId?.let { taxonomyPath(nodes, it) }.orEmpty()
     }
@@ -128,6 +130,10 @@ fun TaxonomyProductLinkDialog(
             .take(12)
     }
 
+    val canCreate = currentNode != null &&
+        currentNode.level != TaxonomyLevel.SEGMENT.code &&
+        newName.isNotBlank()
+
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
         title = {
@@ -166,20 +172,19 @@ fun TaxonomyProductLinkDialog(
                                     currentNode?.parentId != null ||
                                     lockedSegmentId == null
                                 ) {
-                                    TextButton(
+                                    NeutralTextActionButton(
+                                        text = if (currentNode?.parentId == null) {
+                                            "Trocar segmento"
+                                        } else {
+                                            "Voltar um nível"
+                                        },
                                         onClick = {
                                             selectedNodeId = currentNode?.parentId
+                                            selectedProductId = null
                                             creating = false
+                                            query = ""
                                         },
-                                    ) {
-                                        Text(
-                                            if (currentNode?.parentId == null) {
-                                                "Trocar segmento"
-                                            } else {
-                                                "Voltar um nível"
-                                            },
-                                        )
-                                    }
+                                    )
                                 } else {
                                     Text(
                                         text = "Segmento fixado pelo estabelecimento. Para trocar, edite o estabelecimento.",
@@ -213,6 +218,7 @@ fun TaxonomyProductLinkDialog(
                         item {
                             SmartSuggestionCompact(
                                 suggestion = suggestion,
+                                saving = saving,
                                 onUse = { product ->
                                     onSelect(product, currentNode.id)
                                 },
@@ -239,97 +245,112 @@ fun TaxonomyProductLinkDialog(
                     }
 
                     items(options, key = { it.id }) { node ->
-                        OutlinedButton(
+                        NeutralActionButton(
+                            text = node.name,
                             onClick = {
                                 selectedNodeId = node.id
+                                selectedProductId = null
                                 creating = false
                                 query = ""
                             },
                             modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(node.name)
-                        }
+                        )
                     }
                 }
 
                 if (currentNode != null && currentNode.level != TaxonomyLevel.SEGMENT.code) {
-                    item {
-                        Text(
-                            text = "Produtos Mestres nesta classificação",
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                    }
-
-                    if (classifiedProducts.isEmpty()) {
+                    if (!creating) {
                         item {
                             Text(
-                                text = "Nenhum Produto Mestre foi classificado aqui ainda. Você pode buscar um existente ou criar um novo.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = "Produtos Mestres nesta classificação",
+                                style = MaterialTheme.typography.titleSmall,
                             )
                         }
-                    } else {
-                        items(classifiedProducts, key = { "classified_${it.id}" }) { product ->
-                            Button(
-                                enabled = !saving,
-                                onClick = { onSelect(product, currentNode.id) },
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
+
+                        if (classifiedProducts.isEmpty()) {
+                            item {
                                 Text(
-                                    if (product.id == item.productId) {
-                                        "${product.normalizedName} • atual"
-                                    } else {
-                                        product.normalizedName
+                                    text = "Nenhum Produto Mestre foi classificado aqui ainda. Você pode buscar um existente ou criar um novo.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            items(classifiedProducts, key = { "classified_${it.id}" }) { product ->
+                                FilterChip(
+                                    selected = selectedProductId == product.id,
+                                    onClick = {
+                                        selectedProductId = product.id
                                     },
+                                    label = {
+                                        Text(
+                                            if (product.id == item.productId) {
+                                                "${product.normalizedName} • atual"
+                                            } else {
+                                                product.normalizedName
+                                            },
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
                             }
                         }
-                    }
 
-                    item {
-                        OutlinedTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            label = { Text("Buscar em todos os Produtos Mestres") },
-                            placeholder = { Text("Ex.: Banana") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-
-                    if (searchedProducts.isNotEmpty()) {
-                        items(searchedProducts, key = { "search_${it.id}" }) { product ->
-                            OutlinedButton(
-                                enabled = !saving,
-                                onClick = { onSelect(product, currentNode.id) },
+                        item {
+                            OutlinedTextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                label = { Text("Buscar em todos os Produtos Mestres") },
+                                placeholder = { Text("Ex.: Banana") },
+                                singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Column(Modifier.fillMaxWidth()) {
-                                    Text(product.normalizedName)
-                                    Text(
-                                        text = listOfNotNull(
-                                            product.sector,
-                                            product.category,
-                                            product.subcategory,
-                                        ).joinToString(" • "),
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
+                            )
+                        }
+
+                        if (searchedProducts.isNotEmpty()) {
+                            items(searchedProducts, key = { "search_${it.id}" }) { product ->
+                                FilterChip(
+                                    selected = selectedProductId == product.id,
+                                    onClick = {
+                                        selectedProductId = product.id
+                                    },
+                                    label = {
+                                        Column(Modifier.fillMaxWidth()) {
+                                            Text(product.normalizedName)
+                                            Text(
+                                                text = listOfNotNull(
+                                                    product.sector,
+                                                    product.category,
+                                                    product.subcategory,
+                                                ).joinToString(" • "),
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
                             }
                         }
-                    }
 
-                    item {
-                        TextButton(
-                            enabled = !saving,
-                            onClick = { creating = !creating },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(if (creating) "Cancelar novo Produto Mestre" else "Criar Produto Mestre nesta classificação")
+                        item {
+                            NeutralActionButton(
+                                text = "Criar novo Produto Mestre",
+                                enabled = !saving,
+                                onClick = {
+                                    creating = true
+                                    selectedProductId = null
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
-                    }
-
-                    if (creating) {
+                    } else {
+                        item {
+                            Text(
+                                text = "Novo Produto Mestre",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                         item {
                             OutlinedTextField(
                                 value = newName,
@@ -349,32 +370,55 @@ fun TaxonomyProductLinkDialog(
                             )
                         }
                         item {
-                            Button(
-                                enabled = !saving && newName.isNotBlank(),
+                            NeutralTextActionButton(
+                                text = "Voltar para produtos existentes",
+                                enabled = !saving,
                                 onClick = {
-                                    onCreate(
-                                        newName,
-                                        currentNode.id,
-                                        unit,
-                                    )
+                                    creating = false
+                                    selectedProductId = null
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(if (saving) "Criando..." else "Criar e vincular")
-                            }
+                            )
                         }
                     }
                 }
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            PrimaryActionButton(
+                text = when {
+                    saving -> "Salvando..."
+                    creating -> "Criar e vincular"
+                    item.productId == null -> "Vincular"
+                    else -> "Confirmar vínculo"
+                },
+                enabled = !saving && if (creating) {
+                    canCreate
+                } else {
+                    selectedProduct != null
+                },
+                onClick = {
+                    if (creating) {
+                        val node = currentNode ?: return@PrimaryActionButton
+                        onCreate(
+                            newName,
+                            node.id,
+                            unit,
+                        )
+                    } else {
+                        selectedProduct?.let { product ->
+                            onSelect(product, currentNode?.id)
+                        }
+                    }
+                },
+            )
+        },
         dismissButton = {
-            TextButton(
+            NeutralTextActionButton(
+                text = "Cancelar",
                 enabled = !saving,
                 onClick = onDismiss,
-            ) {
-                Text("Fechar")
-            }
+            )
         },
     )
 }
@@ -382,6 +426,7 @@ fun TaxonomyProductLinkDialog(
 @Composable
 private fun SmartSuggestionCompact(
     suggestion: SmartProductSuggestion,
+    saving: Boolean,
     onUse: (ProductEntity) -> Unit,
 ) {
     if (suggestion !is SmartProductSuggestion.ExistingProduct) return
@@ -407,9 +452,11 @@ private fun SmartSuggestionCompact(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            TextButton(onClick = { onUse(suggestion.product) }) {
-                Text("Usar")
-            }
+            PrimaryActionButton(
+                text = "Usar",
+                enabled = !saving,
+                onClick = { onUse(suggestion.product) },
+            )
         }
     }
 }
