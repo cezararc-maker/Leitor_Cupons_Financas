@@ -105,3 +105,22 @@ Quando um dado importado for alterado pelo usuário, preservar origem e permitir
 - informado/corrigido pelo usuário.
 
 A implementação detalhada de histórico de alterações pode ser feita em etapa posterior; desde já, o modelo deve evitar sobrescrever silenciosamente dados importantes.
+
+
+## Validação antes de salvar
+
+Nenhuma edição deve substituir a compra existente enquanto houver erro impeditivo.
+
+Campos inválidos:
+
+- recebem contorno vermelho;
+- mostram a causa do erro;
+- permanecem com o valor informado para correção.
+
+Ao tocar em Salvar com erro:
+
+1. abrir diálogo explicativo;
+2. não persistir nenhuma alteração;
+3. após OK, rolar e focar o primeiro campo inválido.
+
+A versão anteriormente salva da compra permanece intacta até que a nova versão passe por todas as validações.
