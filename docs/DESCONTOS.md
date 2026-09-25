@@ -147,3 +147,16 @@ Ao abrir um item, o usuário pode revisar:
 - preço líquido.
 
 O histórico deve preservar os valores originais/importados e registrar a correção do usuário quando houver edição.
+
+
+## Validação impeditiva de descontos
+
+Não permitir salvar:
+
+- desconto negativo;
+- percentual abaixo de 0% ou acima de 100%;
+- desconto unitário maior que o preço bruto unitário;
+- desconto total do item maior que o valor bruto do item;
+- desconto global que produza total líquido negativo.
+
+A interface deve destacar o campo em vermelho e explicar a inconsistência antes de direcionar o foco para correção.
