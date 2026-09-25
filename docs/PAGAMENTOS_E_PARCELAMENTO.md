@@ -44,6 +44,8 @@ A informação pode vir de:
 3. leitura por IA;
 4. confirmação manual do usuário.
 
+Quando o documento fiscal trouxer o meio e o valor do pagamento, esses dados devem ser importados automaticamente. O usuário só precisa complementar o que o documento não informa com segurança, especialmente o parcelamento.
+
 A prioridade é preservar o dado original. Se o documento disser apenas `Cartão`, não converter automaticamente para Débito ou Crédito sem evidência.
 
 ## Revisão
@@ -68,6 +70,19 @@ Parcelas: [ 3 ]
 ```
 
 O app deve validar a soma das formas de pagamento contra o total da compra.
+
+Para Crédito, se a nota indicar apenas "Cartão de Crédito" e não trouxer quantidade de parcelas, a revisão deve perguntar:
+
+```
+Esta compra foi parcelada?
+
+( ) Não / crédito à vista
+( ) Sim
+
+Quantidade de parcelas: [  ]
+```
+
+Essa informação será fornecida pelo usuário e marcada como origem `USER`.
 
 ## Análises
 
