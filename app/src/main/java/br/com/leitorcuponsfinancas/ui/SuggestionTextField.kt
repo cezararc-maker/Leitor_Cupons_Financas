@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 
@@ -48,12 +49,27 @@ fun SuggestionTextField(
     Box(modifier = modifier) {
         OutlinedTextField(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = { typed ->
+                onValueChange(
+                    if (keyboardType == KeyboardType.Text) {
+                        TextInputRules.capitalizeFirstLetter(typed)
+                    } else {
+                        typed
+                    },
+                )
+            },
             label = label,
             placeholder = placeholder,
             supportingText = supportingText,
-            singleLine = singleLine,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                capitalization = if (keyboardType == KeyboardType.Text) {
+                    KeyboardCapitalization.Sentences
+                } else {
+                    KeyboardCapitalization.None
+                },
+                keyboardType = keyboardType,
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { focused = it.isFocused },
