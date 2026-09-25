@@ -134,11 +134,7 @@ fun ReviewCenterScreen(
                             taxonomyNodeId = taxonomyNodeId,
                         )
                     },
-                    onChoose = {
-                        reviewViewModel.clearMessage()
-                        linkingItem = item
-                    },
-                    onCreate = {
+                    onManualLink = {
                         reviewViewModel.clearMessage()
                         linkingItem = item
                     },
@@ -193,8 +189,7 @@ private fun ReviewItemCard(
     suggestion: SmartProductSuggestion?,
     saving: Boolean,
     onAcceptSuggestion: (ProductEntity) -> Unit,
-    onChoose: () -> Unit,
-    onCreate: () -> Unit,
+    onManualLink: () -> Unit,
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(
@@ -243,25 +238,16 @@ private fun ReviewItemCard(
                 null -> Unit
             }
 
-            Row(
+            NeutralActionButton(
+                text = if (suggestion is SmartProductSuggestion.ExistingProduct) {
+                    "Escolher outro Produto Mestre"
+                } else {
+                    "Vincular Produto Mestre"
+                },
+                enabled = !saving,
+                onClick = onManualLink,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    enabled = !saving,
-                    onClick = onChoose,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("Escolher existente")
-                }
-                OutlinedButton(
-                    enabled = !saving,
-                    onClick = onCreate,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("Criar novo")
-                }
-            }
+            )
         }
     }
 }
