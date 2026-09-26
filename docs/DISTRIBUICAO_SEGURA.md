@@ -206,14 +206,14 @@ Já concluído e validado no Moto G15:
 6. suspensão/bloqueio/liberação de conta e revogação/liberação de dispositivo validados;
 7. App Check integrado no Android por variante.
 8. Grupo `leitor-cupons-testadores` criado no Firebase App Distribution.
+9. Primeira release APK assinada distribuída com sucesso pelo workflow do GitHub Actions.
 
 Antes da primeira instalação no aparelho de outra pessoa ainda é necessário:
 
-1. configurar os Secrets do GitHub;
-2. gerar a primeira versão APK assinada pelo workflow;
-3. enviar o convite do App Distribution;
-4. validar instalação, login e autorização no primeiro smartphone externo;
-5. posteriormente, quando houver Play Console (ou decisão explícita por outro provedor), registrar/validar App Check e só então considerar enforcement.
+1. adicionar o primeiro testador ao grupo `leitor-cupons-testadores`;
+2. enviar/aceitar o convite do App Distribution;
+3. validar instalação, login e autorização no primeiro smartphone externo;
+4. posteriormente, quando houver Play Console (ou decisão explícita por outro provedor), registrar/validar App Check e só então considerar enforcement.
 
 ## Atualização posterior
 
