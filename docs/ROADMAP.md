@@ -52,6 +52,9 @@ Branch de desenvolvimento:
 - Controle remoto de conta `ACTIVE / SUSPENDED / BLOCKED`.
 - Aprovação e revogação por instalação/dispositivo.
 - Janela offline de autorização limitada a 72 horas.
+- Fluxo real de autenticação/autorização validado no Moto G15.
+- Suspensão, bloqueio/liberação da conta e revogação/liberação do aparelho validados.
+- Firebase App Check preparado por variante: Debug Provider no debug e Play Integrity na release.
 
 ## Decisões de produto já definidas
 
@@ -79,14 +82,12 @@ Já preparado:
 
 Antes da primeira instalação externa ainda é obrigatório concluir:
 
-- habilitar Authentication por e-mail/senha no projeto Firebase;
-- criar o Firestore e publicar as regras do repositório;
-- criar e validar a primeira conta autorizada;
-- aprovar o primeiro dispositivo de teste;
+- registrar e validar o Firebase App Check para o app Android;
+- cadastrar a impressão SHA-256 da chave oficial de release no App Check;
 - criar o grupo `leitor-cupons-testadores`;
 - configurar Secrets do GitHub para assinatura, Google Services e App Distribution;
 - validar a primeira release assinada no fluxo externo;
-- habilitar App Check antes de ampliar a distribuição;
+- observar métricas do App Check antes de habilitar enforcement;
 - criptografar e vincular por usuário o backup restaurável antes de compartilhamento entre aparelhos.
 
 O APK nunca deve conter banco ou dados reais de usuários.
