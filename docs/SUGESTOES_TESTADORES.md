@@ -9,11 +9,11 @@ As solicitações ficam no Cloud Firestore, coleção `feedback`.
 ## Fluxo do testador
 
 1. Tocar no balão flutuante com `...`.
-2. Escolher **Enviar nova sugestão**.
+2. A caixa de texto abre diretamente.
 3. Digitar entre 10 e 1500 caracteres.
 4. Tocar em **Enviar**.
 5. A solicitação nasce com status **Recebido**.
-6. Em **Minhas sugestões**, acompanhar o status e, quando aplicável, o motivo do descarte.
+6. Pelo link de acompanhamento na própria caixa, consultar o status e, quando aplicável, o motivo do descarte.
 
 ## Status
 
