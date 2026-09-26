@@ -96,7 +96,7 @@ android {
             buildConfigField("boolean", "IN_APP_UPDATES_ENABLED", "false")
         }
 
-        create("tester") {
+        create("beta") {
             initWith(getByName("release"))
             matchingFallbacks += listOf("release")
             signingConfig = secureReleaseSigning
@@ -141,8 +141,8 @@ val requireReleaseSigning = providers.gradleProperty("LCF_REQUIRE_RELEASE_SIGNIN
 tasks.matching { task ->
     task.name == "assembleRelease" ||
         task.name == "bundleRelease" ||
-        task.name == "assembleTester" ||
-        task.name == "bundleTester"
+        task.name == "assembleBeta" ||
+        task.name == "bundleBeta"
 }.configureEach {
     doFirst {
         if (requireReleaseSigning && !releaseSigningReady) {
@@ -178,8 +178,8 @@ dependencies {
     implementation("com.google.firebase:firebase-appdistribution-api:16.0.0-beta20")
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
     releaseImplementation("com.google.firebase:firebase-appcheck-playintegrity")
-    add("testerImplementation", "com.google.firebase:firebase-appcheck-playintegrity")
-    add("testerImplementation", "com.google.firebase:firebase-appdistribution:16.0.0-beta20")
+    add("betaImplementation", "com.google.firebase:firebase-appcheck-playintegrity")
+    add("betaImplementation", "com.google.firebase:firebase-appdistribution:16.0.0-beta20")
 
     implementation("org.jsoup:jsoup:1.23.2")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
