@@ -5,11 +5,15 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,20 +34,25 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.com.leitorcuponsfinancas.data.FeedbackItem
 import br.com.leitorcuponsfinancas.data.FeedbackManager
 import br.com.leitorcuponsfinancas.data.FeedbackStatus
+import kotlin.math.roundToInt
 
 @Composable
 fun FeedbackOverlay(
@@ -56,6 +65,16 @@ fun FeedbackOverlay(
     var composerOpen by rememberSaveable { mutableStateOf(false) }
     var listOpen by rememberSaveable { mutableStateOf(false) }
     var editingItem by remember { mutableStateOf<FeedbackItem?>(null) }
+
+    val positionPreferences = remember(context) {
+        context.getSharedPreferences(
+            FEEDBACK_BUTTON_POSITION_PREFERENCES,
+            android.content.Context.MODE_PRIVATE,
+        )
+    }
+    val density = LocalDensity.current
+    var buttonOffsetX by remember { mutableFloatStateOf(Float.NaN) }
+    var buttonOffsetY by remember { mutableFloatStateOf(Float.NaN) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -71,32 +90,130 @@ fun FeedbackOverlay(
 
     if (!state.available) return
 
-    Box(modifier = modifier) {
-        FloatingActionButton(
-            onClick = { composerOpen = true },
-            modifier = Modifier.align(Alignment.Center),
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreHoriz,
-                contentDescription = "Sugestões e melhorias",
-            )
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize(),
+    ) {
+        val buttonContainerSize = 64.dp
+        val edgeMargin = 8.dp
+
+        val buttonSizePx = with(density) { buttonContainerSize.toPx() }
+        val edgeMarginPx = with(density) { edgeMargin.toPx() }
+        val widthPx = with(density) { maxWidth.toPx() }
+        val heightPx = with(density) { maxHeight.toPx() }
+
+        val minX = edgeMarginPx
+        val minY = edgeMarginPx
+        val maxX = (widthPx - buttonSizePx - edgeMarginPx).coerceAtLeast(minX)
+        val maxY = (heightPx - buttonSizePx - edgeMarginPx).coerceAtLeast(minY)
+
+        LaunchedEffect(maxX, maxY) {
+            val hasSavedPosition =
+                positionPreferences.contains(FEEDBACK_BUTTON_POSITION_X) &&
+                    positionPreferences.contains(FEEDBACK_BUTTON_POSITION_Y)
+
+            if (hasSavedPosition) {
+                val ratioX = positionPreferences
+                    .getFloat(FEEDBACK_BUTTON_POSITION_X, 1f)
+                    .coerceIn(0f, 1f)
+                val ratioY = positionPreferences
+                    .getFloat(FEEDBACK_BUTTON_POSITION_Y, 1f)
+                    .coerceIn(0f, 1f)
+
+                buttonOffsetX = minX + ((maxX - minX) * ratioX)
+                buttonOffsetY = minY + ((maxY - minY) * ratioY)
+            } else {
+                buttonOffsetX = maxX
+                buttonOffsetY = maxY
+            }
         }
 
-        if (state.unreadCount > 0) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(22.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = state.unreadCount.coerceAtMost(99).toString(),
-                        color = MaterialTheme.colorScheme.onError,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
+        val resolvedX = if (buttonOffsetX.isFinite()) {
+            buttonOffsetX.coerceIn(minX, maxX)
+        } else {
+            maxX
+        }
+        val resolvedY = if (buttonOffsetY.isFinite()) {
+            buttonOffsetY.coerceIn(minY, maxY)
+        } else {
+            maxY
+        }
+
+        Box(
+            modifier = Modifier
+                .offset {
+                    IntOffset(
+                        resolvedX.roundToInt(),
+                        resolvedY.roundToInt(),
                     )
+                }
+                .size(buttonContainerSize)
+                .pointerInput(maxX, maxY) {
+                    detectDragGestures(
+                        onDragStart = {
+                            if (!buttonOffsetX.isFinite()) buttonOffsetX = resolvedX
+                            if (!buttonOffsetY.isFinite()) buttonOffsetY = resolvedY
+                        },
+                        onDragEnd = {
+                            val xRange = (maxX - minX).coerceAtLeast(1f)
+                            val yRange = (maxY - minY).coerceAtLeast(1f)
+
+                            val ratioX = (
+                                (buttonOffsetX.coerceIn(minX, maxX) - minX) / xRange
+                            ).coerceIn(0f, 1f)
+                            val ratioY = (
+                                (buttonOffsetY.coerceIn(minY, maxY) - minY) / yRange
+                            ).coerceIn(0f, 1f)
+
+                            positionPreferences.edit()
+                                .putFloat(FEEDBACK_BUTTON_POSITION_X, ratioX)
+                                .putFloat(FEEDBACK_BUTTON_POSITION_Y, ratioY)
+                                .apply()
+                        },
+                    ) { change, dragAmount ->
+                        change.consume()
+
+                        val currentX = if (buttonOffsetX.isFinite()) {
+                            buttonOffsetX
+                        } else {
+                            resolvedX
+                        }
+                        val currentY = if (buttonOffsetY.isFinite()) {
+                            buttonOffsetY
+                        } else {
+                            resolvedY
+                        }
+
+                        buttonOffsetX = (currentX + dragAmount.x).coerceIn(minX, maxX)
+                        buttonOffsetY = (currentY + dragAmount.y).coerceIn(minY, maxY)
+                    }
+                },
+        ) {
+            FloatingActionButton(
+                onClick = { composerOpen = true },
+                modifier = Modifier.align(Alignment.Center),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreHoriz,
+                    contentDescription = "Sugestões e melhorias",
+                )
+            }
+
+            if (state.unreadCount > 0) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(22.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = state.unreadCount.coerceAtMost(99).toString(),
+                            color = MaterialTheme.colorScheme.onError,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
         }
@@ -410,4 +527,9 @@ private fun FeedbackStatusDialog(
             }
         },
     )
+    
+private const val FEEDBACK_BUTTON_POSITION_PREFERENCES = "feedback_button_position"
+private const val FEEDBACK_BUTTON_POSITION_X = "normalized_x"
+private const val FEEDBACK_BUTTON_POSITION_Y = "normalized_y"
+
 }
