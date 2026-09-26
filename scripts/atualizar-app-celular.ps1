@@ -2,7 +2,8 @@ param(
     [string]$PhoneSerial = "ZF52554B2L",
     [switch]$SkipTests,
     [switch]$SafeBuild,
-    [switch]$TestRemoteAccess
+    [switch]$TestRemoteAccess,
+    [switch]$EnableAppCheck
 )
 
 $ErrorActionPreference = "Stop"
@@ -159,6 +160,13 @@ if ($TestRemoteAccess) {
     Write-Host "[MODO DESENVOLVIMENTO] APK debug sem bloqueio por login remoto." -ForegroundColor DarkCyan
 }
 
+if ($EnableAppCheck) {
+    $BuildArguments += "-PLCF_APP_CHECK_ENABLED=true"
+    Write-Host "[APP CHECK] Habilitado explicitamente para este build." -ForegroundColor Cyan
+} else {
+    Write-Host "[APP CHECK] Desabilitado neste build ate o provedor ser registrado." -ForegroundColor DarkCyan
+}
+
 & $Gradle @BuildArguments
 
 if ($LASTEXITCODE -ne 0) {
@@ -221,3 +229,4 @@ Write-Host "Emulator utilizado: NAO"
 Write-Host "Rotacao/configuracoes Android alteradas: NAO"
 Write-Host "pm clear / uninstall executados: NAO"
 Write-Host "Controle remoto exigido neste debug: $($TestRemoteAccess.IsPresent)"
+Write-Host "App Check habilitado neste debug: $($EnableAppCheck.IsPresent)"
