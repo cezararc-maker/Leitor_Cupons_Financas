@@ -1,5 +1,25 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+val releaseKeystorePath = System.getenv("LCF_RELEASE_KEYSTORE_PATH")
+val releaseKeystorePassword = System.getenv("LCF_RELEASE_KEYSTORE_PASSWORD")
+val releaseKeyAlias = System.getenv("LCF_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = System.getenv("LCF_RELEASE_KEY_PASSWORD")
+
+val releaseSigningReady = listOf(
+    releaseKeystorePath,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { !it.isNullOrBlank() }
+
+val configuredVersionCode = providers.gradleProperty("LCF_VERSION_CODE")
+    .orNull
+    ?.toIntOrNull()
+val configuredVersionName = providers.gradleProperty("LCF_VERSION_NAME")
+    .orNull
+    ?.trim()
+    ?.takeIf { it.isNotBlank() }
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -16,13 +36,31 @@ android {
         applicationId = "br.com.leitorcuponsfinancas"
         minSdk = 23
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = configuredVersionCode ?: 1
+        versionName = configuredVersionName ?: "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
         compose = true
+    }
+
+    val secureReleaseSigning = if (releaseSigningReady) {
+        signingConfigs.create("secureRelease") {
+            storeFile = file(releaseKeystorePath!!)
+            storePassword = releaseKeystorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+        }
+    } else {
+        null
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfig = secureReleaseSigning
+            isMinifyEnabled = false
+        }
     }
 
     compileOptions {
@@ -45,6 +83,24 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.fromTarget("17")
+    }
+}
+
+
+val requireReleaseSigning = providers.gradleProperty("LCF_REQUIRE_RELEASE_SIGNING")
+    .orNull
+    ?.equals("true", ignoreCase = true)
+    ?: false
+
+tasks.matching { task ->
+    task.name == "assembleRelease" || task.name == "bundleRelease"
+}.configureEach {
+    doFirst {
+        if (requireReleaseSigning && !releaseSigningReady) {
+            throw org.gradle.api.GradleException(
+                "Assinatura de release obrigatoria, mas as variaveis LCF_RELEASE_* nao foram configuradas.",
+            )
+        }
     }
 }
 
