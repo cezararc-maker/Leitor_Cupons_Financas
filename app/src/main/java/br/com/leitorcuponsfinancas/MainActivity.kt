@@ -106,6 +106,7 @@ import br.com.leitorcuponsfinancas.ui.ProductScreen
 import br.com.leitorcuponsfinancas.ui.ProductViewModel
 import br.com.leitorcuponsfinancas.ui.ProfileScreen
 import br.com.leitorcuponsfinancas.ui.ReceiptOcrScreen
+import br.com.leitorcuponsfinancas.ui.RemoteAccessGate
 import br.com.leitorcuponsfinancas.ui.SettingsScreen
 import br.com.leitorcuponsfinancas.ui.TaxonomyScreen
 import br.com.leitorcuponsfinancas.ui.ScreenHero
@@ -131,10 +132,12 @@ class MainActivity : ComponentActivity() {
                 fontScale = preferences.fontScale,
             ) {
                 Surface(Modifier.fillMaxSize()) {
-                    LeitorCuponsApp(
-                        preferences = preferences,
-                        preferencesStore = preferencesStore,
-                    )
+                    RemoteAccessGate {
+                        LeitorCuponsApp(
+                            preferences = preferences,
+                            preferencesStore = preferencesStore,
+                        )
+                    }
                 }
             }
         }
