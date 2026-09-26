@@ -170,10 +170,9 @@ class FeedbackManager private constructor(
                 clients.second.collection(FEEDBACK_COLLECTION).add(
                     mapOf(
                         FIELD_AUTHOR_UID to user.uid,
-                        FIELD_AUTHOR_EMAIL to user.email,
+                        FIELD_AUTHOR_EMAIL to user.email.orEmpty(),
                         FIELD_MESSAGE to normalized,
                         FIELD_STATUS to FeedbackStatus.RECEIVED.firestoreValue,
-                        FIELD_DISCARD_REASON to null,
                         FIELD_CREATED_AT to FieldValue.serverTimestamp(),
                         FIELD_UPDATED_AT to FieldValue.serverTimestamp(),
                         FIELD_ADMIN_SEEN to false,
@@ -222,9 +221,9 @@ class FeedbackManager private constructor(
                         mapOf(
                             FIELD_STATUS to status.firestoreValue,
                             FIELD_DISCARD_REASON to if (status == FeedbackStatus.DISCARDED) {
-                                reason
+                                reason.orEmpty()
                             } else {
-                                null
+                                FieldValue.delete()
                             },
                             FIELD_UPDATED_AT to FieldValue.serverTimestamp(),
                             FIELD_ADMIN_SEEN to true,
