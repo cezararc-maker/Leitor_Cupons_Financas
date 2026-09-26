@@ -143,6 +143,8 @@ dependencies {
     implementation(firebaseBom)
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
+    releaseImplementation("com.google.firebase:firebase-appcheck-playintegrity")
 
     implementation("org.jsoup:jsoup:1.23.2")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
