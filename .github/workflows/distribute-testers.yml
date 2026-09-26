@@ -150,9 +150,9 @@ jobs:
       - name: Unit tests
         run: gradle testDebugUnitTest
 
-      - name: Build signed release APK
+      - name: Build signed tester APK
         run: >
-          gradle assembleRelease
+          gradle assembleTester
           -PLCF_REQUIRE_RELEASE_SIGNING=true
           -PLCF_VERSION_NAME="${{ steps.version.outputs.name }}"
           -PLCF_VERSION_CODE="${{ steps.version.outputs.code }}"
@@ -160,7 +160,7 @@ jobs:
       - name: Verify APK signature
         shell: bash
         run: |
-          APK="app/build/outputs/apk/release/app-release.apk"
+          APK="app/build/outputs/apk/tester/app-tester.apk"
           if [ ! -f "$APK" ]; then
             echo "Signed APK not found: $APK"
             exit 1
@@ -205,4 +205,4 @@ jobs:
             NOTES="Versao ${{ steps.version.outputs.name }} para testadores autorizados."
           fi
 
-          firebase appdistribution:distribute             "app/build/outputs/apk/release/app-release.apk"             --app "$FIREBASE_APP_ID"             --groups "$GROUP"             --release-notes "$NOTES"
+          firebase appdistribution:distribute             "app/build/outputs/apk/tester/app-tester.apk"             --app "$FIREBASE_APP_ID"             --groups "$GROUP"             --release-notes "$NOTES"
