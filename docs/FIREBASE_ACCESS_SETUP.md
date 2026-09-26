@@ -138,6 +138,14 @@ release
 
 O App Check é inicializado em `LeitorCuponsApplication` antes do uso de Authentication/Firestore.
 
+Enquanto não houver um provedor App Check registrado no Firebase, a inicialização fica **desativada por padrão**. Ela só é ligada com:
+
+```
+-PLCF_APP_CHECK_ENABLED=true
+```
+
+O script de atualização do Moto G15 expõe isso como `-EnableAppCheck`. Essa flag não deve ser usada na distribuição atual enquanto o provedor não estiver registrado.
+
 ### Debug
 
 O debug provider é usado somente em builds debug e nunca deve ser distribuído como release.
