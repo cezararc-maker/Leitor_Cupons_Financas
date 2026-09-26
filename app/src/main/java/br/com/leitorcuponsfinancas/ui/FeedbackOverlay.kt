@@ -527,9 +527,8 @@ private fun FeedbackStatusDialog(
             }
         },
     )
-    
+}
+
 private const val FEEDBACK_BUTTON_POSITION_PREFERENCES = "feedback_button_position"
 private const val FEEDBACK_BUTTON_POSITION_X = "normalized_x"
 private const val FEEDBACK_BUTTON_POSITION_Y = "normalized_y"
-
-}
