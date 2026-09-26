@@ -81,6 +81,7 @@ android {
                 "APP_CHECK_ENABLED",
                 appCheckEnabled.toString(),
             )
+            buildConfigField("boolean", "IN_APP_UPDATES_ENABLED", "false")
         }
 
         getByName("release") {
@@ -92,6 +93,20 @@ android {
                 "APP_CHECK_ENABLED",
                 appCheckEnabled.toString(),
             )
+            buildConfigField("boolean", "IN_APP_UPDATES_ENABLED", "false")
+        }
+
+        create("tester") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            signingConfig = secureReleaseSigning
+            buildConfigField("boolean", "REMOTE_ACCESS_REQUIRED", "true")
+            buildConfigField(
+                "boolean",
+                "APP_CHECK_ENABLED",
+                appCheckEnabled.toString(),
+            )
+            buildConfigField("boolean", "IN_APP_UPDATES_ENABLED", "true")
         }
     }
 
@@ -124,7 +139,10 @@ val requireReleaseSigning = providers.gradleProperty("LCF_REQUIRE_RELEASE_SIGNIN
     ?: false
 
 tasks.matching { task ->
-    task.name == "assembleRelease" || task.name == "bundleRelease"
+    task.name == "assembleRelease" ||
+        task.name == "bundleRelease" ||
+        task.name == "assembleTester" ||
+        task.name == "bundleTester"
 }.configureEach {
     doFirst {
         if (requireReleaseSigning && !releaseSigningReady) {
@@ -157,8 +175,11 @@ dependencies {
     implementation(firebaseBom)
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-appdistribution-api:16.0.0-beta20")
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
     releaseImplementation("com.google.firebase:firebase-appcheck-playintegrity")
+    testerImplementation("com.google.firebase:firebase-appcheck-playintegrity")
+    testerImplementation("com.google.firebase:firebase-appdistribution:16.0.0-beta20")
 
     implementation("org.jsoup:jsoup:1.23.2")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
