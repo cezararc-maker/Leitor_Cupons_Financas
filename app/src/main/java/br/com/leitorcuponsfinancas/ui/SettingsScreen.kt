@@ -49,6 +49,8 @@ fun SettingsScreen(
     onColorPaletteChange: (AppColorPalette) -> Unit,
     onGradientEnabledChange: (Boolean) -> Unit,
     onTaxonomy: () -> Unit,
+    updatesEnabled: Boolean,
+    onCheckUpdates: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -307,12 +309,16 @@ fun SettingsScreen(
 
                     PrimaryActionButton(
                         text = "Verificar atualizações",
-                        enabled = false,
-                        onClick = {},
+                        enabled = updatesEnabled,
+                        onClick = onCheckUpdates,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
-                        text = "A verificação online será habilitada quando concluirmos a vinculação segura com o Firebase.",
+                        text = if (updatesEnabled) {
+                            "Esta versão verifica automaticamente novas versões ao abrir o app. Você também pode verificar manualmente por este botão."
+                        } else {
+                            "A verificação dentro do app fica disponível somente nas versões distribuídas pelo canal de testadores."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
