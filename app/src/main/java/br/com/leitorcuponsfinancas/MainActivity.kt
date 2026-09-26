@@ -512,9 +512,7 @@ private fun LeitorCuponsApp(
             }
 
             FeedbackOverlay(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 18.dp, bottom = 96.dp),
+                modifier = Modifier.fillMaxSize(),
             )
 
             QuickAddMenu(
