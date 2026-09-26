@@ -56,6 +56,7 @@ Branch de desenvolvimento:
 - Suspensão, bloqueio/liberação da conta e revogação/liberação do aparelho validados.
 - Firebase App Check preparado por variante: Debug Provider no debug e Play Integrity na release.
 - Grupo `leitor-cupons-testadores` criado no Firebase App Distribution.
+- Primeira release APK assinada distribuída com sucesso pelo Firebase App Distribution.
 - Enforcement do App Check adiado para depois da primeira distribuição externa, pois ainda não há Google Play Console; distribuição inicial será por APK no Firebase App Distribution.
 
 ## Decisões de produto já definidas
@@ -85,7 +86,6 @@ Já preparado:
 Antes da primeira instalação externa ainda é obrigatório concluir:
 
 - configurar Secrets do GitHub para assinatura, Google Services e App Distribution;
-- validar a primeira release APK assinada no fluxo externo;
 - validar instalação/login/autorização no primeiro smartphone externo;
 - posteriormente registrar App Check com Play Integrity quando houver Google Play Console (ou escolher outro provedor);
 - criptografar e vincular por usuário o backup restaurável antes de compartilhamento entre aparelhos.
