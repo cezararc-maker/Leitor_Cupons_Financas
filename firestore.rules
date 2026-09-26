@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function ownsUser(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if ownsUser(uid);
+      allow create, update, delete: if false;
+
+      match /devices/{installationId} {
+        allow read: if ownsUser(uid);
+
+        allow create: if ownsUser(uid)
+          && request.resource.data.keys().hasOnly([
+            "installationId",
+            "status",
+            "active",
+            "model",
+            "appVersion",
+            "firstSeenAt",
+            "lastSeenAt"
+          ])
+          && request.resource.data.installationId == installationId
+          && request.resource.data.status == "PENDING"
+          && request.resource.data.active == false
+          && request.resource.data.model is string
+          && request.resource.data.appVersion is string;
+
+        allow update: if ownsUser(uid)
+          && request.resource.data.installationId == resource.data.installationId
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.active == resource.data.active
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "model",
+            "appVersion",
+            "lastSeenAt"
+          ]);
+
+        allow delete: if false;
+      }
+    }
+  }
+}
