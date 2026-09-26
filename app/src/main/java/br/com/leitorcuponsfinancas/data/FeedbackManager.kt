@@ -463,7 +463,7 @@ class FeedbackManager private constructor(
         key: String,
         values: MutableSet<String>,
     ) {
-        val limited = values.takeLast(MAX_NOTIFICATION_HISTORY).toSet()
+        val limited = values.toList().takeLast(MAX_NOTIFICATION_HISTORY).toSet()
         notificationStore.edit().putStringSet(key, limited).apply()
     }
 
