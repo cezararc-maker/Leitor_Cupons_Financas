@@ -68,7 +68,6 @@ service cloud.firestore {
         && request.resource.data.message.size() >= 10
         && request.resource.data.message.size() <= 1500
         && request.resource.data.status == "RECEIVED"
-        && request.resource.data.discardReason == null
         && request.resource.data.adminSeen == false
         && request.resource.data.userSeen == true;
 
