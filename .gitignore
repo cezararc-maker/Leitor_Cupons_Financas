@@ -19,3 +19,15 @@ app/build
 /gradle/
 /gradlew
 /gradlew.bat
+
+# Segredos de distribuicao / assinatura
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+firebase-service-account*.json
+service-account*.json
+app/google-services.json
+/.secrets/
+
