@@ -62,6 +62,7 @@ LCF_RELEASE_KEY_ALIAS
 LCF_RELEASE_KEY_PASSWORD
 FIREBASE_APP_ID_ANDROID
 FIREBASE_SERVICE_ACCOUNT_BASE64
+FIREBASE_GOOGLE_SERVICES_JSON_BASE64
 ```
 
 ## Firebase App Distribution
@@ -106,31 +107,33 @@ testadores autorizados
 
 Nenhum APK é publicado por esse fluxo quando testes ou assinatura falham.
 
-## Controle de usuários — próxima camada obrigatória
+## Controle de usuários e dispositivos — base implementada
 
 App Distribution controla quem recebe versões, mas não é suficiente para banir uma instalação que já recebeu o APK.
 
-Antes da primeira distribuição ampla, integrar:
+A base Android/Firestore agora implementa:
 
-- Firebase Authentication;
-- coleção administrativa de usuários;
-- status `ACTIVE`, `SUSPENDED` ou `BLOCKED`;
-- dispositivos autorizados por usuário;
-- limite configurável de dispositivos;
-- revogação de sessão;
-- App Check para proteger chamadas ao backend.
+- Firebase Authentication por e-mail e senha;
+- ausência de cadastro público no aplicativo;
+- status de conta `ACTIVE`, `SUSPENDED` e `BLOCKED`;
+- dispositivo identificado pelo `installationId` aleatório já existente;
+- primeiro dispositivo novo registrado como `PENDING`;
+- ativação administrativa separada da autenticação;
+- revogação por dispositivo;
+- regra offline limitada a 72 horas desde a última validação online aprovada;
+- consulta de autorização usando origem `SERVER`, sem depender indefinidamente do cache Firestore;
+- regras Firestore que impedem o cliente de alterar o próprio status ou se autoativar.
 
-Os dados financeiros continuarão locais. O backend de acesso não deve receber compras, itens ou valores apenas para controlar licença/acesso.
-
-Estrutura conceitual:
+Estrutura:
 
 ```
 users/{uid}
   status
   maxDevices
-  createdAt
 
 users/{uid}/devices/{installationId}
+  installationId
+  status
   active
   model
   appVersion
@@ -138,7 +141,13 @@ users/{uid}/devices/{installationId}
   lastSeenAt
 ```
 
-O próprio usuário autenticado poderá ler somente seu status/dispositivos. Alterações administrativas de bloqueio devem ser feitas apenas por ambiente administrativo confiável, nunca diretamente pelo cliente Android.
+Os dados financeiros continuam locais. O Firebase desta camada não recebe compras, itens ou valores.
+
+O limite `maxDevices` é conferido durante a aprovação administrativa. A automação dessa aprovação deverá usar backend confiável/Cloud Function; ela não deve ser delegada ao cliente Android.
+
+Firebase App Check permanece como próxima camada de endurecimento.
+
+Detalhes operacionais: `docs/FIREBASE_ACCESS_SETUP.md`.
 
 ## Atualizações no aplicativo
 
@@ -183,15 +192,18 @@ Depois da instalação, orientar a desativá-lo novamente, principalmente porque
 
 Não enviar o APK de desenvolvimento atual.
 
-A primeira instalação no aparelho de outra pessoa somente deve ocorrer depois de:
+A chave oficial de assinatura e o registro do aplicativo Firebase já foram preparados.
 
-1. criar a chave oficial de assinatura;
-2. registrar o aplicativo no Firebase;
-3. configurar o grupo de testadores;
-4. configurar os Secrets do GitHub;
-5. concluir a camada mínima de autenticação/autorização;
-6. gerar a primeira versão assinada pelo workflow;
-7. enviar o convite do App Distribution.
+Antes da primeira instalação no aparelho de outra pessoa ainda é necessário:
+
+1. colocar localmente o `google-services.json` em `app/google-services.json`;
+2. habilitar Authentication por e-mail/senha;
+3. criar o Firestore e publicar `firestore.rules`;
+4. criar a primeira conta autorizada e validar o fluxo de dispositivo `PENDING → ACTIVE`;
+5. configurar o grupo `leitor-cupons-testadores`;
+6. configurar os Secrets do GitHub;
+7. gerar a primeira versão assinada pelo workflow;
+8. enviar o convite do App Distribution.
 
 ## Atualização posterior
 
