@@ -178,8 +178,8 @@ dependencies {
     implementation("com.google.firebase:firebase-appdistribution-api:16.0.0-beta20")
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
     releaseImplementation("com.google.firebase:firebase-appcheck-playintegrity")
-    testerImplementation("com.google.firebase:firebase-appcheck-playintegrity")
-    testerImplementation("com.google.firebase:firebase-appdistribution:16.0.0-beta20")
+    add("testerImplementation", "com.google.firebase:firebase-appcheck-playintegrity")
+    add("testerImplementation", "com.google.firebase:firebase-appdistribution:16.0.0-beta20")
 
     implementation("org.jsoup:jsoup:1.23.2")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
