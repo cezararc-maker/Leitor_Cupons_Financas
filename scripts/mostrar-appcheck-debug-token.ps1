@@ -60,7 +60,9 @@ $Matches = @(
 Write-Host ""
 if ($Matches.Count -eq 0) {
     Write-Host "[ATENCAO] Nenhuma linha do App Check foi encontrada." -ForegroundColor DarkYellow
-    Write-Host "Confirme que o APK debug mais recente esta instalado e tente novamente."
+    Write-Host "Isto tambem ocorre quando o App Check esta intencionalmente desabilitado no build." -ForegroundColor DarkCyan
+    Write-Host "Atualmente ele deve permanecer desabilitado ate existir um provedor registrado no Firebase." -ForegroundColor DarkCyan
+    Write-Host "Para um teste futuro, gere o APK explicitamente com -EnableAppCheck." -ForegroundColor DarkCyan
     exit 2
 }
 
