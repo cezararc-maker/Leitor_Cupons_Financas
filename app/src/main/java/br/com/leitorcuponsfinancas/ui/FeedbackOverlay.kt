@@ -54,7 +54,6 @@ fun FeedbackOverlay(
     val manager = remember { FeedbackManager.getInstance(context) }
     val state by manager.state.collectAsStateWithLifecycle()
 
-    var hubOpen by rememberSaveable { mutableStateOf(false) }
     var composerOpen by rememberSaveable { mutableStateOf(false) }
     var listOpen by rememberSaveable { mutableStateOf(false) }
     var editingItem by remember { mutableStateOf<FeedbackItem?>(null) }
@@ -75,7 +74,7 @@ fun FeedbackOverlay(
 
     Box(modifier = modifier) {
         FloatingActionButton(
-            onClick = { hubOpen = true },
+            onClick = { composerOpen = true },
             modifier = Modifier.align(Alignment.Center),
         ) {
             Icon(
@@ -104,60 +103,20 @@ fun FeedbackOverlay(
         }
     }
 
-    if (hubOpen) {
-        AlertDialog(
-            onDismissRequest = { hubOpen = false },
-            title = { Text("Ideias e melhorias") },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Text(
-                        "Use este canal para enviar sugestões e acompanhar o andamento.",
-                    )
-                    Button(
-                        onClick = {
-                            hubOpen = false
-                            composerOpen = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Enviar nova sugestão")
-                    }
-                    Button(
-                        onClick = {
-                            hubOpen = false
-                            listOpen = true
-                            if (state.isAdmin) {
-                                manager.markAdminSeen()
-                            } else {
-                                manager.markUserSeen()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            if (state.isAdmin) {
-                                "Central de solicitações"
-                            } else {
-                                "Minhas sugestões"
-                            },
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { hubOpen = false }) {
-                    Text("Fechar")
-                }
-            },
-        )
-    }
-
     if (composerOpen) {
         FeedbackComposerDialog(
             submitting = state.submitting,
+            isAdmin = state.isAdmin,
             onDismiss = { composerOpen = false },
+            onOpenList = {
+                composerOpen = false
+                listOpen = true
+                if (state.isAdmin) {
+                    manager.markAdminSeen()
+                } else {
+                    manager.markUserSeen()
+                }
+            },
             onSend = { message ->
                 manager.submitSuggestion(message)
                 composerOpen = false
@@ -206,7 +165,9 @@ fun FeedbackOverlay(
 @Composable
 private fun FeedbackComposerDialog(
     submitting: Boolean,
+    isAdmin: Boolean,
     onDismiss: () -> Unit,
+    onOpenList: () -> Unit,
     onSend: (String) -> Unit,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
@@ -231,6 +192,18 @@ private fun FeedbackComposerDialog(
                     minLines = 5,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                TextButton(
+                    onClick = onOpenList,
+                    modifier = Modifier.align(Alignment.End),
+                ) {
+                    Text(
+                        if (isAdmin) {
+                            "Central de solicitações"
+                        } else {
+                            "Acompanhar minhas sugestões"
+                        },
+                    )
+                }
             }
         },
         confirmButton = {
