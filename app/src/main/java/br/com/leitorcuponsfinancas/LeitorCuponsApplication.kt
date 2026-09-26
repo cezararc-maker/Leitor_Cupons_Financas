@@ -7,6 +7,9 @@ class LeitorCuponsApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        AppCheckInitializer.initialize(this)
+
         InstallationIdentityStore
             .getInstance(this)
             .getOrCreateInstallationId()
