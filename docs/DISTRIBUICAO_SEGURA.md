@@ -230,7 +230,7 @@ Uma versão nova deve:
 
 ## Atualizações dentro do app para testadores
 
-O canal Firebase App Distribution usa uma variante Android exclusiva chamada `tester`.
+O canal Firebase App Distribution usa uma variante Android exclusiva chamada `beta`.
 
 Arquitetura:
 
@@ -239,7 +239,7 @@ debug
 → desenvolvimento local
 → sem SDK completo de autoatualização
 
-tester
+beta
 → Firebase App Distribution
 → assinatura oficial
 → login/autorização remota obrigatórios
@@ -253,7 +253,7 @@ release
 
 A separação existe porque o SDK completo do App Distribution contém funcionalidade de autoatualização e não deve acompanhar uma futura build publicada na Google Play.
 
-Na variante `tester`:
+Na variante `beta`:
 
 - depois que o usuário autenticado entra no app, uma verificação de nova versão é executada automaticamente;
 - na primeira utilização, o App Distribution pode pedir um login Google do testador;
@@ -268,6 +268,6 @@ Pré-requisito do projeto Firebase/Google Cloud:
 Firebase App Testers API = habilitada
 ```
 
-O workflow `Distribuir para testadores` gera e distribui `assembleTester`, não a variante `release`.
+O workflow `Distribuir para testadores` gera e distribui `assembleBeta`, não a variante `release`.
 
-Importante: a primeira versão que já estava instalada antes desta integração não consegue avisar sobre sua própria atualização. O usuário precisa instalar uma vez uma build `tester` que já contenha o SDK. A partir dela, as versões seguintes podem ser detectadas dentro do app.
+Importante: a primeira versão que já estava instalada antes desta integração não consegue avisar sobre sua própria atualização. O usuário precisa instalar uma vez uma build `beta` que já contenha o SDK. A partir dela, as versões seguintes podem ser detectadas dentro do app.
