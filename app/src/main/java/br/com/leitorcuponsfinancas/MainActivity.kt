@@ -86,6 +86,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.leitorcuponsfinancas.data.AppPreferences
 import br.com.leitorcuponsfinancas.data.AppPreferencesStore
+import br.com.leitorcuponsfinancas.data.TesterUpdateManager
 import br.com.leitorcuponsfinancas.ui.BackArrowButton
 import br.com.leitorcuponsfinancas.ui.BackupScreen
 import br.com.leitorcuponsfinancas.ui.ContextualTipDialog
@@ -187,6 +188,10 @@ private fun LeitorCuponsApp(
         pageCount = { MainTab.entries.size },
     )
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        TesterUpdateManager.checkForUpdates()
+    }
 
     var taskScreen by rememberSaveable { mutableStateOf<AppScreen?>(null) }
     var addMenuOpen by rememberSaveable { mutableStateOf(false) }
@@ -478,6 +483,8 @@ private fun LeitorCuponsApp(
                                     onColorPaletteChange = preferencesStore::setColorPalette,
                                     onGradientEnabledChange = preferencesStore::setGradientEnabled,
                                     onTaxonomy = { taskScreen = AppScreen.TAXONOMY },
+                                    updatesEnabled = BuildConfig.IN_APP_UPDATES_ENABLED,
+                                    onCheckUpdates = TesterUpdateManager::checkForUpdates,
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
