@@ -31,7 +31,9 @@ A configuração Gradle aplica o plugin Google Services somente quando esse arqu
 - Google Services plugin `4.5.0`;
 - Firebase BoM `34.19.0`;
 - Firebase Authentication;
-- Cloud Firestore.
+- Cloud Firestore;
+- Firebase App Check Debug Provider para builds debug;
+- Firebase App Check Play Integrity para builds release.
 
 Nenhum SDK de compras/dados financeiros foi adicionado.
 
@@ -120,7 +122,77 @@ Regras:
 - após 72 horas, uma nova validação online é obrigatória;
 - retrocesso do relógio local não renova a janela offline.
 
-Esta é uma primeira proteção prática. Firebase App Check permanece como próxima camada de endurecimento.
+Esta é uma primeira proteção prática.
+
+## Firebase App Check
+
+A integração Android está preparada por variante:
+
+```
+debug
+→ DebugAppCheckProvider
+
+release
+→ PlayIntegrityAppCheckProvider
+```
+
+O App Check é inicializado em `LeitorCuponsApplication` antes do uso de Authentication/Firestore.
+
+### Debug
+
+O debug provider é usado somente em builds debug e nunca deve ser distribuído como release.
+
+Para localizar o token de debug no Moto G15:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\mostrar-appcheck-debug-token.ps1"
+```
+
+O token deve ser cadastrado em:
+
+```
+Firebase
+→ Segurança
+→ App Check
+→ Apps
+→ Gerenciar tokens de depuração
+```
+
+O token é sensível:
+
+- não enviar ao chat;
+- não versionar no GitHub;
+- não colocar em documentação;
+- revogar no Firebase se houver exposição.
+
+### Release / Play Integrity
+
+A release usa Play Integrity.
+
+Antes de habilitar enforcement:
+
+1. habilitar/vincular Play Integrity ao mesmo projeto Google Cloud/Firebase;
+2. registrar o app Android no Firebase App Check;
+3. cadastrar a impressão digital SHA-256 do certificado oficial de release;
+4. instalar/validar uma release assinada;
+5. observar métricas do App Check;
+6. somente então habilitar enforcement.
+
+A impressão SHA-256 pode ser obtida localmente sem compartilhar a chave:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\mostrar-sha256-release.ps1"
+```
+
+O script pode solicitar a senha do keystore no computador. A senha nunca deve ser enviada ao chat.
+
+Para distribuição exclusivamente fora da Google Play, a configuração avançada inicial recomendada é:
+
+- `PLAY_RECOGNIZED`: não exigir;
+- `LICENSED`: não exigir;
+- integridade mínima do dispositivo: `Device integrity`.
+
+Não habilitar enforcement antes de validar o tráfego legítimo do Moto G15 e da primeira release de testadores.
 
 ## Builds de desenvolvimento x release
 
@@ -198,16 +270,23 @@ Grupo previsto:
 leitor-cupons-testadores
 ```
 
-## Próximas camadas
+## Estado de validação e próximas camadas
 
-Antes de ampliar a distribuição:
+Concluído:
 
-1. habilitar Authentication Email/Password;
-2. criar Firestore e publicar `firestore.rules`;
-3. criar o primeiro usuário administrativo/testador;
-4. validar o fluxo PENDING → ACTIVE no Moto G15;
-5. criar o grupo `leitor-cupons-testadores`;
-6. configurar os Secrets do GitHub;
-7. habilitar Firebase App Check;
-8. depois evoluir a aprovação de dispositivos para backend confiável/Cloud Function, caso se deseje aplicação automática de `maxDevices`;
-9. criptografar/vincular o `.lcfbackup` ao usuário antes de permitir transporte entre aparelhos.
+1. Authentication Email/Password habilitado;
+2. Firestore criado e `firestore.rules` publicadas;
+3. primeiro usuário administrativo/testador criado;
+4. fluxo PENDING → ACTIVE validado no Moto G15;
+5. suspensão, bloqueio/liberação da conta e revogação/liberação do aparelho validados no Moto G15;
+6. App Check integrado no código por variante.
+
+Próximos passos:
+
+1. registrar e validar App Check;
+2. criar o grupo `leitor-cupons-testadores`;
+3. configurar os Secrets do GitHub;
+4. gerar e validar a primeira release assinada;
+5. distribuir ao primeiro smartphone externo;
+6. depois evoluir a aprovação de dispositivos para backend confiável/Cloud Function, caso se deseje aplicação automática de `maxDevices`;
+7. criptografar/vincular o `.lcfbackup` ao usuário antes de permitir transporte entre aparelhos.
