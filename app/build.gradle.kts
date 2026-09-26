@@ -19,6 +19,10 @@ val configuredVersionName = providers.gradleProperty("LCF_VERSION_NAME")
     .orNull
     ?.trim()
     ?.takeIf { it.isNotBlank() }
+val remoteAccessRequiredInDebug = providers.gradleProperty("LCF_REMOTE_ACCESS_REQUIRED")
+    .orNull
+    ?.equals("true", ignoreCase = true)
+    ?: false
 
 plugins {
     id("com.android.application")
@@ -26,6 +30,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("androidx.room")
+}
+
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 android {
@@ -43,6 +51,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     val secureReleaseSigning = if (releaseSigningReady) {
@@ -57,9 +66,18 @@ android {
     }
 
     buildTypes {
+        getByName("debug") {
+            buildConfigField(
+                "boolean",
+                "REMOTE_ACCESS_REQUIRED",
+                remoteAccessRequiredInDebug.toString(),
+            )
+        }
+
         getByName("release") {
             signingConfig = secureReleaseSigning
             isMinifyEnabled = false
+            buildConfigField("boolean", "REMOTE_ACCESS_REQUIRED", "true")
         }
     }
 
@@ -85,7 +103,6 @@ kotlin {
         jvmTarget = JvmTarget.fromTarget("17")
     }
 }
-
 
 val requireReleaseSigning = providers.gradleProperty("LCF_REQUIRE_RELEASE_SIGNING")
     .orNull
@@ -121,6 +138,11 @@ dependencies {
 
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+
+    val firebaseBom = platform("com.google.firebase:firebase-bom:34.19.0")
+    implementation(firebaseBom)
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
 
     implementation("org.jsoup:jsoup:1.23.2")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
