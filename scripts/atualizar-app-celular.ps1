@@ -1,7 +1,8 @@
 param(
     [string]$PhoneSerial = "ZF52554B2L",
     [switch]$SkipTests,
-    [switch]$SafeBuild
+    [switch]$SafeBuild,
+    [switch]$TestRemoteAccess
 )
 
 $ErrorActionPreference = "Stop"
@@ -142,11 +143,23 @@ if (-not $SkipTests) {
 Write-Host ""
 Write-Host "[4/7] Gerando APK..." -ForegroundColor Yellow
 
+$BuildArguments = @("assembleDebug")
+
 if ($SafeBuild) {
-    & $Gradle assembleDebug --no-daemon --max-workers=1
+    $BuildArguments += "--no-daemon"
+    $BuildArguments += "--max-workers=1"
 } else {
-    & $Gradle assembleDebug --max-workers=2
+    $BuildArguments += "--max-workers=2"
 }
+
+if ($TestRemoteAccess) {
+    $BuildArguments += "-PLCF_REMOTE_ACCESS_REQUIRED=true"
+    Write-Host "[MODO TESTE] Login/autorizacao remota habilitados neste APK debug." -ForegroundColor Cyan
+} else {
+    Write-Host "[MODO DESENVOLVIMENTO] APK debug sem bloqueio por login remoto." -ForegroundColor DarkCyan
+}
+
+& $Gradle @BuildArguments
 
 if ($LASTEXITCODE -ne 0) {
     throw "Falha ao gerar o APK. Nada sera instalado no celular."
@@ -207,3 +220,4 @@ Write-Host "Metodo: adb install -r"
 Write-Host "Emulator utilizado: NAO"
 Write-Host "Rotacao/configuracoes Android alteradas: NAO"
 Write-Host "pm clear / uninstall executados: NAO"
+Write-Host "Controle remoto exigido neste debug: $($TestRemoteAccess.IsPresent)"
