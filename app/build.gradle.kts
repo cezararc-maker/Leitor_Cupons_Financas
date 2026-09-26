@@ -23,6 +23,10 @@ val remoteAccessRequiredInDebug = providers.gradleProperty("LCF_REMOTE_ACCESS_RE
     .orNull
     ?.equals("true", ignoreCase = true)
     ?: false
+val appCheckEnabled = providers.gradleProperty("LCF_APP_CHECK_ENABLED")
+    .orNull
+    ?.equals("true", ignoreCase = true)
+    ?: false
 
 plugins {
     id("com.android.application")
@@ -72,12 +76,22 @@ android {
                 "REMOTE_ACCESS_REQUIRED",
                 remoteAccessRequiredInDebug.toString(),
             )
+            buildConfigField(
+                "boolean",
+                "APP_CHECK_ENABLED",
+                appCheckEnabled.toString(),
+            )
         }
 
         getByName("release") {
             signingConfig = secureReleaseSigning
             isMinifyEnabled = false
             buildConfigField("boolean", "REMOTE_ACCESS_REQUIRED", "true")
+            buildConfigField(
+                "boolean",
+                "APP_CHECK_ENABLED",
+                appCheckEnabled.toString(),
+            )
         }
     }
 
