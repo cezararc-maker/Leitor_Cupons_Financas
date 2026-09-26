@@ -55,6 +55,7 @@ Branch de desenvolvimento:
 - Fluxo real de autenticação/autorização validado no Moto G15.
 - Suspensão, bloqueio/liberação da conta e revogação/liberação do aparelho validados.
 - Firebase App Check preparado por variante: Debug Provider no debug e Play Integrity na release.
+- Grupo `leitor-cupons-testadores` criado no Firebase App Distribution.
 - Enforcement do App Check adiado para depois da primeira distribuição externa, pois ainda não há Google Play Console; distribuição inicial será por APK no Firebase App Distribution.
 
 ## Decisões de produto já definidas
@@ -83,7 +84,6 @@ Já preparado:
 
 Antes da primeira instalação externa ainda é obrigatório concluir:
 
-- criar o grupo `leitor-cupons-testadores`;
 - configurar Secrets do GitHub para assinatura, Google Services e App Distribution;
 - validar a primeira release APK assinada no fluxo externo;
 - validar instalação/login/autorização no primeiro smartphone externo;
