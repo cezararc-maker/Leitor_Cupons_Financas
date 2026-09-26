@@ -57,6 +57,7 @@ Branch de desenvolvimento:
 - Firebase App Check preparado por variante: Debug Provider no debug e Play Integrity na release.
 - Grupo `leitor-cupons-testadores` criado no Firebase App Distribution.
 - Primeira release APK assinada distribuída com sucesso pelo Firebase App Distribution.
+- Atualização dentro do app preparada para o canal de testadores, com variante `tester`, verificação automática e botão manual em Configurações.
 - Enforcement do App Check adiado para depois da primeira distribuição externa, pois ainda não há Google Play Console; distribuição inicial será por APK no Firebase App Distribution.
 
 ## Decisões de produto já definidas
