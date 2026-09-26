@@ -6,6 +6,11 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    function isAdmin() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ADMIN";
+    }
+
     match /users/{uid} {
       allow read: if ownsUser(uid);
       allow create, update, delete: if false;
@@ -41,6 +46,67 @@ service cloud.firestore {
 
         allow delete: if false;
       }
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          "authorUid",
+          "authorEmail",
+          "message",
+          "status",
+          "discardReason",
+          "createdAt",
+          "updatedAt",
+          "adminSeen",
+          "userSeen",
+          "appVersion",
+          "deviceModel"
+        ])
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 10
+        && request.resource.data.message.size() <= 1500
+        && request.resource.data.status == "RECEIVED"
+        && request.resource.data.discardReason == null
+        && request.resource.data.adminSeen == false
+        && request.resource.data.userSeen == true;
+
+      allow read: if request.auth != null
+        && (
+          resource.data.authorUid == request.auth.uid
+          || isAdmin()
+        );
+
+      allow update: if request.auth != null
+        && (
+          (
+            isAdmin()
+            && request.resource.data.authorUid == resource.data.authorUid
+            && request.resource.data.authorEmail == resource.data.authorEmail
+            && request.resource.data.message == resource.data.message
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.appVersion == resource.data.appVersion
+            && request.resource.data.deviceModel == resource.data.deviceModel
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "status",
+              "discardReason",
+              "updatedAt",
+              "adminSeen",
+              "userSeen"
+            ])
+          )
+          ||
+          (
+            resource.data.authorUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              "userSeen"
+            ])
+            && request.resource.data.userSeen == true
+          )
+        );
+
+      allow delete: if false;
     }
   }
 }
