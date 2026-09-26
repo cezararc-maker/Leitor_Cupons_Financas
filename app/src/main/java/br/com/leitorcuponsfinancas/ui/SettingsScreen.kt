@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -22,11 +23,16 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import br.com.leitorcuponsfinancas.data.AppColorPalette
 import br.com.leitorcuponsfinancas.data.AppPreferences
@@ -45,6 +51,48 @@ fun SettingsScreen(
     onTaxonomy: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val versionName = rememberSaveable {
+        @Suppress("DEPRECATION")
+        context.packageManager
+            .getPackageInfo(context.packageName, 0)
+            .versionName
+            .orEmpty()
+            .ifBlank { "desconhecida" }
+    }
+    var showDeveloperModeHelp by rememberSaveable { mutableStateOf(false) }
+
+    if (showDeveloperModeHelp) {
+        AlertDialog(
+            onDismissRequest = { showDeveloperModeHelp = false },
+            title = { Text("Como ativo o modo desenvolvedor?") },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text("Na maioria dos aparelhos isso não é necessário para instalar o app.")
+                    Text("Se o Android realmente solicitar, siga este passo a passo:")
+                    Text("1. Abra Configurações do celular.")
+                    Text("2. Entre em Sobre o telefone ou Informações do software.")
+                    Text("3. Localize Número da versão ou Número da compilação.")
+                    Text("4. Toque 7 vezes nessa opção.")
+                    Text("5. Confirme PIN, senha ou biometria, se solicitado.")
+                    Text("6. Volte às Configurações e procure Opções do desenvolvedor.")
+                    Text(
+                        text = "Importante: depois da instalação, desative novamente o Modo Desenvolvedor. Apps de segurança, bancos e o gov.br podem impedir o acesso enquanto essa opção estiver ativa.",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            confirmButton = {
+                PrimaryActionButton(
+                    text = "Entendi",
+                    onClick = { showDeveloperModeHelp = false },
+                )
+            },
+        )
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -233,6 +281,47 @@ fun SettingsScreen(
                     ) {
                         Text("Configurar taxonomia")
                     }
+                }
+            }
+        }
+
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        text = "Atualizações e instalação",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = "Versão instalada: $versionName",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "As atualizações serão distribuídas por um canal seguro para testadores autorizados. O app não transfere automaticamente banco, histórico ou perfil entre aparelhos.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    PrimaryActionButton(
+                        text = "Verificar atualizações",
+                        enabled = false,
+                        onClick = {},
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = "A verificação online será habilitada quando concluirmos a vinculação segura com o Firebase.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    NeutralActionButton(
+                        text = "Como ativo o modo desenvolvedor?",
+                        onClick = { showDeveloperModeHelp = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }
