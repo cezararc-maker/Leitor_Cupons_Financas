@@ -145,7 +145,7 @@ Os dados financeiros continuam locais. O Firebase desta camada não recebe compr
 
 O limite `maxDevices` é conferido durante a aprovação administrativa. A automação dessa aprovação deverá usar backend confiável/Cloud Function; ela não deve ser delegada ao cliente Android.
 
-Firebase App Check permanece como próxima camada de endurecimento.
+Firebase App Check foi integrado no código por variante e agora precisa ser registrado/validado no projeto antes do enforcement.
 
 Detalhes operacionais: `docs/FIREBASE_ACCESS_SETUP.md`.
 
@@ -194,16 +194,24 @@ Não enviar o APK de desenvolvimento atual.
 
 A chave oficial de assinatura e o registro do aplicativo Firebase já foram preparados.
 
+Já concluído e validado no Moto G15:
+
+1. `google-services.json` configurado localmente;
+2. Authentication por e-mail/senha habilitado;
+3. Firestore criado e `firestore.rules` publicadas;
+4. primeira conta autorizada criada;
+5. fluxo `PENDING → ACTIVE` validado;
+6. suspensão/bloqueio/liberação de conta e revogação/liberação de dispositivo validados;
+7. App Check integrado no Android por variante.
+
 Antes da primeira instalação no aparelho de outra pessoa ainda é necessário:
 
-1. colocar localmente o `google-services.json` em `app/google-services.json`;
-2. habilitar Authentication por e-mail/senha;
-3. criar o Firestore e publicar `firestore.rules`;
-4. criar a primeira conta autorizada e validar o fluxo de dispositivo `PENDING → ACTIVE`;
-5. configurar o grupo `leitor-cupons-testadores`;
-6. configurar os Secrets do GitHub;
-7. gerar a primeira versão assinada pelo workflow;
-8. enviar o convite do App Distribution.
+1. registrar/validar o App Check e a assinatura oficial;
+2. configurar o grupo `leitor-cupons-testadores`;
+3. configurar os Secrets do GitHub;
+4. gerar a primeira versão assinada pelo workflow;
+5. enviar o convite do App Distribution;
+6. acompanhar métricas do App Check e habilitar enforcement somente depois da validação.
 
 ## Atualização posterior
 
