@@ -47,7 +47,11 @@ Branch de desenvolvimento:
 - Campo de data com máscara e calendário.
 - Backup restaurável `.lcfbackup`, com validação e integridade.
 - Testes automatizados e GitHub Actions.
-- Emulador de referência: `LeitorCupons_API34_Lite`.
+- Aparelho físico de referência para testes funcionais: Moto G15.
+- Firebase Authentication/Firestore integrados para releases de testadores.
+- Controle remoto de conta `ACTIVE / SUSPENDED / BLOCKED`.
+- Aprovação e revogação por instalação/dispositivo.
+- Janela offline de autorização limitada a 72 horas.
 
 ## Decisões de produto já definidas
 
@@ -63,19 +67,27 @@ Já preparado:
 - configuração de release assinada por chave permanente;
 - proteção no `.gitignore` para keystores e credenciais;
 - workflow de distribuição para testadores autorizados via Firebase App Distribution;
+- integração Gradle do Firebase sem versionar `google-services.json`;
+- Firebase Authentication por e-mail/senha para releases;
+- Firestore apenas para conta/dispositivos, sem dados financeiros;
+- regras Firestore para impedir autoativação do cliente;
+- status `ACTIVE`, `SUSPENDED` e `BLOCKED`;
+- registro de dispositivo como `PENDING`, ativação/revogação administrativa;
+- funcionamento offline limitado a 72 horas após validação online;
 - área inicial de **Atualizações e instalação** em Configurações;
 - tutorial de Modo Desenvolvedor aberto somente quando solicitado pelo usuário.
 
 Antes da primeira instalação externa ainda é obrigatório concluir:
 
-- criação e guarda segura da chave oficial de assinatura;
-- criação/registro do projeto Firebase;
-- Secrets do GitHub para assinatura e App Distribution;
-- autenticação de usuários;
-- autorização por dispositivo;
-- estados de acesso `ACTIVE`, `SUSPENDED` e `BLOCKED`;
-- regra de comportamento offline para não permitir que um bloqueio remoto seja burlado indefinidamente;
-- criptografia e vínculo por usuário do backup restaurável antes de compartilhamento entre aparelhos.
+- habilitar Authentication por e-mail/senha no projeto Firebase;
+- criar o Firestore e publicar as regras do repositório;
+- criar e validar a primeira conta autorizada;
+- aprovar o primeiro dispositivo de teste;
+- criar o grupo `leitor-cupons-testadores`;
+- configurar Secrets do GitHub para assinatura, Google Services e App Distribution;
+- validar a primeira release assinada no fluxo externo;
+- habilitar App Check antes de ampliar a distribuição;
+- criptografar e vincular por usuário o backup restaurável antes de compartilhamento entre aparelhos.
 
 O APK nunca deve conter banco ou dados reais de usuários.
 
@@ -329,9 +341,9 @@ Antes de adicionar novas grandes funcionalidades:
    - alerta de revisão;
    - dashboard e filtros.
 3. Registrar e corrigir problemas encontrados.
-4. Revalidar no emulador e no aparelho físico.
+4. Revalidar no aparelho físico.
 
-A restauração de backup deve ser validada primeiro no emulador antes de ser testada no aparelho principal.
+O emulador não deve ser iniciado nem usado para testes funcionais, salvo quando solicitado explicitamente.
 
 ## Fase 2 — leitura por foto / documento
 
