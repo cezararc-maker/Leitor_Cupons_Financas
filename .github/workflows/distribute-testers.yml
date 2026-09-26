@@ -205,4 +205,4 @@ jobs:
             NOTES="Versao ${{ steps.version.outputs.name }} para testadores autorizados."
           fi
 
-          firebase appdistribution:distribute             "app/build/outputs/apk/tester/app-tester.apk"             --app "$FIREBASE_APP_ID"             --groups "$GROUP"             --release-notes "$NOTES"
+          firebase appdistribution:distribute             "app/build/outputs/apk/beta/app-beta.apk"             --app "$FIREBASE_APP_ID"             --groups "$GROUP"             --release-notes "$NOTES"
