@@ -90,6 +90,7 @@ import br.com.leitorcuponsfinancas.data.TesterUpdateManager
 import br.com.leitorcuponsfinancas.ui.BackArrowButton
 import br.com.leitorcuponsfinancas.ui.BackupScreen
 import br.com.leitorcuponsfinancas.ui.ContextualTipDialog
+import br.com.leitorcuponsfinancas.ui.FeedbackOverlay
 import br.com.leitorcuponsfinancas.ui.GuidedTutorialOverlay
 import br.com.leitorcuponsfinancas.ui.GuidedTutorialStep
 import br.com.leitorcuponsfinancas.ui.LocalTutorialTargetRegistry
@@ -509,6 +510,12 @@ private fun LeitorCuponsApp(
                         .clickable { addMenuOpen = false },
                 )
             }
+
+            FeedbackOverlay(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 18.dp, bottom = 96.dp),
+            )
 
             QuickAddMenu(
                 open = addMenuOpen,
