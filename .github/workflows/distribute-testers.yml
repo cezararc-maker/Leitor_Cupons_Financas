@@ -150,9 +150,9 @@ jobs:
       - name: Unit tests
         run: gradle testDebugUnitTest
 
-      - name: Build signed tester APK
+      - name: Build signed beta APK
         run: >
-          gradle assembleTester
+          gradle assembleBeta
           -PLCF_REQUIRE_RELEASE_SIGNING=true
           -PLCF_VERSION_NAME="${{ steps.version.outputs.name }}"
           -PLCF_VERSION_CODE="${{ steps.version.outputs.code }}"
@@ -160,7 +160,7 @@ jobs:
       - name: Verify APK signature
         shell: bash
         run: |
-          APK="app/build/outputs/apk/tester/app-tester.apk"
+          APK="app/build/outputs/apk/beta/app-beta.apk"
           if [ ! -f "$APK" ]; then
             echo "Signed APK not found: $APK"
             exit 1
