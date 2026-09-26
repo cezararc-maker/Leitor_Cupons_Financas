@@ -168,7 +168,7 @@ fun FeedbackOverlay(
     if (listOpen) {
         FeedbackListDialog(
             isAdmin = state.isAdmin,
-            items = state.items,
+            feedbackItems = state.items,
             onDismiss = { listOpen = false },
             onEditStatus = { editingItem = it },
         )
@@ -252,7 +252,7 @@ private fun FeedbackComposerDialog(
 @Composable
 private fun FeedbackListDialog(
     isAdmin: Boolean,
-    items: List<FeedbackItem>,
+    feedbackItems: List<FeedbackItem>,
     onDismiss: () -> Unit,
     onEditStatus: (FeedbackItem) -> Unit,
 ) {
@@ -278,7 +278,7 @@ private fun FeedbackListDialog(
                     fontWeight = FontWeight.Bold,
                 )
 
-                if (items.isEmpty()) {
+                if (feedbackItems.isEmpty()) {
                     Text(
                         if (isAdmin) {
                             "Nenhuma solicitação recebida."
@@ -291,7 +291,7 @@ private fun FeedbackListDialog(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.weight(1f, fill = false),
                     ) {
-                        items(items, key = { it.id }) { item ->
+                        items(feedbackItems, key = { it.id }) { item ->
                             FeedbackItemCard(
                                 item = item,
                                 isAdmin = isAdmin,
