@@ -226,3 +226,48 @@ Uma versão nova deve:
 - nunca executar `pm clear`;
 - nunca substituir o banco por um banco empacotado;
 - nunca importar dados de outro usuário automaticamente.
+
+
+## Atualizações dentro do app para testadores
+
+O canal Firebase App Distribution usa uma variante Android exclusiva chamada `tester`.
+
+Arquitetura:
+
+```
+debug
+→ desenvolvimento local
+→ sem SDK completo de autoatualização
+
+tester
+→ Firebase App Distribution
+→ assinatura oficial
+→ login/autorização remota obrigatórios
+→ SDK completo do App Distribution
+→ verifica novas versões dentro do app
+
+release
+→ reservada para futura distribuição oficial
+→ sem SDK completo de autoatualização do App Distribution
+```
+
+A separação existe porque o SDK completo do App Distribution contém funcionalidade de autoatualização e não deve acompanhar uma futura build publicada na Google Play.
+
+Na variante `tester`:
+
+- depois que o usuário autenticado entra no app, uma verificação de nova versão é executada automaticamente;
+- na primeira utilização, o App Distribution pode pedir um login Google do testador;
+- quando existe nova versão, o SDK mostra o diálogo de atualização dentro do app;
+- se o usuário não atualizar naquele momento, uma nova verificação ocorre em uma abertura posterior;
+- em **Configurações > Atualizações e instalação**, o botão **Verificar atualizações** também executa a verificação manual;
+- o banco Room, histórico e perfil local não são enviados ao Firebase durante a atualização.
+
+Pré-requisito do projeto Firebase/Google Cloud:
+
+```
+Firebase App Testers API = habilitada
+```
+
+O workflow `Distribuir para testadores` gera e distribui `assembleTester`, não a variante `release`.
+
+Importante: a primeira versão que já estava instalada antes desta integração não consegue avisar sobre sua própria atualização. O usuário precisa instalar uma vez uma build `tester` que já contenha o SDK. A partir dela, as versões seguintes podem ser detectadas dentro do app.
