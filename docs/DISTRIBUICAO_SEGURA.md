@@ -147,6 +147,8 @@ O limite `maxDevices` é conferido durante a aprovação administrativa. A autom
 
 Firebase App Check foi integrado no código por variante e agora precisa ser registrado/validado no projeto antes do enforcement.
 
+Decisão atual para a primeira distribuição externa: como ainda não existe conta Google Play Console vinculada ao projeto, o enforcement do App Check ficará adiado. A primeira distribuição continuará por APK no Firebase App Distribution, que não exige Google Play Console. Authentication, regras Firestore e autorização por dispositivo continuam obrigatórias e já foram validadas. O provedor Play Integrity permanece preparado no código para ativação futura. reCAPTCHA Enterprise para Android existe como alternativa, mas está em Preview e não será adotado nesta primeira distribuição.
+
 Detalhes operacionais: `docs/FIREBASE_ACCESS_SETUP.md`.
 
 ## Atualizações no aplicativo
@@ -206,12 +208,12 @@ Já concluído e validado no Moto G15:
 
 Antes da primeira instalação no aparelho de outra pessoa ainda é necessário:
 
-1. registrar/validar o App Check e a assinatura oficial;
-2. configurar o grupo `leitor-cupons-testadores`;
-3. configurar os Secrets do GitHub;
-4. gerar a primeira versão assinada pelo workflow;
-5. enviar o convite do App Distribution;
-6. acompanhar métricas do App Check e habilitar enforcement somente depois da validação.
+1. configurar o grupo `leitor-cupons-testadores`;
+2. configurar os Secrets do GitHub;
+3. gerar a primeira versão APK assinada pelo workflow;
+4. enviar o convite do App Distribution;
+5. validar instalação, login e autorização no primeiro smartphone externo;
+6. posteriormente, quando houver Play Console (ou decisão explícita por outro provedor), registrar/validar App Check e só então considerar enforcement.
 
 ## Atualização posterior
 
