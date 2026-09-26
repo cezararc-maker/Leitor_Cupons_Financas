@@ -8,7 +8,9 @@ class LeitorCuponsApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        AppCheckInitializer.initialize(this)
+        if (BuildConfig.APP_CHECK_ENABLED) {
+            AppCheckInitializer.initialize(this)
+        }
 
         InstallationIdentityStore
             .getInstance(this)
