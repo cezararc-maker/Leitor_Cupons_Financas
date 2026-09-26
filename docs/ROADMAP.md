@@ -51,6 +51,36 @@ Branch de desenvolvimento:
 
 ## Decisões de produto já definidas
 
+### Distribuição segura e isolamento entre usuários
+
+Antes de instalar o aplicativo em outro smartphone, foi iniciada uma camada específica de distribuição segura.
+
+Já preparado:
+
+- bloqueio de backup automático e transferência direta de dados do Android;
+- regras explícitas para impedir cópia automática de banco, perfil e preferências entre aparelhos;
+- identidade aleatória própria por instalação, sem usar IMEI ou identificador invasivo do aparelho;
+- configuração de release assinada por chave permanente;
+- proteção no `.gitignore` para keystores e credenciais;
+- workflow de distribuição para testadores autorizados via Firebase App Distribution;
+- área inicial de **Atualizações e instalação** em Configurações;
+- tutorial de Modo Desenvolvedor aberto somente quando solicitado pelo usuário.
+
+Antes da primeira instalação externa ainda é obrigatório concluir:
+
+- criação e guarda segura da chave oficial de assinatura;
+- criação/registro do projeto Firebase;
+- Secrets do GitHub para assinatura e App Distribution;
+- autenticação de usuários;
+- autorização por dispositivo;
+- estados de acesso `ACTIVE`, `SUSPENDED` e `BLOCKED`;
+- regra de comportamento offline para não permitir que um bloqueio remoto seja burlado indefinidamente;
+- criptografia e vínculo por usuário do backup restaurável antes de compartilhamento entre aparelhos.
+
+O APK nunca deve conter banco ou dados reais de usuários.
+
+Documento principal: `docs/DISTRIBUICAO_SEGURA.md`.
+
 ### Produto Mestre
 
 Produto Mestre representa o **item raiz**, independentemente de marca.
@@ -475,20 +505,21 @@ Estrutura prevista:
 ```
 1. Instalar e validar a versão atual no celular
 2. Corrigir problemas encontrados
-3. Estabilizar taxonomia e revisão
-4. Melhorar OCR local e estruturar captura de descontos, forma de pagamento e parcelamento
-5. Implementar fallback de IA para fotos/recibos, incluindo leitura de descontos e pagamentos quando disponível
-6. Persistir descontos, formas de pagamento e parcelamento com validação financeira impeditiva
-7. Criar detalhe/edição completa da compra/NF no Histórico, com destaque e navegação para erros
-8. Analisar descontos e formas de pagamento no dashboard
-9. Criar Modo Compras
-10. Adicionar código de barras e leitura de etiqueta
-11. Criar comparação por kg/litro/unidade
-12. Refinar indicadores e dashboard
-13. Validar restauração de backup
-14. Implementar exportação XLSX
-15. Definir e integrar CNPJ → CNAE → Segmento
-16. Voz e assistentes/IA
+3. Concluir distribuição segura para o primeiro smartphone externo
+4. Estabilizar taxonomia e revisão
+5. Melhorar OCR local e estruturar captura de descontos, forma de pagamento e parcelamento
+6. Implementar fallback de IA para fotos/recibos, incluindo leitura de descontos e pagamentos quando disponível
+7. Persistir descontos, formas de pagamento e parcelamento com validação financeira impeditiva
+8. Criar detalhe/edição completa da compra/NF no Histórico, com destaque e navegação para erros
+9. Analisar descontos e formas de pagamento no dashboard
+10. Criar Modo Compras
+11. Adicionar código de barras e leitura de etiqueta
+12. Criar comparação por kg/litro/unidade
+13. Refinar indicadores e dashboard
+14. Validar restauração de backup
+15. Implementar exportação XLSX
+16. Definir e integrar CNPJ → CNAE → Segmento
+17. Voz e assistentes/IA
 ```
 
 ## Regra para manutenção deste roadmap
