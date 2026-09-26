@@ -106,9 +106,10 @@ jobs:
           KEY_PASSWORD: "${{ secrets.LCF_RELEASE_KEY_PASSWORD }}"
           FIREBASE_APP_ID: "${{ secrets.FIREBASE_APP_ID_ANDROID }}"
           FIREBASE_SERVICE_ACCOUNT_B64: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}"
+          GOOGLE_SERVICES_B64: "${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}"
         run: |
           missing=0
-          for value in "$KEYSTORE_B64" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" "$FIREBASE_APP_ID" "$FIREBASE_SERVICE_ACCOUNT_B64"; do
+          for value in "$KEYSTORE_B64" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" "$FIREBASE_APP_ID" "$FIREBASE_SERVICE_ACCOUNT_B64" "$GOOGLE_SERVICES_B64"; do
             if [ -z "$value" ]; then
               missing=1
             fi
@@ -119,6 +120,15 @@ jobs:
             echo "Consulte docs/DISTRIBUICAO_SEGURA.md."
             exit 1
           fi
+
+      - name: Prepare Firebase Android config
+        shell: bash
+        env:
+          GOOGLE_SERVICES_B64: "${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}"
+        run: |
+          GOOGLE_SERVICES_PATH="app/google-services.json"
+          printf '%s' "$GOOGLE_SERVICES_B64" | base64 --decode > "$GOOGLE_SERVICES_PATH"
+          chmod 600 "$GOOGLE_SERVICES_PATH"
 
       - name: Prepare signing key
         shell: bash
