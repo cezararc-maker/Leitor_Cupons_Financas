@@ -271,3 +271,18 @@ Firebase App Testers API = habilitada
 O workflow `Distribuir para testadores` gera e distribui `assembleBeta`, não a variante `release`.
 
 Importante: a primeira versão que já estava instalada antes desta integração não consegue avisar sobre sua própria atualização. O usuário precisa instalar uma vez uma build `beta` que já contenha o SDK. A partir dela, as versões seguintes podem ser detectadas dentro do app.
+
+### Frequência do alerta de atualização
+
+O canal `beta` usa a configuração avançada do Firebase App Distribution para evitar alertas repetitivos.
+
+Comportamento:
+
+- na primeira abertura bem-sucedida do dia, o app verifica se existe nova versão;
+- se houver atualização, mostra **Instalar agora** e **Lembrar mais tarde**;
+- **Instalar agora** inicia a atualização pelo App Distribution;
+- **Lembrar mais tarde** fecha o aviso e o alerta automático só volta na primeira abertura do dia seguinte;
+- abrir e fechar o app várias vezes no mesmo dia não repete o aviso;
+- **Configurações > Atualizações e instalação > Verificar atualizações** continua disponível e ignora o limite diário, permitindo consulta manual a qualquer momento;
+- se a consulta automática falhar por rede/autenticação, o dia não é marcado como concluído, permitindo nova tentativa em outra abertura.
+
