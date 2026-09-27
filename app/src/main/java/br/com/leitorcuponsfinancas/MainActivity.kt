@@ -78,6 +78,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
@@ -111,6 +112,7 @@ import br.com.leitorcuponsfinancas.ui.ReceiptOcrScreen
 import br.com.leitorcuponsfinancas.ui.RemoteAccessGate
 import br.com.leitorcuponsfinancas.ui.SettingsScreen
 import br.com.leitorcuponsfinancas.ui.TaxonomyScreen
+import br.com.leitorcuponsfinancas.ui.TesterUpdatePrompt
 import br.com.leitorcuponsfinancas.ui.ScreenHero
 import br.com.leitorcuponsfinancas.ui.theme.LeitorCuponsTheme
 import br.com.leitorcuponsfinancas.ui.theme.LocalAppVisuals
@@ -183,6 +185,7 @@ private fun LeitorCuponsApp(
     val taxonomyNodes by productViewModel.taxonomyNodes.collectAsStateWithLifecycle()
     val taxonomyProductLinks by productViewModel.taxonomyProductLinks.collectAsStateWithLifecycle()
     val dashboard by homeViewModel.dashboard.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     val pagerState = rememberPagerState(
         initialPage = MainTab.HOME.page,
@@ -191,7 +194,10 @@ private fun LeitorCuponsApp(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        TesterUpdateManager.checkForUpdates()
+        TesterUpdateManager.checkForUpdates(
+            context = context,
+            automatic = true,
+        )
     }
 
     var taskScreen by rememberSaveable { mutableStateOf<AppScreen?>(null) }
@@ -485,7 +491,12 @@ private fun LeitorCuponsApp(
                                     onGradientEnabledChange = preferencesStore::setGradientEnabled,
                                     onTaxonomy = { taskScreen = AppScreen.TAXONOMY },
                                     updatesEnabled = BuildConfig.IN_APP_UPDATES_ENABLED,
-                                    onCheckUpdates = TesterUpdateManager::checkForUpdates,
+                                    onCheckUpdates = {
+                                        TesterUpdateManager.checkForUpdates(
+                                            context = context,
+                                            automatic = false,
+                                        )
+                                    },
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
@@ -513,6 +524,12 @@ private fun LeitorCuponsApp(
 
             FeedbackOverlay(
                 modifier = Modifier.fillMaxSize(),
+            )
+
+            TesterUpdatePrompt(
+                onRemindLater = {
+                    TesterUpdateManager.remindLater(context)
+                },
             )
 
             QuickAddMenu(
