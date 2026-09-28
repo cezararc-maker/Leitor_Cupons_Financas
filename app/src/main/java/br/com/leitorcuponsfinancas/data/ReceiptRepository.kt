@@ -328,9 +328,9 @@ class ReceiptRepository(
     ) = receiptDao.observeHistory(startDate, endDate)
 
     suspend fun deleteManualHistoryItem(item: HistoryItemRow): ManualDeleteResult {
-        if (item.sourceType != "MANUAL") {
+        if (item.sourceType !in setOf("MANUAL", "CARD_RECEIPT")) {
             return ManualDeleteResult.Error(
-                "Somente lançamentos manuais podem ser excluídos por esta opção.",
+                "Somente lançamentos locais podem ser excluídos por esta opção.",
             )
         }
 
@@ -342,7 +342,7 @@ class ReceiptRepository(
         return if (deleted > 0) {
             ManualDeleteResult.Success
         } else {
-            ManualDeleteResult.Error("O lançamento manual não foi encontrado.")
+            ManualDeleteResult.Error("O lançamento não foi encontrado.")
         }
     }
 
