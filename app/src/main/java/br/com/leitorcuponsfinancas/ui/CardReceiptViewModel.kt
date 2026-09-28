@@ -250,6 +250,18 @@ class CardReceiptViewModel(
             return
         }
 
+        if (difference > tolerance && allowUnidentifiedAmount) {
+            parsedItems += CardReceiptItemInput(
+                description = "Valor não identificado",
+                quantity = "1",
+                unit = "UN",
+                totalAmount = difference
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .toPlainString(),
+                productId = null,
+            )
+        }
+
         _saveState.value = CardReceiptSaveState(saving = true)
 
         viewModelScope.launch {
