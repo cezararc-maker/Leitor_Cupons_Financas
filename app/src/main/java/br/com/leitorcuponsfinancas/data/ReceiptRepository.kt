@@ -173,6 +173,155 @@ class ReceiptRepository(
         )
     }
 
+    suspend fun saveCardReceiptPurchase(
+        merchantName: String,
+        merchantCnpj: String,
+        issuedAt: String,
+        totalAmount: String,
+        paymentMethod: String,
+        installmentCount: Int?,
+        cardBrand: String?,
+        cardLast4: String?,
+        items: List<CardReceiptItemInput>,
+        actor: LocalUserProfile,
+    ): ReceiptSaveResult {
+        val normalizedMerchant = merchantName.trim()
+        if (normalizedMerchant.isBlank()) {
+            error("Informe o estabelecimento.")
+        }
+
+        val normalizedCnpj = merchantCnpj.filter(Char::isDigit)
+        if (normalizedCnpj.isNotBlank() && normalizedCnpj.length != 14) {
+            error("O CNPJ deve possuir 14 dígitos.")
+        }
+
+        val normalizedTotal = normalizeOptionalDecimal(totalAmount)
+            ?.takeIf { it.isNotBlank() }
+            ?: error("Informe um valor total válido.")
+
+        val totalValue = normalizedTotal.toBigDecimalOrNull()
+            ?.takeIf { it > java.math.BigDecimal.ZERO }
+            ?: error("O valor total deve ser maior que zero.")
+
+        if (issuedAt.trim().isBlank()) {
+            error("Informe a data da compra.")
+        }
+
+        val normalizedMethod = paymentMethod.trim().uppercase()
+        if (normalizedMethod !in setOf("DEBIT", "CREDIT", "OTHER")) {
+            error("Informe a forma de pagamento.")
+        }
+
+        if (normalizedMethod == "CREDIT") {
+            val count = installmentCount
+                ?: error("Confirme se o crédito foi à vista ou parcelado.")
+            if (count < 1) {
+                error("Quantidade de parcelas inválida.")
+            }
+        }
+
+        if (items.isEmpty()) {
+            error("Informe pelo menos um produto comprado.")
+        }
+
+        val products = productDao.listActiveOnce()
+        val normalizedItems = items.mapIndexed { index, input ->
+            val description = input.description.trim()
+            if (description.isBlank()) {
+                error("Informe o produto ${index + 1}.")
+            }
+
+            val quantity = normalizeOptionalDecimal(input.quantity)
+                ?.takeIf { it.isNotBlank() }
+                ?: error("Informe uma quantidade válida no produto ${index + 1}.")
+            val quantityValue = quantity.toBigDecimalOrNull()
+                ?.takeIf { it > java.math.BigDecimal.ZERO }
+                ?: error("A quantidade do produto ${index + 1} deve ser maior que zero.")
+
+            val itemTotal = normalizeOptionalDecimal(input.totalAmount)
+                ?.takeIf { it.isNotBlank() }
+                ?: error("Informe o valor do produto ${index + 1}.")
+            val itemTotalValue = itemTotal.toBigDecimalOrNull()
+                ?.takeIf { it >= java.math.BigDecimal.ZERO }
+                ?: error("O valor do produto ${index + 1} é inválido.")
+
+            val unitPrice = itemTotalValue
+                .divide(quantityValue, 6, java.math.RoundingMode.HALF_UP)
+                .stripTrailingZeros()
+                .toPlainString()
+
+            val exactProductId = input.productId
+                ?: findExactProductMatch(
+                    fiscalDescription = description,
+                    products = products,
+                )?.id
+
+            ReceiptItemEntity(
+                receiptId = 0,
+                lineNumber = index + 1,
+                fiscalDescription = description,
+                quantity = quantity,
+                unit = input.unit.trim().ifBlank { "UN" },
+                unitPrice = unitPrice,
+                totalAmount = itemTotal,
+                productId = exactProductId,
+            )
+        }
+
+        val merchantMaster = merchantDao?.let {
+            MerchantRepository(it).resolveOrCreate(
+                name = normalizedMerchant,
+                cnpj = normalizedCnpj.ifBlank { null },
+            )
+        }
+
+        val now = System.currentTimeMillis()
+        val cardId = java.util.UUID.randomUUID().toString()
+        val receipt = ReceiptEntity(
+            accessKey = "CARD:$cardId",
+            sourceUrl = "card-receipt://ocr/$cardId",
+            merchantName = normalizedMerchant,
+            merchantCnpj = normalizedCnpj.ifBlank { null },
+            merchantId = merchantMaster?.id,
+            issuedAt = issuedAt.trim(),
+            issuedDate = parseIsoDate(issuedAt),
+            totalAmount = totalValue.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
+            sourceType = "CARD_RECEIPT",
+            createdById = actor.id,
+            createdByName = actor.displayName,
+            createdAt = now,
+        )
+
+        val payment = PaymentAllocationEntity(
+            receiptId = 0,
+            method = normalizedMethod,
+            amount = totalValue.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString(),
+            installmentCount = installmentCount,
+            source = "OCR",
+            cardBrand = cardBrand?.trim()?.ifBlank { null },
+            cardLast4 = cardLast4
+                ?.filter(Char::isDigit)
+                ?.takeLast(4)
+                ?.takeIf { it.length == 4 },
+            createdAt = now,
+            updatedAt = now,
+        )
+
+        val inserted = receiptDao.insertReceiptWithItems(
+            receipt = receipt,
+            items = normalizedItems,
+            payments = listOf(payment),
+        )
+
+        return ReceiptSaveResult(
+            receiptId = inserted.receiptId,
+            inserted = inserted.inserted,
+            firstImportedAt = inserted.firstImportedAt,
+            matchedItems = normalizedItems.count { it.productId != null },
+            totalItems = normalizedItems.size,
+        )
+    }
+
     fun observeHistory(
         startDate: String,
         endDate: String,
@@ -458,6 +607,14 @@ class ReceiptRepository(
         return "$year-$month-$day"
     }
 }
+
+data class CardReceiptItemInput(
+    val description: String,
+    val quantity: String = "1",
+    val unit: String = "UN",
+    val totalAmount: String,
+    val productId: Long? = null,
+)
 
 data class ReceiptSaveResult(
     val receiptId: Long,
