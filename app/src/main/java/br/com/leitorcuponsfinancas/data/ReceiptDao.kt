@@ -22,6 +22,12 @@ interface ReceiptDao {
     @Insert
     suspend fun insertItems(items: List<ReceiptItemEntity>)
 
+    @Insert
+    suspend fun insertPayments(payments: List<PaymentAllocationEntity>)
+
+    @Query("SELECT * FROM payment_allocations WHERE receiptId = :receiptId ORDER BY id")
+    suspend fun listPayments(receiptId: Long): List<PaymentAllocationEntity>
+
     @Query("SELECT * FROM receipt_items WHERE receiptId = :receiptId ORDER BY lineNumber")
     suspend fun listItems(receiptId: Long): List<ReceiptItemEntity>
 
@@ -282,6 +288,7 @@ interface ReceiptDao {
     suspend fun insertReceiptWithItems(
         receipt: ReceiptEntity,
         items: List<ReceiptItemEntity>,
+        payments: List<PaymentAllocationEntity> = emptyList(),
     ): ReceiptInsertResult {
         val insertedId = insertReceipt(receipt)
 
@@ -300,6 +307,14 @@ interface ReceiptDao {
             insertItems(
                 items.map { item ->
                     item.copy(receiptId = insertedId)
+                },
+            )
+        }
+
+        if (payments.isNotEmpty()) {
+            insertPayments(
+                payments.map { payment ->
+                    payment.copy(receiptId = insertedId)
                 },
             )
         }
