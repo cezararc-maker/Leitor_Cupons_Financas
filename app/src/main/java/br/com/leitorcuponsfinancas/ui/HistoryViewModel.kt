@@ -573,7 +573,7 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
             when (val result = receiptRepository.deleteManualHistoryItem(item)) {
                 ManualDeleteResult.Success -> {
                     _deleteState.value = HistoryDeleteState(
-                        message = "Lançamento manual excluído do histórico.",
+                        message = "Lançamento excluído do histórico.",
                     )
                 }
 
