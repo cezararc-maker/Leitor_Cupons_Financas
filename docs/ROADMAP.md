@@ -546,3 +546,17 @@ Ao concluir uma etapa importante:
 4. registrar qualquer decisão que altere arquitetura, dados, segurança ou experiência do usuário.
 
 Este arquivo deve permanecer como a referência de continuidade do projeto.
+
+
+## Comprovante de cartão V1
+
+- [x] opção dedicada no botão +;
+- [x] OCR específico para maquininha;
+- [x] leitura de estabelecimento, CNPJ, data/hora, valor, débito/crédito, parcelas, bandeira e final mascarado;
+- [x] produtos obrigatórios informados pelo usuário;
+- [x] sugestão de Produtos Mestres;
+- [x] conferência do total dos produtos contra o comprovante;
+- [x] persistência de pagamento em tabela própria;
+- [x] origem `CARD_RECEIPT` no Histórico;
+- [ ] validação funcional no Moto G15 com comprovantes reais;
+- [ ] distribuição aos testadores após validação.
