@@ -551,7 +551,11 @@ fun HistoryScreen(
             },
             text = {
                 Text(
-                    text = "O item \"${item.displayDescription}\" será removido do Histórico e Gastos. Esta ação não afeta o cadastro mestre de produtos.",
+                    text = if (item.sourceType == "CARD_RECEIPT") {
+                        "A compra inteira deste comprovante, incluindo seus produtos e pagamento, será removida do Histórico e Gastos. Esta ação não afeta o cadastro mestre de produtos."
+                    } else {
+                        "O item \"${item.displayDescription}\" será removido do Histórico e Gastos. Esta ação não afeta o cadastro mestre de produtos."
+                    },
                 )
             },
             confirmButton = {
