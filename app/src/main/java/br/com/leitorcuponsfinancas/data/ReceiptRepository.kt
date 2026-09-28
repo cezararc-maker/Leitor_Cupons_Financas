@@ -328,16 +328,22 @@ class ReceiptRepository(
     ) = receiptDao.observeHistory(startDate, endDate)
 
     suspend fun deleteManualHistoryItem(item: HistoryItemRow): ManualDeleteResult {
-        if (item.sourceType !in setOf("MANUAL", "CARD_RECEIPT")) {
-            return ManualDeleteResult.Error(
-                "Somente lançamentos locais podem ser excluídos por esta opção.",
+        val deleted = when (item.sourceType) {
+            "MANUAL" -> receiptDao.deleteManualHistoryItem(
+                itemId = item.itemId,
+                receiptId = item.receiptId,
             )
-        }
 
-        val deleted = receiptDao.deleteManualHistoryItem(
-            itemId = item.itemId,
-            receiptId = item.receiptId,
-        )
+            "CARD_RECEIPT" -> receiptDao.deleteCardReceipt(
+                receiptId = item.receiptId,
+            )
+
+            else -> {
+                return ManualDeleteResult.Error(
+                    "Somente lançamentos locais podem ser excluídos por esta opção.",
+                )
+            }
+        }
 
         return if (deleted > 0) {
             ManualDeleteResult.Success
