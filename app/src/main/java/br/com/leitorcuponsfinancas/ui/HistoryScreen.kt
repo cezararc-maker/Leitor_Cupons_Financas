@@ -767,7 +767,11 @@ private fun HistoryItemCard(
 ) {
     var menuExpanded by remember(item.itemId) { mutableStateOf(false) }
 
-    val sourceLabel = if (item.sourceType == "MANUAL") "Manual" else "NFC-e"
+    val sourceLabel = when (item.sourceType) {
+        "MANUAL" -> "Manual"
+        "CARD_RECEIPT" -> "Cartão"
+        else -> "NFC-e"
+    }
     val header = listOfNotNull(
         item.issuedAt?.take(10),
         item.merchantName,
@@ -886,6 +890,34 @@ private fun HistoryItemCard(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
+            }
+
+            if (item.sourceType == "CARD_RECEIPT") {
+                val paymentLabel = when (item.paymentMethod) {
+                    "DEBIT" -> "Débito"
+                    "CREDIT" -> if ((item.installmentCount ?: 1) > 1) {
+                        "Crédito • ${item.installmentCount}x"
+                    } else {
+                        "Crédito • à vista"
+                    }
+                    "OTHER" -> "Outro pagamento"
+                    else -> "Pagamento"
+                }
+
+                val cardLabel = listOfNotNull(
+                    item.cardBrand?.takeIf { it.isNotBlank() },
+                    item.cardLast4
+                        ?.takeIf { it.length == 4 }
+                        ?.let { "final $it" },
+                ).joinToString(" • ")
+
+                Text(
+                    text = listOf(paymentLabel, cardLabel)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" • "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
 
             if (item.manuallyEdited) {
