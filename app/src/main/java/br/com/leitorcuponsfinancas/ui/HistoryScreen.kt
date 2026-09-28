@@ -540,7 +540,15 @@ fun HistoryScreen(
             onDismissRequest = {
                 if (!deleteState.deleting) deletingItem = null
             },
-            title = { Text("Excluir lançamento manual?") },
+            title = {
+                Text(
+                    if (item.sourceType == "CARD_RECEIPT") {
+                        "Excluir comprovante de cartão?"
+                    } else {
+                        "Excluir lançamento manual?"
+                    },
+                )
+            },
             text = {
                 Text(
                     text = "O item \"${item.displayDescription}\" será removido do Histórico e Gastos. Esta ação não afeta o cadastro mestre de produtos.",
@@ -841,7 +849,7 @@ private fun HistoryItemCard(
                             },
                         )
 
-                        if (item.sourceType == "MANUAL") {
+                        if (item.sourceType == "MANUAL" || item.sourceType == "CARD_RECEIPT") {
                             DropdownMenuItem(
                                 text = { Text("Excluir") },
                                 onClick = {
