@@ -242,7 +242,7 @@ class ReceiptRepository(
                 ?.takeIf { it.isNotBlank() }
                 ?: error("Informe o valor do produto ${index + 1}.")
             val itemTotalValue = itemTotal.toBigDecimalOrNull()
-                ?.takeIf { it >= java.math.BigDecimal.ZERO }
+                ?.takeIf { it > java.math.BigDecimal.ZERO }
                 ?: error("O valor do produto ${index + 1} é inválido.")
 
             val unitPrice = itemTotalValue
