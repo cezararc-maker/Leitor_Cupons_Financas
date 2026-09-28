@@ -136,6 +136,12 @@ class AppBackupManager(private val context: Context) {
             }
             val version = it.version
             val requiredTables = when {
+                version >= 8 -> REQUIRED_TABLES + setOf(
+                    "merchants",
+                    "taxonomy_nodes",
+                    "taxonomy_product_links",
+                    "payment_allocations",
+                )
                 version >= 7 -> REQUIRED_TABLES + setOf(
                     "merchants",
                     "taxonomy_nodes",
