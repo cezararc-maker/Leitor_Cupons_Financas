@@ -72,4 +72,22 @@ class CardReceiptParserTest {
         assertEquals(CreditInstallmentMode.UNKNOWN, result.creditMode)
         assertNull(result.installmentCount)
     }
+    @Test
+    fun parsesCreditInstallmentPrefix() {
+        val text = """
+            LOJA TESTE
+            CNPJ 11.222.333/0001-44
+            10/09/2026 10:20
+            CRÉDITO R$ 75,00
+            VISA ******4321
+            PARC: 03
+        """.trimIndent()
+
+        val result = CardReceiptParser.parse(text)
+
+        assertEquals(CardReceiptPaymentMethod.CREDIT, result.paymentMethod)
+        assertEquals(CreditInstallmentMode.INSTALLMENT, result.creditMode)
+        assertEquals(3, result.installmentCount)
+    }
+
 }
