@@ -55,6 +55,7 @@ fun CardReceiptScreen(
     val ocrState by viewModel.ocrState.collectAsStateWithLifecycle()
     val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     val products by viewModel.products.collectAsStateWithLifecycle()
+    val merchantSuggestions by viewModel.merchantSuggestions.collectAsStateWithLifecycle()
 
     var merchantName by remember { mutableStateOf("") }
     var merchantCnpj by remember { mutableStateOf("") }
@@ -205,9 +206,20 @@ fun CardReceiptScreen(
                     SuggestionTextField(
                         value = merchantName,
                         onValueChange = { merchantName = it },
-                        suggestions = emptyList(),
+                        suggestions = merchantSuggestions.map { it.name },
                         label = { Text("Estabelecimento *") },
                         modifier = Modifier.fillMaxWidth(),
+                        onSuggestionSelected = { selected ->
+                            merchantName = selected
+                            merchantSuggestions
+                                .firstOrNull {
+                                    it.name.equals(selected, ignoreCase = true)
+                                }
+                                ?.cnpj
+                                ?.filter(Char::isDigit)
+                                ?.takeIf { it.length == 14 }
+                                ?.let { merchantCnpj = it }
+                        },
                     )
 
                     OutlinedTextField(
