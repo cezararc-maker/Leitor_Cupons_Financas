@@ -21,7 +21,7 @@ Representa um produto conhecido pelo usuário.
 Representa uma compra.
 
 - id
-- source: NFCE | MANUAL
+- source: NFCE | OCR | CARD_RECEIPT | MANUAL
 - establishmentName
 - documentNumber
 - address
@@ -71,6 +71,8 @@ Representa uma parcela do pagamento de uma compra. Uma compra pode possuir mais 
 - firstDueDate: opcional; usado apenas quando houver informação confiável para projeção de fluxo
 - source: NFCE | OCR | AI | USER
 - confidence: opcional; utilizado quando o dado for inferido por leitura automática
+- cardBrand: opcional; bandeira quando identificada no comprovante
+- cardLast4: opcional; somente os 4 últimos dígitos mascarados do cartão; nunca armazenar PAN completo
 - createdAt
 - updatedAt
 
