@@ -25,8 +25,9 @@ No botão **+** existe a opção **Comprovante de cartão**.
 5. Usuário informa pelo menos um produto comprado.
 6. O app compara a soma dos produtos com o valor do comprovante.
 7. Diferença positiva exige correção ou confirmação explícita de **valor não identificado**.
-8. Soma de produtos acima do total do comprovante é bloqueada.
-9. A compra é salva no Histórico com `sourceType = CARD_RECEIPT`.
+8. Quando confirmada, a diferença é preservada como um item revisável chamado **Valor não identificado**, para que o total não seja perdido silenciosamente.
+9. Soma de produtos acima do total do comprovante é bloqueada.
+10. A compra é salva no Histórico com `sourceType = CARD_RECEIPT`.
 
 ## Produtos
 
@@ -88,3 +89,11 @@ O backup restaurável do banco local inclui naturalmente essa nova tabela.
 9. Testar diferença com “valor não identificado”.
 10. Conferir registro no Histórico e persistência após fechar/abrir o app.
 11. Só depois liberar aos testadores.
+
+
+## Exclusão e correção
+
+- itens podem ser corrigidos no Histórico;
+- comprovantes de cartão podem ser excluídos porque são lançamentos locais;
+- a exclusão pelo Histórico remove a compra inteira, todos os itens e o pagamento daquele comprovante, evitando deixar totais inconsistentes;
+- NFC-e continua com as regras próprias de preservação.
