@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.History
@@ -90,6 +91,7 @@ import br.com.leitorcuponsfinancas.data.AppPreferencesStore
 import br.com.leitorcuponsfinancas.data.TesterUpdateManager
 import br.com.leitorcuponsfinancas.ui.BackArrowButton
 import br.com.leitorcuponsfinancas.ui.BackupScreen
+import br.com.leitorcuponsfinancas.ui.CardReceiptScreen
 import br.com.leitorcuponsfinancas.ui.ContextualTipDialog
 import br.com.leitorcuponsfinancas.ui.FeedbackOverlay
 import br.com.leitorcuponsfinancas.ui.GuidedTutorialOverlay
@@ -151,6 +153,7 @@ class MainActivity : ComponentActivity() {
 private enum class AppScreen {
     NFCE,
     OCR,
+    CARD_RECEIPT,
     MANUAL,
     REVIEW,
     MERCHANTS,
@@ -458,6 +461,10 @@ private fun LeitorCuponsApp(
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
+                                AppScreen.CARD_RECEIPT -> CardReceiptScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+
                                 AppScreen.MANUAL -> ManualEntryScreen(
                                     onBack = { taskScreen = null },
                                     modifier = Modifier.fillMaxSize(),
@@ -554,6 +561,16 @@ private fun LeitorCuponsApp(
                             key = "ocr",
                             title = "Foto, imagem ou PDF",
                             text = "O aplicativo identifica os dados do cupom e sempre apresenta uma etapa de revisão antes de salvar.",
+                        ),
+                    )
+                },
+                onCardReceipt = {
+                    openTask(
+                        AppScreen.CARD_RECEIPT,
+                        AppTip(
+                            key = "card_receipt",
+                            title = "Comprovante de cartão",
+                            text = "Fotografe ou escolha o comprovante da maquininha. Revise pagamento e valor e informe os produtos comprados antes de salvar.",
                         ),
                     )
                 },
@@ -738,6 +755,7 @@ private fun QuickAddMenu(
     modifier: Modifier = Modifier,
     onNfce: () -> Unit,
     onOcr: () -> Unit,
+    onCardReceipt: () -> Unit,
     onManual: () -> Unit,
 ) {
     val actions = listOf(
@@ -752,13 +770,20 @@ private fun QuickAddMenu(
             label = "Foto, imagem ou PDF",
             icon = Icons.Default.CameraAlt,
             accent = MaterialTheme.colorScheme.secondary,
-            delayMillis = 45,
+            delayMillis = 90,
             onClick = onOcr,
+        ),
+        QuickAction(
+            label = "Comprovante de cartão",
+            icon = Icons.Default.CreditCard,
+            accent = MaterialTheme.colorScheme.tertiary,
+            delayMillis = 45,
+            onClick = onCardReceipt,
         ),
         QuickAction(
             label = "Lançamento manual",
             icon = Icons.Default.Keyboard,
-            accent = MaterialTheme.colorScheme.tertiary,
+            accent = MaterialTheme.colorScheme.primary,
             delayMillis = 0,
             onClick = onManual,
         ),
@@ -1139,7 +1164,7 @@ private fun HomeScreen(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Use o botão + abaixo para escolher QR/chave NFC-e, foto/PDF ou lançamento manual.",
+                        text = "Use o botão + abaixo para escolher QR/chave NFC-e, foto/PDF, comprovante de cartão ou lançamento manual.",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
