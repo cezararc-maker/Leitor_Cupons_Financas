@@ -425,7 +425,7 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
             val now = System.currentTimeMillis()
             val product = ProductEntity(
                 fiscalDescription = item.fiscalDescription.takeIf {
-                    item.sourceType != "MANUAL"
+                    item.sourceType == "NFCE" || item.sourceType == "OCR"
                 },
                 normalizedName = cleanName,
                 sector = cleanSector,
@@ -512,7 +512,7 @@ class HistoryViewModel(application: Application) : AndroidViewModel(application)
                 val now = System.currentTimeMillis()
                 val candidate = ProductEntity(
                     fiscalDescription = item.fiscalDescription.takeIf {
-                        item.sourceType != "MANUAL"
+                        item.sourceType == "NFCE" || item.sourceType == "OCR"
                     },
                     normalizedName = cleanName,
                     sector = department,
