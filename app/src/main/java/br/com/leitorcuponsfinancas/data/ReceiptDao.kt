@@ -252,7 +252,7 @@ interface ReceiptDao {
           AND receiptId IN (
               SELECT id FROM receipts
               WHERE id = :receiptId
-                AND sourceType = 'MANUAL'
+                AND sourceType IN ('MANUAL', 'CARD_RECEIPT')
           )
         """,
     )
@@ -263,9 +263,20 @@ interface ReceiptDao {
 
     @Query(
         """
+        DELETE FROM payment_allocations
+        WHERE receiptId = :receiptId
+          AND NOT EXISTS (
+              SELECT 1 FROM receipt_items WHERE receiptId = :receiptId
+          )
+        """,
+    )
+    suspend fun deletePaymentsForEmptyLocalReceipt(receiptId: Long): Int
+
+    @Query(
+        """
         DELETE FROM receipts
         WHERE id = :receiptId
-          AND sourceType = 'MANUAL'
+          AND sourceType IN ('MANUAL', 'CARD_RECEIPT')
           AND NOT EXISTS (
               SELECT 1 FROM receipt_items WHERE receiptId = :receiptId
           )
@@ -283,6 +294,7 @@ interface ReceiptDao {
             receiptId = receiptId,
         )
         if (deleted > 0) {
+            deletePaymentsForEmptyLocalReceipt(receiptId)
             deleteEmptyManualReceipt(receiptId)
         }
         return deleted
