@@ -252,7 +252,7 @@ interface ReceiptDao {
           AND receiptId IN (
               SELECT id FROM receipts
               WHERE id = :receiptId
-                AND sourceType IN ('MANUAL', 'CARD_RECEIPT')
+                AND sourceType = 'MANUAL'
           )
         """,
     )
@@ -263,20 +263,9 @@ interface ReceiptDao {
 
     @Query(
         """
-        DELETE FROM payment_allocations
-        WHERE receiptId = :receiptId
-          AND NOT EXISTS (
-              SELECT 1 FROM receipt_items WHERE receiptId = :receiptId
-          )
-        """,
-    )
-    suspend fun deletePaymentsForEmptyLocalReceipt(receiptId: Long): Int
-
-    @Query(
-        """
         DELETE FROM receipts
         WHERE id = :receiptId
-          AND sourceType IN ('MANUAL', 'CARD_RECEIPT')
+          AND sourceType = 'MANUAL'
           AND NOT EXISTS (
               SELECT 1 FROM receipt_items WHERE receiptId = :receiptId
           )
@@ -294,10 +283,51 @@ interface ReceiptDao {
             receiptId = receiptId,
         )
         if (deleted > 0) {
-            deletePaymentsForEmptyLocalReceipt(receiptId)
             deleteEmptyManualReceipt(receiptId)
         }
         return deleted
+    }
+
+    @Query(
+        """
+        DELETE FROM receipt_items
+        WHERE receiptId = :receiptId
+          AND receiptId IN (
+              SELECT id FROM receipts
+              WHERE id = :receiptId
+                AND sourceType = 'CARD_RECEIPT'
+          )
+        """,
+    )
+    suspend fun deleteCardReceiptItems(receiptId: Long): Int
+
+    @Query(
+        """
+        DELETE FROM payment_allocations
+        WHERE receiptId = :receiptId
+          AND receiptId IN (
+              SELECT id FROM receipts
+              WHERE id = :receiptId
+                AND sourceType = 'CARD_RECEIPT'
+          )
+        """,
+    )
+    suspend fun deleteCardReceiptPayments(receiptId: Long): Int
+
+    @Query(
+        """
+        DELETE FROM receipts
+        WHERE id = :receiptId
+          AND sourceType = 'CARD_RECEIPT'
+        """,
+    )
+    suspend fun deleteCardReceiptRow(receiptId: Long): Int
+
+    @Transaction
+    suspend fun deleteCardReceipt(receiptId: Long): Int {
+        deleteCardReceiptItems(receiptId)
+        deleteCardReceiptPayments(receiptId)
+        return deleteCardReceiptRow(receiptId)
     }
 
     @Query(
