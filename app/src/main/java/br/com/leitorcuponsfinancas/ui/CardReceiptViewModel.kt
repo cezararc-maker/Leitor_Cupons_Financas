@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.leitorcuponsfinancas.data.AppDatabase
 import br.com.leitorcuponsfinancas.data.CardReceiptItemInput
+import br.com.leitorcuponsfinancas.data.MerchantSuggestion
 import br.com.leitorcuponsfinancas.data.ProductEntity
 import br.com.leitorcuponsfinancas.data.ReceiptOcrReadResult
 import br.com.leitorcuponsfinancas.data.ReceiptOcrReader
@@ -60,6 +61,14 @@ class CardReceiptViewModel(
 
     val products: StateFlow<List<ProductEntity>> = database.productDao()
         .observeActive()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
+    val merchantSuggestions: StateFlow<List<MerchantSuggestion>> = database.receiptDao()
+        .observeMerchantSuggestions()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
