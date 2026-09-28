@@ -47,6 +47,10 @@ object CardReceiptParser {
         """\b(\d{1,2})\s*(?:PARCELA|PARCELAS|PARC)\b""",
         RegexOption.IGNORE_CASE,
     )
+    private val installmentPrefixRegex = Regex(
+        """\b(?:PARC|PARCELA|PARCELAS)\s*[:.\-]?\s*(\d{1,2})\b""",
+        RegexOption.IGNORE_CASE,
+    )
 
     fun parse(text: String): CardReceiptDraft {
         val lines = text.lines()
@@ -197,7 +201,13 @@ object CardReceiptParser {
             ?.toIntOrNull()
         if (xCount != null) return xCount
 
-        return installmentWordsRegex.find(text)
+        val wordsCount = installmentWordsRegex.find(text)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toIntOrNull()
+        if (wordsCount != null) return wordsCount
+
+        return installmentPrefixRegex.find(text)
             ?.groupValues
             ?.getOrNull(1)
             ?.toIntOrNull()
