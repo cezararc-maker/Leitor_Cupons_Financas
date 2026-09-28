@@ -215,7 +215,7 @@ class CardReceiptViewModel(
             }
 
             val itemTotal = CurrencyInputFormatter.parse(item.totalAmount)
-                ?.takeIf { it >= BigDecimal.ZERO }
+                ?.takeIf { it > BigDecimal.ZERO }
             if (itemTotal == null) {
                 _saveState.value = CardReceiptSaveState(
                     error = "Informe o valor do produto ${index + 1}.",
