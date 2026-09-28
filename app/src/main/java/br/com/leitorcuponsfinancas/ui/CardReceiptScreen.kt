@@ -585,7 +585,7 @@ fun CardReceiptScreen(
                         allowUnidentifiedAmount = allowUnidentifiedAmount,
                     )
                 },
-                enabled = !saveState.saving,
+                enabled = !saveState.saving && saveState.message == null,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (saveState.saving) {
