@@ -134,6 +134,7 @@ fun HistoryAdvancedFilterDialog(
                             null to "Todas",
                             "NFCE" to "NFC-e",
                             "OCR" to "Foto / OCR",
+                            "CARD_RECEIPT" to "Comprovante de cartão",
                             "MANUAL" to "Manual",
                         ).forEach { (value, label) ->
                             FilterChip(
