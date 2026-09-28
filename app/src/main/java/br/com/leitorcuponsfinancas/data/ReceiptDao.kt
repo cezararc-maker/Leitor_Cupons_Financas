@@ -64,6 +64,34 @@ interface ReceiptDao {
             r.series AS receiptSeries,
             r.sourceType AS sourceType,
             r.createdByName AS createdByName,
+            (
+                SELECT pa.method
+                FROM payment_allocations pa
+                WHERE pa.receiptId = r.id
+                ORDER BY pa.id
+                LIMIT 1
+            ) AS paymentMethod,
+            (
+                SELECT pa.installmentCount
+                FROM payment_allocations pa
+                WHERE pa.receiptId = r.id
+                ORDER BY pa.id
+                LIMIT 1
+            ) AS installmentCount,
+            (
+                SELECT pa.cardBrand
+                FROM payment_allocations pa
+                WHERE pa.receiptId = r.id
+                ORDER BY pa.id
+                LIMIT 1
+            ) AS cardBrand,
+            (
+                SELECT pa.cardLast4
+                FROM payment_allocations pa
+                WHERE pa.receiptId = r.id
+                ORDER BY pa.id
+                LIMIT 1
+            ) AS cardLast4,
             ri.fiscalDescription AS fiscalDescription,
             ri.itemCode AS itemCode,
             ri.quantity AS quantity,
@@ -112,6 +140,34 @@ interface ReceiptDao {
             r.series AS receiptSeries,
             r.sourceType AS sourceType,
             r.createdByName AS createdByName,
+            (
+                SELECT pa.method
+                FROM payment_allocations pa
+                WHERE pa.receiptId = r.id
+                ORDER BY pa.id
+                LIMIT 1
+            ) AS paymentMethod,
+            (
+                SELECT pa.installmentCount
+                FROM payment_allocations pa
+                WHERE pa.receiptId = r.id
+                ORDER BY pa.id
+                LIMIT 1
+            ) AS installmentCount,
+            (
+                SELECT pa.cardBrand
+                FROM payment_allocations pa
+                WHERE pa.receiptId = r.id
+                ORDER BY pa.id
+                LIMIT 1
+            ) AS cardBrand,
+            (
+                SELECT pa.cardLast4
+                FROM payment_allocations pa
+                WHERE pa.receiptId = r.id
+                ORDER BY pa.id
+                LIMIT 1
+            ) AS cardLast4,
             ri.fiscalDescription AS fiscalDescription,
             ri.itemCode AS itemCode,
             ri.quantity AS quantity,
