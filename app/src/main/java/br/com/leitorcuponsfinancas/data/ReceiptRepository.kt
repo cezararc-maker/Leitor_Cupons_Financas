@@ -424,7 +424,7 @@ class ReceiptRepository(
         item: HistoryItemRow,
         productId: Long,
     ): ProductLinkResult {
-        if (item.sourceType == "MANUAL") {
+        if (item.sourceType == "MANUAL" || item.sourceType == "CARD_RECEIPT") {
             val updated = receiptDao.updateItemProduct(
                 itemId = item.itemId,
                 productId = productId,
@@ -436,7 +436,7 @@ class ReceiptRepository(
                     updatedItems = 1,
                 )
             } else {
-                ProductLinkResult.Error("O item manual não foi encontrado no histórico.")
+                ProductLinkResult.Error("O item não foi encontrado no histórico.")
             }
         }
 
